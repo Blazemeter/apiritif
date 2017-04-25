@@ -15,7 +15,7 @@ matrix:
 
 
 install:
-- pip install codecov nose jsonpath-rw
+- pip install codecov nose jsonpath-rw lxml
 script: coverage run -m nose
 after_success:
   - codecov
