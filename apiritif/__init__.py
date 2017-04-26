@@ -29,7 +29,7 @@ import jsonpath_rw
 import requests
 from lxml import etree
 
-from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp, shorten
+from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp
 
 log = logging.getLogger('apiritif')
 log.setLevel(logging.DEBUG)
