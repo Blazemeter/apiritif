@@ -67,7 +67,7 @@ class http(object):
         http.log.debug("Response headers: %r", response.headers)
         http.log.debug("Response cookies: %r", dict(response.cookies))
         http.log.debug('Response content: \n%s', response.content)
-        wrapped_response = HTTPResponse.from_py_response(response)
+        wrapped_response = HTTPResponse(response)
         recorder.record_http_request(method, address, prepared, wrapped_response, session)
         return wrapped_response
 
@@ -112,6 +112,14 @@ class Event(object):
 
 class Request(Event):
     def __init__(self, method, address, request, response, session):
+        """
+
+        :type method: str
+        :type address: str
+        :type request: requests.Request
+        :type response: HTTPResponse
+        :type session: requests.Session
+        """
         super(Request, self).__init__()
         self.method = method
         self.address = address
@@ -328,90 +336,99 @@ class HTTPTarget(object):
         return self.request("HEAD", path, **kwargs)
 
 
-# HTTP Response:
 class HTTPResponse(object):
-    # properties:
-    # - url
-    # - status code
-    # - status message
-    # - text
-    # - content
-    # - headers
-    # - cookies
-    # - request
-
     def __init__(self, py_response):
         """
+        Construct HTTPResponse from requests.Response object
 
-        :param py_response: requests.Response
         :type py_response: requests.Response
         """
-        self.py_response = py_response
-        # TODO: unpack all py_response fields into local properties
+        self.url = py_response.url
+        self.method = py_response.request.method
+        self.status_code = int(py_response.status_code)
+        self.reason = py_response.reason
 
-    @classmethod
-    def from_py_response(cls, py_response):
-        """Construct HTTPResponse from requests.Response object"""
-        return cls(py_response)
+        self.headers = dict(py_response.headers)
+        self.cookies = dict(py_response.cookies)
+
+        self.text = py_response.text
+        self.content = py_response.content
+
+        self.elapsed = py_response.elapsed
+
+        self._response = py_response
+        self._request = py_response.request
+
+    def json(self):
+        return self._response.json()
 
     def __eq__(self, other):
-        return self.py_response == other.py_response
+        """
+        :type other: HTTPResponse
+        """
+        return isinstance(other, self.__class__) \
+               and self.status_code == other.status_code \
+               and self.method == other.method \
+               and self.url == other.url \
+               and self.reason == other.reason \
+               and self.headers == other.headers \
+               and self.cookies == other.cookies \
+               and self.text == other.text \
+               and self.content == other.content
 
     def __hash__(self):
-        return hash(self.py_response)
+        return hash((self.url, self.method, self.status_code, self.reason,
+                     self.headers, self.cookies, self.text, self.content))
 
     def __repr__(self):
-        req = self.py_response.request
-        params = (req.method, req.url, self.py_response.status_code, self.py_response.reason)
+        params = (self.method, self.url, self.status_code, self.reason)
         return "%s %s => %s %s" % params
-
-    # TODO: text, content - @property?
 
     @recorder.assertion_decorator
     def assert_ok(self, msg=None):
-        if self.py_response.status_code >= 400:
-            msg = msg or "Request to %s didn't succeed (%s)" % (self.py_response.url, self.py_response.status_code)
+        if self.status_code >= 400:
+            msg = msg or "Request to %s didn't succeed (%s)" % (self.url, self.status_code)
             raise AssertionError(msg)
         return self
 
     @recorder.assertion_decorator
     def assert_failed(self, msg=None):
-        if self.py_response.status_code < 400:
-            msg = msg or "Request to %s didn't fail (%s)" % (self.py_response.url, self.py_response.status_code)
+        if self.status_code < 400:
+            msg = msg or "Request to %s didn't fail (%s)" % (self.url, self.status_code)
             raise AssertionError(msg)
         return self
 
     @recorder.assertion_decorator
     def assert_2xx(self, msg=None):
-        if not 200 <= self.py_response.status_code < 300:
-            msg = msg or "Response code isn't 2xx, it's %s" % self.py_response.status_code
+        if not 200 <= self.status_code < 300:
+            msg = msg or "Response code isn't 2xx, it's %s" % self.status_code
             raise AssertionError(msg)
         return self
 
     @recorder.assertion_decorator
     def assert_3xx(self, msg=None):
-        if not 300 <= self.py_response.status_code < 400:
-            msg = msg or "Response code isn't 3xx, it's %s" % self.py_response.status_code
+        if not 300 <= self.status_code < 400:
+            msg = msg or "Response code isn't 3xx, it's %s" % self.status_code
             raise AssertionError(msg)
         return self
 
     @recorder.assertion_decorator
     def assert_4xx(self, msg=None):
-        if not 400 <= self.py_response.status_code < 500:
-            msg = msg or "Response code isn't 4xx, it's %s" % self.py_response.status_code
+        if not 400 <= self.status_code < 500:
+            msg = msg or "Response code isn't 4xx, it's %s" % self.status_code
             raise AssertionError(msg)
         return self
 
     @recorder.assertion_decorator
     def assert_5xx(self, msg=None):
-        if not 500 <= self.py_response.status_code < 600:
-            msg = msg or "Response code isn't 5xx, it's %s" % self.py_response.status_code
+        if not 500 <= self.status_code < 600:
+            msg = msg or "Response code isn't 5xx, it's %s" % self.status_code
             raise AssertionError(msg)
         return self
 
     @recorder.assertion_decorator
     def assert_status_code(self, code, msg=None):
-        actual = str(self.py_response.status_code)
+        actual = str(self.status_code)
         expected = str(code)
         if actual != expected:
             msg = msg or "Actual status code (%s) didn't match expected (%s)" % (actual, expected)
@@ -420,7 +437,7 @@ class HTTPResponse(object):
 
     @recorder.assertion_decorator
     def assert_not_status_code(self, code, msg=None):
-        actual = str(self.py_response.status_code)
+        actual = str(self.status_code)
         expected = str(code)
         if actual == expected:
             msg = msg or "Actual status code (%s) unexpectedly matched" % actual
@@ -429,41 +446,41 @@ class HTTPResponse(object):
 
     @recorder.assertion_decorator
     def assert_in_body(self, member, msg=None):
-        if member not in self.py_response.text:
+        if member not in self.text:
             msg = msg or "%r wasn't found in response body" % member
             raise AssertionError(msg)
         return self
 
     @recorder.assertion_decorator
     def assert_not_in_body(self, member, msg=None):
-        if member in self.py_response.text:
+        if member in self.text:
             msg = msg or "%r was found in response body" % member
             raise AssertionError(msg)
         return self
 
     @recorder.assertion_decorator
     def assert_regex_in_body(self, regex, match=False, msg=None):
-        assert_regexp(regex, self.py_response.text, match=match, msg=msg)
+        assert_regexp(regex, self.text, match=match, msg=msg)
         return self
 
     @recorder.assertion_decorator
     def assert_regex_not_in_body(self, regex, match=False, msg=None):
-        assert_not_regexp(regex, self.py_response.text, match=match, msg=msg)
+        assert_not_regexp(regex, self.text, match=match, msg=msg)
         return self
 
     # TODO: assert_content_type?
 
     @recorder.assertion_decorator
     def assert_has_header(self, header, msg=None):
-        if header not in self.py_response.headers:
-            msg = msg or "Header %s wasn't found in response headers: %r" % (header, self.py_response.headers)
+        if header not in self.headers:
+            msg = msg or "Header %s wasn't found in response headers: %r" % (header, self.headers)
             raise AssertionError(msg)
         return self
 
     @recorder.assertion_decorator
     def assert_header_value(self, header, value, msg=None):
         self.assert_has_header(header)
-        actual = self.py_response.headers[header]
+        actual = self.headers[header]
         if actual != value:
             msg = msg or "Actual header value (%r) isn't equal to expected (%r)" % (actual, value)
             raise AssertionError(msg)
@@ -471,7 +488,7 @@ class HTTPResponse(object):
 
     @recorder.assertion_decorator
     def assert_in_headers(self, member, msg=None):
-        headers_text = headers_as_text(self.py_response.headers)
+        headers_text = headers_as_text(self.headers)
         if member not in headers_text:
             msg = msg or "Header %s wasn't found in response headers text: %r" % (member, headers_text)
             raise AssertionError(msg)
@@ -479,25 +496,25 @@ class HTTPResponse(object):
 
     @recorder.assertion_decorator
     def assert_not_in_headers(self, member, msg=None):
-        if member in headers_as_text(self.py_response.headers):
+        if member in headers_as_text(self.headers):
             msg = msg or "Header %s was found in response headers text" % member
             raise AssertionError(msg)
         return self
 
     @recorder.assertion_decorator
     def assert_regex_in_headers(self, member, msg=None):
-        assert_regexp(member, headers_as_text(self.py_response.headers), msg=msg)
+        assert_regexp(member, headers_as_text(self.headers), msg=msg)
         return self
 
     @recorder.assertion_decorator
     def assert_regex_not_in_headers(self, member, msg=None):
-        assert_not_regexp(member, headers_as_text(self.py_response.headers), msg=msg)
+        assert_not_regexp(member, headers_as_text(self.headers), msg=msg)
         return self
 
     @recorder.assertion_decorator
     def assert_jsonpath(self, jsonpath_query, expected_value=None, msg=None):
         jsonpath_expr = jsonpath_rw.parse(jsonpath_query)
-        body = self.py_response.json()
+        body = self.json()
         matches = jsonpath_expr.find(body)
         if not matches:
             msg = msg or "JSONPath query %r didn't match response content: %s" % (jsonpath_query, body)
@@ -512,7 +529,7 @@ class HTTPResponse(object):
     @recorder.assertion_decorator
     def assert_not_jsonpath(self, jsonpath_query, msg=None):
         jsonpath_expr = jsonpath_rw.parse(jsonpath_query)
-        body = self.py_response.json()
+        body = self.json()
         matches = jsonpath_expr.find(body)
         if matches:
             msg = msg or "JSONPath query %r did match response content: %s" % (jsonpath_query, body)
@@ -522,20 +539,20 @@ class HTTPResponse(object):
     @recorder.assertion_decorator
     def assert_xpath(self, xpath_query, parser_type='html', validate=False, msg=None):
         parser = etree.HTMLParser() if parser_type == 'html' else etree.XMLParser(dtd_validation=validate)
-        tree = etree.parse(BytesIO(self.py_response.content), parser)
+        tree = etree.parse(BytesIO(self.content), parser)
         matches = tree.xpath(xpath_query)
         if not matches:
-            msg = msg or "XPath query %r didn't match response content: %s" % (xpath_query, self.py_response.text)
+            msg = msg or "XPath query %r didn't match response content: %s" % (xpath_query, self.text)
             raise AssertionError(msg)
         return self
 
     @recorder.assertion_decorator
     def assert_not_xpath(self, xpath_query, parser_type='html', validate=False, msg=None):
         parser = etree.HTMLParser() if parser_type == 'html' else etree.XMLParser(dtd_validation=validate)
-        tree = etree.parse(BytesIO(self.py_response.content), parser)
+        tree = etree.parse(BytesIO(self.content), parser)
         matches = tree.xpath(xpath_query)
         if matches:
-            msg = msg or "XPath query %r did match response content: %s" % (xpath_query, self.py_response.text)
+            msg = msg or "XPath query %r did match response content: %s" % (xpath_query, self.text)
             raise AssertionError(msg)
         return self
 
@@ -543,14 +560,14 @@ class HTTPResponse(object):
 
     def extract_regex(self, regex, default=None):
         extracted_value = default
-        for item in re.finditer(regex, self.py_response.text):
+        for item in re.finditer(regex, self.text):
             extracted_value = item
             break
         return extracted_value
 
     def extract_jsonpath(self, jsonpath_query, default=None):
         jsonpath_expr = jsonpath_rw.parse(jsonpath_query)
-        body = self.py_response.json()
+        body = self.json()
         matches = jsonpath_expr.find(body)
         if not matches:
             return default
@@ -558,7 +575,7 @@ class HTTPResponse(object):
 
     def extract_xpath(self, xpath_query, default=None, parser_type='html', validate=False):
         parser = etree.HTMLParser() if parser_type == 'html' else etree.XMLParser(dtd_validation=validate)
-        tree = etree.parse(BytesIO(self.py_response.content), parser)
+        tree = etree.parse(BytesIO(self.content), parser)
         matches = tree.xpath(xpath_query)
         if not matches:
             return default
