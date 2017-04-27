@@ -377,8 +377,7 @@ class HTTPResponse(object):
                and self.content == other.content
 
     def __hash__(self):
-        return hash((self.url, self.method, self.status_code, self.reason,
-                     self.headers, self.cookies, self.text, self.content))
+        return hash((self.url, self.method, self.status_code, self.reason, self.text, self.content))
 
     def __repr__(self):
         params = (self.method, self.url, self.status_code, self.reason)
