@@ -29,7 +29,7 @@ import jsonpath_rw
 import requests
 from lxml import etree
 
-from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp
+from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp, extract_embedded_resources
 
 log = logging.getLogger('apiritif')
 log.setLevel(logging.DEBUG)
@@ -45,6 +45,7 @@ class http(object):
 
     @staticmethod
     def request(method, address, session=None,
+                download_embedded_resources=True,
                 params=None, headers=None, cookies=None, data=None, json=None, allow_redirects=True, timeout=30):
         """
 
@@ -69,6 +70,13 @@ class http(object):
         http.log.debug('Response content: \n%s', response.content)
         wrapped_response = HTTPResponse(response)
         recorder.record_http_request(method, address, prepared, wrapped_response, session)
+
+        if download_embedded_resources and 'text/html' in response.headers.get('content-type'):
+            http.log.debug("Downloading embedded resources")
+            for link in extract_embedded_resources(response.text, response.url):
+                http.get(link)  # TODO: put downloaded resources somewhere in `wrapped_response`?
+            # TODO: subsamples? add time spent downloading resources in parent sample?
+
         return wrapped_response
 
     @staticmethod
@@ -183,6 +191,9 @@ class _EventRecorder(object):
             if func_name.startswith("test"):  # is this heuristic good enough?
                 return func_name
         return None
+
+    def get_labels(self):
+        return list(self._recording.keys())
 
     def get_recording(self, label=None):
         label = label or self._get_current_test_case_name() or ""
