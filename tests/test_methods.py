@@ -1,6 +1,5 @@
-from unittest import TestCase
-
 from apiritif import http
+from unittest import TestCase
 
 
 class TestRequests(TestCase):
@@ -9,16 +8,15 @@ class TestRequests(TestCase):
 
     def test_post(self):
         http.post('http://blazedemo.com/?tag=post')
-        
+
     def test_put(self):
         http.put('http://blazedemo.com/?tag=put')
-        
+
     def test_patch(self):
         http.patch('http://blazedemo.com/?tag=patch')
-        
+
     def test_head(self):
         http.head('http://blazedemo.com/?tag=head')
-        
+
     def test_delete(self):
         http.delete('http://blazedemo.com/?tag=delete')
-        

@@ -14,7 +14,7 @@ class TestRequests(unittest.TestCase):
         target.get('/')
 
     # will produce test-case sample with two sub-samples
-    def test_2_multiple_requests(self): 
+    def test_2_multiple_requests(self):
         target.get('/')
         target.get('/2')
 
@@ -32,7 +32,7 @@ class TestRequests(unittest.TestCase):
             target.get('/2')
 
     # won't produce test-case sample, two separate ones
-    def test_5_multiple_transactions(self): 
+    def test_5_multiple_transactions(self):
         with transaction("Transaction 1"):
             target.get('/')
             target.get('/2')

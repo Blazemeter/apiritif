@@ -1,7 +1,5 @@
-from unittest import TestCase
-
 from apiritif import http
-
+from unittest import TestCase
 
 target = http.target("http://blazedemo.com")
 target.use_cookies(False)
