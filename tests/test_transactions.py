@@ -55,4 +55,7 @@ class TestRequests(unittest.TestCase):
     def test_8_transaction_attach(self):
         with transaction("Label") as tran:
             user_input = "YO"
+            tran.set_request("Request body")
+            tran.set_response("Response body")
+            tran.set_response_code(201)
             tran.attach_extra("user", user_input)
