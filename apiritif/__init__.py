@@ -101,9 +101,12 @@ class transaction(object):
         self.name = name
         self.success = True
         self.error_message = None
-        self._extras = {}
+        self._request = None
+        self._response = None
+        self._response_code = None
         self._start_ts = None
         self._finish_ts = None
+        self._extras = {}
 
     def __enter__(self):
         self.start()
@@ -139,6 +142,24 @@ class transaction(object):
     def fail(self, message=""):
         self.success = False
         self.error_message = message
+
+    def request(self):
+        return self._request
+
+    def set_request(self, value):
+        self._request = value
+
+    def response(self):
+        return self._response
+
+    def set_response(self, value):
+        self._response = value
+
+    def response_code(self):
+        return self._response_code
+
+    def set_response_code(self, code):
+        self._response_code = code
 
     def attach_extra(self, key, value):
         self._extras[key] = value
