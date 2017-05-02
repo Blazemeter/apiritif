@@ -96,13 +96,80 @@ class http(object):
         return http.request("HEAD", address, **kwargs)
 
 
-@contextmanager
-def transaction(name):
-    recorder.record_transaction_start(name)
-    try:
-        yield
-    finally:
-        recorder.record_transaction_end(name)
+class transaction(object):
+    def __init__(self, name):
+        self.name = name
+        self.success = True
+        self.error_message = None
+        self._request = None
+        self._response = None
+        self._response_code = None
+        self._start_ts = None
+        self._finish_ts = None
+        self._extras = {}
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if exc_value is not None:
+            self.fail()
+        self.finish()
+
+    def start(self):
+        if self._start_ts is None:
+            self._start_ts = time.time()
+            recorder.record_transaction_start(self)
+
+    def finish(self):
+        if self._start_ts is None:
+            raise ValueError("Can't finish non-started transaction %s" % self.name)
+        if self._finish_ts is None:
+            self._finish_ts = time.time()
+            recorder.record_transaction_end(self)
+
+    def finished(self):
+        return self._start_ts is not None and self._finish_ts is not None
+
+    def start_time(self):
+        return self._start_ts
+
+    def duration(self):
+        if self.finished():
+            return self._finish_ts - self._start_ts
+
+    def fail(self, message=""):
+        self.success = False
+        self.error_message = message
+
+    def request(self):
+        return self._request
+
+    def set_request(self, value):
+        self._request = value
+
+    def response(self):
+        return self._response
+
+    def set_response(self, value):
+        self._response = value
+
+    def response_code(self):
+        return self._response_code
+
+    def set_response_code(self, code):
+        self._response_code = code
+
+    def attach_extra(self, key, value):
+        self._extras[key] = value
+
+    def extras(self):
+        return self._extras
+
+    def __repr__(self):
+        tmpl = "transaction(name=%r, success=%r)"
+        return tmpl % (self.name, self.success)
 
 
 class Event(object):
@@ -132,18 +199,20 @@ class Request(Event):
 
 
 class TransactionStarted(Event):
-    def __init__(self, transaction_name):
+    def __init__(self, transaction):
         super(TransactionStarted, self).__init__()
-        self.transaction_name = transaction_name
+        self.transaction = transaction
+        self.transaction_name = transaction.name
 
     def __repr__(self):
         return "TransactionStarted(transaction_name=%r)" % self.transaction_name
 
 
 class TransactionEnded(Event):
-    def __init__(self, transaction_name):
+    def __init__(self, transaction):
         super(TransactionEnded, self).__init__()
-        self.transaction_name = transaction_name
+        self.transaction = transaction
+        self.transaction_name = transaction.name
 
     def __repr__(self):
         return "TransactionEnded(transaction_name=%r)" % self.transaction_name
@@ -195,11 +264,11 @@ class _EventRecorder(object):
         recording = self.get_recording()
         recording.append(event)
 
-    def record_transaction_start(self, transaction_name):
-        self.record_event(TransactionStarted(transaction_name))
+    def record_transaction_start(self, transaction):
+        self.record_event(TransactionStarted(transaction))
 
-    def record_transaction_end(self, transaction_name):
-        self.record_event(TransactionEnded(transaction_name))
+    def record_transaction_end(self, transaction):
+        self.record_event(TransactionEnded(transaction))
 
     def record_http_request(self, method, address, request, response, session):
         self.record_event(Request(method, address, request, response, session))

@@ -1,3 +1,4 @@
+import time
 import unittest
 
 from apiritif import http, transaction
@@ -40,3 +41,21 @@ class TestRequests(unittest.TestCase):
         with transaction("Transaction 2"):
             target.get('/')
             target.get('/2')
+
+    def test_6_transaction_obj(self):
+        tran = transaction("Label")
+        tran.start()
+        time.sleep(0.5)
+        tran.finish()
+
+    def test_7_transaction_fail(self):
+        with transaction("Label") as tran:
+            tran.fail("Something went wrong")
+
+    def test_8_transaction_attach(self):
+        with transaction("Label") as tran:
+            user_input = "YO"
+            tran.set_request("Request body")
+            tran.set_response("Response body")
+            tran.set_response_code(201)
+            tran.attach_extra("user", user_input)
