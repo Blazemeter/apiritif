@@ -4,7 +4,8 @@
 
 - fix package requirement
 - refactor HTTPResponse class to contain data fields
- 
+- allow attaching data and status to `transaction`
+
 
 ## 0.1 <sup>25 apr 2017</sup>
 
