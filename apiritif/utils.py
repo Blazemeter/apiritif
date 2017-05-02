@@ -1,4 +1,6 @@
+import random
 import re
+import string
 
 
 def headers_as_text(headers_dict):
@@ -29,3 +31,19 @@ def assert_not_regexp(regex, text, match=False, msg=None):
         if re.findall(regex, text):
             msg = msg or "Regex %r unexpectedly found something in text %r" % (regex, shorten(text, 100))
             raise AssertionError(msg)
+
+
+def random_uniform(start, stop=None):
+    return random.randrange(start, stop=stop)
+
+
+def random_normal(sigma, mu):
+    return random.gauss(sigma, mu)
+
+
+def random_string(size, chars=string.printable):
+    return "".join(random.choice(chars) for _ in range(size))
+
+
+def formatted_date(format_string):
+    pass
