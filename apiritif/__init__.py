@@ -143,9 +143,12 @@ class transaction(object):
     def attach_extra(self, key, value):
         self._extras[key] = value
 
+    def extras(self):
+        return self._extras
+
     def __repr__(self):
-        tmpl = "transaction(name=%r,start_time=%r,duration=%r,success=%r,error_message=%r,extras=%r)"
-        return tmpl % (self.name, self.start_time(), self.duration(), self.success, self.error_message, self._extras)
+        tmpl = "transaction(name=%r, success=%r)"
+        return tmpl % (self.name, self.success)
 
 
 class Event(object):
