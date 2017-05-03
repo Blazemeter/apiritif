@@ -1,6 +1,7 @@
 import random
 import re
 import string
+from datetime import datetime
 
 
 def headers_as_text(headers_dict):
@@ -45,5 +46,55 @@ def random_string(size, chars=string.printable):
     return "".join(random.choice(chars) for _ in range(size))
 
 
+class SimpleDateFormat(object):
+    def __init__(self, format):
+        self.format = format
+
+    @staticmethod
+    def _replacer(match):
+        what = match.group(0)
+        if what.startswith("y") or what.startswith("Y"):
+            if len(what) < 4:
+                return "%y"
+            else:
+                return "%Y"
+        elif what.startswith("M"):
+            return "%m"
+        elif what.startswith("d"):
+            return "%d"
+        elif what.startswith("h"):
+            return "%I"
+        elif what.startswith("H"):
+            return "%H"
+        elif what.startswith("m"):
+            return "%M"
+        elif what.startswith("s"):
+            return "%S"
+        elif what.startswith("S"):
+            return what
+        elif what.startswith("E"):
+            if len("E") <= 3:
+                return "%a"
+            else:
+                return "%A"
+        elif what.startswith("D"):
+            return "%j"
+        elif what.startswith("w"):
+            return "%U"
+        elif what.startswith("a"):
+            return "%p"
+        elif what.startswith("z"):
+            return "%z"
+        elif what.startswith("Z"):
+            return "%Z"
+
+    def format_datetime(self, datetime):
+        letters = "yYMdhHmsSEDwazZ"  # TODO: moar
+        regex = "(" + "|".join(letter + "+" for letter in letters) + ")"
+        strftime_fmt = re.sub(regex, self._replacer, self.format)
+        return datetime.strftime(strftime_fmt)
+
+
 def formatted_date(format_string):
-    pass
+    formatter = SimpleDateFormat(format_string)
+    return formatter.format_datetime(datetime.now())
