@@ -19,7 +19,7 @@ from setuptools import setup
 setup(
     name="apiritif",
     packages=['apiritif'],
-    version="0.2",
+    version="0.3",
     description='Python framework for API testing',
     license='Apache 2.0',
     platform='any',

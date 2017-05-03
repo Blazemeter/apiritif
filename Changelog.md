@@ -1,8 +1,10 @@
 # Changelog
 
-## 0.3 (next)
+## 0.4 (next)
 
-- allow attaching data and status to `transaction`
+## 0.3 <sup>3 may 2017</sup>
+
+- allow attaching data and status to `transaction` from code
 
 
 ## 0.2 <sup>29 apr 2017</sup>
