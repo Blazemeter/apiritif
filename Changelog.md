@@ -21,3 +21,4 @@
 # Roadmap / Ideas
 
 - have field in response for parsed JSON 
+- handle file upload requests - give sugar 
