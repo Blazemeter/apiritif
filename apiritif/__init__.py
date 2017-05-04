@@ -29,6 +29,7 @@ import requests
 from lxml import etree
 
 from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp
+from apiritif.utilities import *
 
 log = logging.getLogger('apiritif')
 log.setLevel(logging.DEBUG)
