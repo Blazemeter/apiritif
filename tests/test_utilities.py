@@ -29,6 +29,6 @@ class TestUtilities(unittest.TestCase):
                 self.assertIn(char, random_hex)
 
     def test_format_date(self):
-        timestamp = datetime(2010, 12, 19, 20, 05, 30)
+        timestamp = datetime(2010, 12, 19, 20, 5, 30)
         formatted = utilities.format_date("dd/MM/yyyy HH:mm:ss", timestamp)
         self.assertEqual("19/12/2010 20:05:30", formatted)
