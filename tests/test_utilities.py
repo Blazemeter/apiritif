@@ -34,6 +34,6 @@ class TestUtilities(unittest.TestCase):
         self.assertEqual("19/12/2010 20:05:30", formatted)
 
     def test_format_date_epoch(self):
-        timestamp = datetime(2010, 12, 19, 20, 5, 30, 100000)
+        timestamp = datetime.fromtimestamp(1292789130)
         formatted = utilities.format_date(datetime_obj=timestamp)
-        self.assertEqual("1292781930100", formatted)
+        self.assertEqual("1292789130000", formatted)
