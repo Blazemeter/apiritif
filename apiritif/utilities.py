@@ -25,7 +25,7 @@ def random_uniform(start, stop=None):
     return random.randrange(start, stop=stop)
 
 
-def random_normal(sigma, mu):
+def random_gauss(sigma, mu):
     return random.gauss(sigma, mu)
 
 
