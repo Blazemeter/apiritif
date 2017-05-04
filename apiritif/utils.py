@@ -95,7 +95,7 @@ class SimpleDateFormat(object):
         return datetime.strftime(strftime_fmt)
 
 
-def formatted_date(format_string, datetime_obj=None):
+def format_date(format_string, datetime_obj=None):
     formatter = SimpleDateFormat(format_string)
     datetime_obj = datetime_obj or datetime.now()
     return formatter.format_datetime(datetime_obj)
