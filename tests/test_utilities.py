@@ -12,7 +12,7 @@ class TestUtilities(unittest.TestCase):
 
     def test_random_normal(self):
         for _ in range(1000):
-            random = utilities.random_normal(0, 1)
+            random = utilities.random_gauss(0, 1)
             self.assertTrue(-5 <= random < 5)
 
     def test_random_string(self):
