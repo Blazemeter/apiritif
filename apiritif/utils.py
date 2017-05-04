@@ -44,5 +44,3 @@ def assert_not_regexp(regex, text, match=False, msg=None):
         if re.findall(regex, text):
             msg = msg or "Regex %r unexpectedly found something in text %r" % (regex, shorten(text, 100))
             raise AssertionError(msg)
-
-
