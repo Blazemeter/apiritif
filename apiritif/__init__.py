@@ -18,7 +18,6 @@ limitations under the License.
 import copy
 import inspect
 import logging
-import re
 import time
 from collections import OrderedDict
 from functools import wraps
@@ -56,6 +55,9 @@ class http(object):
         http.log.info("Request: %s %s", method, address)
         msg = "Request: params=%r, headers=%r, cookies=%r, data=%r, json=%r, allow_redirects=%r, timeout=%r"
         http.log.debug(msg, params, headers, cookies, data, json, allow_redirects, timeout)
+
+        if "User-Agent" not in headers:
+            headers["User-Agent"] = "Apiritif"
 
         if session is None:
             session = requests.Session()
