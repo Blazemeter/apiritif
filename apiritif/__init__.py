@@ -56,6 +56,8 @@ class http(object):
         msg = "Request: params=%r, headers=%r, cookies=%r, data=%r, json=%r, allow_redirects=%r, timeout=%r"
         http.log.debug(msg, params, headers, cookies, data, json, allow_redirects, timeout)
 
+        if headers is None:
+            headers = {}
         if "User-Agent" not in headers:
             headers["User-Agent"] = "Apiritif"
 
