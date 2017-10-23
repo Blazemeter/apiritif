@@ -2,6 +2,9 @@
 
 ## 0.4 (next)
 
+- add utility functions: `format_date()`, `random_uniform()`, `random_gauss()` and `random_string()`
+
+
 ## 0.3 <sup>3 may 2017</sup>
 
 - allow attaching data and status to `transaction` from code
