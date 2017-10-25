@@ -76,38 +76,33 @@ class Supervisor(Thread):
         workers.map(spawn_worker, self._concurrency_slicer(worker_count, self.concurrency))
         workers.close()
         workers.join()
+        # TODO: watch the total test duration, if set
 
 
 class Worker(ThreadPool):
-    def __init__(self, concurrency, results_file, tests):
+    def __init__(self, concurrency, results_file, tests, iterations):
         super(Worker, self).__init__(concurrency)
+        self.iterations = iterations
         self.results_file = results_file
         self.tests = tests
 
     def start(self):
-        self.map_async(self.run_nose, (self.tests))
+        params = ((self.results_file, self.tests, self.iterations),) * self._processes
+        self.map(self.run_nose, params)
         self.close()
 
     def run_nose(self, params):
         logging.debug("Starting nose iterations: %s", params)
-        report_file, files, iteration_limit, hold = params
+        report_file, files, iteration_limit = params
+        assert isinstance(files, list)
         argv = [__file__, '-v']
         argv.extend(files)
         argv.extend(['--nocapture', '--exe', '--nologcapture'])
 
-        if iteration_limit == 0:
-            if hold > 0:
-                iteration_limit = sys.maxsize
-            else:
-                iteration_limit = 1
-
-        start_time = int(time.time())
         iteration = 0
         while True:
             nose.run(addplugins=[], argv=argv)
             iteration += 1
-            if 0 < hold < int(time.time()) - start_time:
-                break
             if iteration >= iteration_limit:
                 break
         log.debug("Done nose iterations")
