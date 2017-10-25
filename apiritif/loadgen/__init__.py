@@ -12,92 +12,108 @@ import sys
 import time
 from multiprocessing.pool import ThreadPool
 from optparse import OptionParser
+from threading import Thread
 
 import nose
 
 log = logging.getLogger("loadgen")
 
 
-def supervisor():
+def spawn_worker(params):
+    """
+    This method has to be module level function
+
+    :return:
+    """
+    idx, conc, res_file, tests = params
+    log.info("Adding worker: idx=%s\tconcurrency=%s\tresults=%s", idx, conc, res_file)
+
+    worker = Worker(conc, res_file, tests)
+    worker.start()
+    worker.join()
+
+
+class Supervisor(Thread):
     """
     apiritif-loadgen CLI utility
-        spawns workers, spreads them over time
-        if concurrency < CPU_count: workers=concurrency else workers=CPU_count
-        distribute load among them equally +-1
-        smart delay of subprocess startup to spread ramp-up gracefully (might be responsibility of worker
         overwatch workers, kill them when terminated
         probably reports through stdout log the names of report files
     """
 
-    args, opts = parse_options()
-    log.debug("%s %s", opts, args)
+    def __init__(self, options, args):
+        super(Supervisor, self).__init__(target=self._start_workers)
+        self.setDaemon(True)
+        self.setName(self.__class__.__name__)
 
-    worker_count = min(opts.concurrency, multiprocessing.cpu_count())
-    log.info("Total workers: %s", worker_count)
+        self.concurrency = options.concurrency
+        self.ramp_up = options.ramp_up
+        self.iterations = options.iterations
+        self.hold_for = options.hold_for
 
-    workers = multiprocessing.Pool(processes=worker_count)
-    workers.map(start_worker, concurrency_slicer(worker_count, opts.concurrency, opts, args))
-    workers.close()
-    workers.join()
+        self.result_file_template = options.result_file_template
+        self.tests = args
 
+    def _concurrency_slicer(self, worker_count, concurrency):
+        total_concurrency = 0
+        inc = concurrency / float(worker_count)
+        assert inc >= 1
+        for idx in range(0, worker_count):
+            progress = (idx + 1) * inc
+            conc = int(round(progress - total_concurrency))
+            total_concurrency += conc
+            assert conc > 0
+            assert total_concurrency >= 0
+            log.debug("Idx: %s, concurrency: %s", idx, conc)
+            yield idx, conc, self.result_file_template % idx, self.tests
 
-def start_worker(params):
-    idx, conc, opts, worker_count, args = params
-    res_file = opts.result_file_template % idx
-    log.info("Adding worker: idx=%s\tconcurrency=%s\tresults=%s", idx, conc, res_file)
+        assert total_concurrency == concurrency
 
-    threads = ThreadPool(processes=conc)
-    threads.map(run_nose, ((res_file, args, opts.iterations, opts.hold_for),))
-    threads.close()
-    threads.join()
-    cmd = [
-        '--ramp-up', opts.ramp_up,
-        '--steps', opts.steps,
-        '--worker-index', idx,
-        '--workers-total', worker_count,
-    ]
+    def _start_workers(self):
+        worker_count = min(self.concurrency, multiprocessing.cpu_count())
+        log.info("Total workers: %s", worker_count)
 
-
-def run_nose(params):
-    logging.debug("Starting nose iterations: %s", params)
-    report_file, files, iteration_limit, hold = params
-    argv = [__file__, '-v']
-    argv.extend(files)
-    argv.extend(['--nocapture', '--exe', '--nologcapture'])
-
-    if iteration_limit == 0:
-        if hold > 0:
-            iteration_limit = sys.maxsize
-        else:
-            iteration_limit = 1
-
-    start_time = int(time.time())
-    iteration = 0
-    while True:
-        nose.run(addplugins=[], argv=argv)
-        iteration += 1
-        if 0 < hold < int(time.time()) - start_time:
-            break
-        if iteration >= iteration_limit:
-            break
+        workers = multiprocessing.Pool(processes=worker_count)
+        workers.map(spawn_worker, self._concurrency_slicer(worker_count, self.concurrency))
+        workers.close()
+        workers.join()
 
 
-def concurrency_slicer(worker_count, concurrency, opts, args):
-    total_concurrency = 0
-    inc = concurrency / float(worker_count)
-    assert inc >= 1
-    for idx in range(0, worker_count):
-        progress = (idx + 1) * inc
-        conc = int(round(progress - total_concurrency))
-        total_concurrency += conc
-        assert conc > 0
-        assert total_concurrency >= 0
-        log.debug("Idx: %s, concurrency: %s", idx, conc)
-        yield idx, conc, opts, worker_count, args
+class Worker(ThreadPool):
+    def __init__(self, concurrency, results_file, tests):
+        super(Worker, self).__init__(concurrency)
+        self.results_file = results_file
+        self.tests = tests
 
-    assert total_concurrency == concurrency
-    log.debug("conc sliced")
-    # sys.executable, args
+    def start(self):
+        self.map_async(self.run_nose, (self.tests))
+        self.close()
+
+    def run_nose(self, params):
+        logging.debug("Starting nose iterations: %s", params)
+        report_file, files, iteration_limit, hold = params
+        argv = [__file__, '-v']
+        argv.extend(files)
+        argv.extend(['--nocapture', '--exe', '--nologcapture'])
+
+        if iteration_limit == 0:
+            if hold > 0:
+                iteration_limit = sys.maxsize
+            else:
+                iteration_limit = 1
+
+        start_time = int(time.time())
+        iteration = 0
+        while True:
+            nose.run(addplugins=[], argv=argv)
+            iteration += 1
+            if 0 < hold < int(time.time()) - start_time:
+                break
+            if iteration >= iteration_limit:
+                break
+        log.debug("Done nose iterations")
+
+    def __reduce__(self):
+        raise NotImplementedError()
 
 
 def parse_options():
@@ -116,4 +132,9 @@ def parse_options():
 if __name__ == '__main__':
     # do the subprocess starter utility
     logging.basicConfig(level=logging.DEBUG)
-    supervisor()
+    args1, opts1 = parse_options()
+    log.debug("%s %s", opts1, args1)
+    supervisor = Supervisor(opts1, args1)
+    supervisor.start()
+    while supervisor.isAlive():
+        time.sleep(1)
