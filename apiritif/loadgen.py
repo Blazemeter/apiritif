@@ -25,10 +25,10 @@ def spawn_worker(params):
 
     :return:
     """
-    idx, conc, res_file, tests = params
+    idx, conc, res_file, tests, iterations = params
     log.info("Adding worker: idx=%s\tconcurrency=%s\tresults=%s", idx, conc, res_file)
 
-    worker = Worker(conc, res_file, tests)
+    worker = Worker(conc, res_file, tests, iterations)
     worker.start()
     worker.join()
 
@@ -64,7 +64,7 @@ class Supervisor(Thread):
             assert conc > 0
             assert total_concurrency >= 0
             log.debug("Idx: %s, concurrency: %s", idx, conc)
-            yield idx, conc, self.result_file_template % idx, self.tests
+            yield idx, conc, self.result_file_template % idx, self.tests, self.iterations
 
         assert total_concurrency == concurrency
 
