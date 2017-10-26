@@ -7,6 +7,7 @@ nosetests plugin (might be part of worker)
 """
 
 import copy
+import csv
 import json
 import logging
 import multiprocessing
@@ -80,8 +81,8 @@ class Supervisor(Thread):
 
         workers = multiprocessing.Pool(processes=worker_count)
         workers.map(spawn_worker, self._concurrency_slicer(worker_count, self.concurrency))
-        # workers.close()
-        workers.join(1)
+        workers.close()
+        workers.join()
         # TODO: watch the total test duration, if set
 
 
@@ -105,8 +106,14 @@ class Worker(ThreadPool):
         argv.extend(files)
         argv.extend(['--with-apiritif', '--nocapture', '--exe', '--nologcapture'])
 
-        with ApiritifPlugin(report_file) as plugin:
+        if report_file.lower().endswith(".ldjson"):
+            writer = LDJSONSampleWriter(report_file)
+        else:
+            writer = JTLSampleWriter(report_file)
+
+        with writer:
             iteration = 0
+            plugin = ApiritifPlugin(writer)
             while True:
                 nose.run(addplugins=[plugin], argv=argv)
                 iteration += 1
@@ -118,23 +125,11 @@ class Worker(ThreadPool):
         raise NotImplementedError()
 
 
-# noinspection PyPep8Naming
-class ApiritifPlugin(Plugin):
-    """
-    Saves test results in a format suitable for Taurus.
-    """
-
-    name = 'apiritif'
-    enabled = True
-
+class LDJSONSampleWriter(object):
     def __init__(self, output_file):
-        super(ApiritifPlugin, self).__init__()
+        super(LDJSONSampleWriter, self).__init__()
         self.output_file = output_file
-        self.test_count = 0
-        self.success_count = 0
-        self.current_sample = None
         self.out_stream = None
-        self.apiritif_extractor = ApiritifSampleExtractor()
 
     def __enter__(self):
         self.out_stream = open(self.output_file, "wt", buffering=1)
@@ -142,6 +137,68 @@ class ApiritifPlugin(Plugin):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.out_stream.close()
+
+    def write(self, sample, test_count, success_count):
+        self.out_stream.write("%s\n" % json.dumps(sample.to_dict()))
+        self.out_stream.flush()
+
+        report_pattern = "%s,Total:%d Passed:%d Failed:%d\n"
+        failed_count = test_count - success_count
+        sys.stdout.write(report_pattern % (sample.test_case, test_count, success_count, failed_count))
+        sys.stdout.flush()
+
+
+class JTLSampleWriter(LDJSONSampleWriter):
+    def __init__(self, output_file):
+        super(JTLSampleWriter, self).__init__(output_file)
+
+    def __enter__(self):
+        obj = super(JTLSampleWriter, self).__enter__()
+
+        fieldnames = ["timeStamp", "elapsed", "label", "responseCode", "responseMessage",
+                      "success", "bytes", "allThreads"]
+        self.writer = csv.DictWriter(self.out_stream, fieldnames=fieldnames, dialect=csv.excel)
+        self.writer.writeheader()
+        self.out_stream.flush()
+
+        return obj
+
+    def write(self, sample, test_count, success_count):
+        """
+        :type sample: Sample
+        :type test_count: int
+        :type success_count: int
+        """
+        self.writer.writerow({
+            "timeStamp": int(1000 * sample.start_time),
+            "elapsed": int(1000 * sample.duration),
+            "label": sample.test_suite + "." + sample.test_case,
+
+            "responseCode": "",  # TODO
+            "responseMessage": sample.error_msg,
+            "allThreads": 0,  # TODO
+            "success": "true" if sample.status == "PASSED" else "false",
+        })
+        self.out_stream.flush()
+
+
+# noinspection PyPep8Naming
+class ApiritifPlugin(Plugin):
+    """
+    Saves test results in a format suitable for Taurus.
+    :type sample_writer: LDJSONSampleWriter
+    """
+
+    name = 'apiritif'
+    enabled = True
+
+    def __init__(self, sample_writer):
+        super(ApiritifPlugin, self).__init__()
+        self.sample_writer = sample_writer
+        self.test_count = 0
+        self.success_count = 0
+        self.current_sample = None
+        self.apiritif_extractor = ApiritifSampleExtractor()
 
     def begin(self):
         """
@@ -232,7 +289,21 @@ class ApiritifPlugin(Plugin):
         self.current_sample.status = "PASSED"
         self.success_count += 1
 
-    def process_apiritif_samples(self, sample):
+    def stopTest(self, test):
+        """
+        after the test has been run
+        :param test:
+        :return:
+        """
+        self.current_sample.duration = time.time() - self.current_sample.start_time
+
+        samples_processed = self._process_apiritif_samples(self.current_sample)
+        if not samples_processed:
+            self._process_sample(self.current_sample)
+
+        self.current_sample = None
+
+    def _process_apiritif_samples(self, sample):
         samples_processed = 0
         test_case = sample.test_case
 
@@ -243,40 +314,13 @@ class ApiritifPlugin(Plugin):
         samples = self.apiritif_extractor.parse_recording(recording, sample)
         for sample in samples:
             samples_processed += 1
-            self.test_count += 1
-            self.write_sample(sample)
-            self.write_stdout_report(sample.test_case)
+            self._process_sample(sample)
 
         return samples_processed
 
-    def process_sample(self, sample):
+    def _process_sample(self, sample):
         self.test_count += 1
-        self.write_sample(sample)
-        self.write_stdout_report(sample.test_case)
-
-    def write_sample(self, sample):
-        self.out_stream.write("%s\n" % json.dumps(sample.to_dict()))
-        self.out_stream.flush()
-
-    def write_stdout_report(self, label):
-        report_pattern = "%s,Total:%d Passed:%d Failed:%d\n"
-        failed = self.test_count - self.success_count
-        sys.stdout.write(report_pattern % (label, self.test_count, self.success_count, failed))
-        sys.stdout.flush()
-
-    def stopTest(self, test):
-        """
-        after the test has been run
-        :param test:
-        :return:
-        """
-        self.current_sample.duration = time.time() - self.current_sample.start_time
-
-        samples_processed = self.process_apiritif_samples(self.current_sample)
-        if samples_processed == 0:
-            self.process_sample(self.current_sample)
-
-        self.current_sample = None
+        self.sample_writer.write(sample, self.test_count, self.success_count)
 
 
 class Sample(object):
