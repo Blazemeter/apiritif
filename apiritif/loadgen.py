@@ -128,17 +128,37 @@ class Worker(ThreadPool):
 class LDJSONSampleWriter(object):
     def __init__(self, output_file):
         super(LDJSONSampleWriter, self).__init__()
+        self.concurrency = 0
         self.output_file = output_file
         self.out_stream = None
+        self._samples_queue = multiprocessing.Queue()
+
+        self._writing = False
+        self._writer_thread = Thread(target=self._writer)
+        self._writer_thread.setDaemon(True)
+        self._writer_thread.setName(self.__class__.__name__)
 
     def __enter__(self):
-        self.out_stream = open(self.output_file, "wt", buffering=1)
+        self.out_stream = open(self.output_file, "wt", buffering=0)
+        self._writing = True
+        self._writer_thread.start()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self._writing = False
+        self._writer_thread.join()
         self.out_stream.close()
 
-    def write(self, sample, test_count, success_count):
+    def add(self, sample, test_count, success_count):
+        self._samples_queue.put_nowait((sample, test_count, success_count))
+
+    def _writer(self):
+        while self._writing:
+            while not self._samples_queue.empty():
+                sample, test_count, success_count = self._samples_queue.get(block=True)
+                self._write_sample(sample, test_count, success_count)
+
+    def _write_sample(self, sample, test_count, success_count):
         self.out_stream.write("%s\n" % json.dumps(sample.to_dict()))
         self.out_stream.flush()
 
@@ -156,14 +176,14 @@ class JTLSampleWriter(LDJSONSampleWriter):
         obj = super(JTLSampleWriter, self).__enter__()
 
         fieldnames = ["timeStamp", "elapsed", "label", "responseCode", "responseMessage",
-                      "success", "bytes", "allThreads"]
+                      "success", "allThreads"]
         self.writer = csv.DictWriter(self.out_stream, fieldnames=fieldnames, dialect=csv.excel)
         self.writer.writeheader()
         self.out_stream.flush()
 
         return obj
 
-    def write(self, sample, test_count, success_count):
+    def _write_sample(self, sample, test_count, success_count):
         """
         :type sample: Sample
         :type test_count: int
@@ -172,11 +192,11 @@ class JTLSampleWriter(LDJSONSampleWriter):
         self.writer.writerow({
             "timeStamp": int(1000 * sample.start_time),
             "elapsed": int(1000 * sample.duration),
-            "label": sample.test_suite + "." + sample.test_case,
+            "label": sample.test_case,
 
-            "responseCode": "",  # TODO
+            "responseCode": None,  # TODO
             "responseMessage": sample.error_msg,
-            "allThreads": 0,  # TODO
+            "allThreads": self.concurrency,  # TODO: there will be a problem aggregating concurrency for rare samples
             "success": "true" if sample.status == "PASSED" else "false",
         })
         self.out_stream.flush()
@@ -206,7 +226,7 @@ class ApiritifPlugin(Plugin):
         open descriptor here
         :return:
         """
-        pass
+        self.sample_writer.concurrency += 1
 
     def finalize(self, result):
         """
@@ -214,6 +234,7 @@ class ApiritifPlugin(Plugin):
         :param result:
         :return:
         """
+        self.sample_writer.concurrency -= 1
         del result
         if not self.test_count:
             raise RuntimeError("Nothing to test.")
@@ -307,7 +328,7 @@ class ApiritifPlugin(Plugin):
         samples_processed = 0
         test_case = sample.test_case
 
-        recording = apiritif.recorder.get_recording(test_case)
+        recording = apiritif.recorder.get_recording(test_case, clear=True)
         if not recording:
             return samples_processed
 
@@ -320,7 +341,7 @@ class ApiritifPlugin(Plugin):
 
     def _process_sample(self, sample):
         self.test_count += 1
-        self.sample_writer.write(sample, self.test_count, self.success_count)
+        self.sample_writer.add(sample, self.test_count, self.success_count)
 
 
 class Sample(object):
