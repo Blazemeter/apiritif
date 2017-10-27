@@ -143,7 +143,7 @@ class LDJSONSampleWriter(object):
         self._writer_thread.setName(self.__class__.__name__)
 
     def __enter__(self):
-        self.out_stream = open(self.output_file, "wt", buffering=0)
+        self.out_stream = open(self.output_file, "wt")
         self._writing = True
         self._writer_thread.start()
         return self
