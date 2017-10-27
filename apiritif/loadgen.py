@@ -32,10 +32,10 @@ def spawn_worker(params):
 
     :return:
     """
-    idx, conc, res_file, tests, iterations = params
+    idx, conc, res_file, tests, iterations, ramp_up, steps = params
     log.info("Adding worker: idx=%s\tconcurrency=%s\tresults=%s", idx, conc, res_file)
 
-    worker = Worker(conc, res_file, tests, iterations)
+    worker = Worker(conc, res_file, tests, iterations, ramp_up, steps)
     worker.start()
     worker.join()
 
@@ -54,6 +54,7 @@ class Supervisor(Thread):
 
         self.concurrency = options.concurrency
         self.ramp_up = options.ramp_up
+        self.steps = options.steps
         self.iterations = options.iterations
         self.hold_for = options.hold_for
 
@@ -61,6 +62,7 @@ class Supervisor(Thread):
         self.tests = args
 
     def _concurrency_slicer(self, worker_count, concurrency):
+        params = (self.tests, self.iterations, self.ramp_up, self.steps)
         total_concurrency = 0
         inc = concurrency / float(worker_count)
         assert inc >= 1
@@ -71,7 +73,7 @@ class Supervisor(Thread):
             assert conc > 0
             assert total_concurrency >= 0
             log.debug("Idx: %s, concurrency: %s", idx, conc)
-            yield idx, conc, self.result_file_template % idx, self.tests, self.iterations
+            yield (idx, conc, self.result_file_template % idx,) + params
 
         assert total_concurrency == concurrency
 
@@ -87,11 +89,13 @@ class Supervisor(Thread):
 
 
 class Worker(ThreadPool):
-    def __init__(self, concurrency, results_file, tests, iterations):
+    def __init__(self, concurrency, results_file, tests, iterations, ramp_up, steps):
         super(Worker, self).__init__(concurrency)
         self.iterations = iterations
         self.results_file = results_file
         self.tests = tests
+        self.ramp_up = ramp_up
+        self.steps = steps
 
     def start(self):
         params = ((self.results_file, self.tests, self.iterations),) * self._processes
