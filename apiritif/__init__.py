@@ -27,8 +27,8 @@ import jsonpath_rw
 import requests
 from lxml import etree
 
-from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp
 from apiritif.utilities import *
+from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp
 
 log = logging.getLogger('apiritif')
 log.setLevel(logging.DEBUG)
@@ -257,11 +257,11 @@ class _EventRecorder(object):
                 return func_name
         return None
 
-    def get_recording(self, label=None):
+    def get_recording(self, label=None, clear=False):
         label = label or self._get_current_test_case_name() or ""
         if label not in self._recording:
             self._recording[label] = []
-        return self._recording[label]
+        return self._recording.pop(label) if clear else self._recording[label]
 
     def record_event(self, event):
         self.log.debug("Recording event %r", event)
