@@ -32,7 +32,8 @@ def spawn_worker(params):
 
     :type params: Params
     """
-    log.info("Adding worker: idx=%s\tconcurrency=%s\tresults=%s", params.index, params.concurrency, params.results_file)
+    log.info("Adding worker: idx=%s\tconcurrency=%s\tresults=%s", params.worker_index, params.concurrency,
+             params.results_file)
 
     worker = Worker(params)
     worker.start()
@@ -42,7 +43,7 @@ def spawn_worker(params):
 class Params(object):
     def __init__(self):
         super(Params, self).__init__()
-        self.index = None
+        self.worker_index = None
         self.worker_count = None
         self.results_file = None
 
@@ -89,7 +90,7 @@ class Supervisor(Thread):
             log.debug("Idx: %s, concurrency: %s", idx, conc)
 
             params = Params()
-            params.index = idx
+            params.worker_index = idx
             params.concurrency = conc
             params.results_file = self.result_file_template % idx
             params.worker_count = worker_count
@@ -154,9 +155,10 @@ class Worker(ThreadPool):
         raise NotImplementedError()
 
     def _get_thread_params(self):
-        for thr_idx in range(self._processes):
+        offset = self.params.worker_index * self.params.ramp_up / float(self.params.worker_count) / self.params.concurrency
+        for thr_idx in range(self.params.concurrency):
             delay = thr_idx * float(self.params.ramp_up) / self.params.concurrency
-            yield self.params.results_file, self.params.tests, self.params.iterations, delay
+            yield self.params.results_file, self.params.tests, self.params.iterations, delay + offset
 
 
 class LDJSONSampleWriter(object):
