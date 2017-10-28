@@ -155,10 +155,16 @@ class Worker(ThreadPool):
         raise NotImplementedError()
 
     def _get_thread_params(self):
-        offset = self.params.worker_index * self.params.ramp_up / float(self.params.worker_count) / self.params.concurrency
+        if not self.params.steps or self.params.steps < 0:
+            self.params.steps = sys.maxsize
+
         for thr_idx in range(self.params.concurrency):
-            delay = thr_idx * float(self.params.ramp_up) / self.params.concurrency
-            yield self.params.results_file, self.params.tests, self.params.iterations, delay + offset
+            ramp_up_per_thread = self.params.ramp_up / self.params.concurrency
+            offset = self.params.worker_index * ramp_up_per_thread / float(self.params.worker_count)
+            delay = offset + thr_idx * float(self.params.ramp_up) / self.params.concurrency
+            divider = self.params.ramp_up / self.params.steps
+            delay -= delay % divider if divider else 0
+            yield self.params.results_file, self.params.tests, self.params.iterations, delay
 
 
 class LDJSONSampleWriter(object):

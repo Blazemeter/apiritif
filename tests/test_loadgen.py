@@ -40,10 +40,11 @@ class TestLoadGen(TestCase):
         print(outfile.name)
 
         params1 = Params()
-        params1.concurrency = 5
+        params1.concurrency = 50
         params1.results_file = outfile.name
         params1.tests = dummy_tests
         params1.ramp_up = 60
+        params1.steps = 5
 
         params1.worker_count = 2
         params1.worker_index = 0
@@ -60,4 +61,22 @@ class TestLoadGen(TestCase):
         print(res2)
         self.assertEquals(params2.concurrency, len(res2))
 
-        print(sorted(res1+res2))
+        print(sorted(res1 + res2))
+
+    def test_ramp_up2(self):
+        outfile = tempfile.NamedTemporaryFile()
+        print(outfile.name)
+
+        params1 = Params()
+        params1.concurrency = 50
+        params1.results_file = outfile.name
+        params1.tests = dummy_tests
+        params1.ramp_up = 60
+
+        params1.worker_count = 1
+        params1.worker_index = 0
+
+        worker1 = Worker(params1)
+        res1 = [x[3] for x in worker1._get_thread_params()]
+        print(res1)
+        self.assertEquals(params1.concurrency, len(res1))
