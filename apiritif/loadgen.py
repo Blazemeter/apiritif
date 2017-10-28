@@ -30,14 +30,29 @@ def spawn_worker(params):
     """
     This method has to be module level function
 
-    :return:
+    :type params: Params
     """
-    idx, conc, res_file, tests, iterations, ramp_up, steps = params
-    log.info("Adding worker: idx=%s\tconcurrency=%s\tresults=%s", idx, conc, res_file)
+    log.info("Adding worker: idx=%s\tconcurrency=%s\tresults=%s", params.index, params.concurrency, params.results_file)
 
-    worker = Worker(conc, res_file, tests, iterations, ramp_up, steps)
+    worker = Worker(params)
     worker.start()
     worker.join()
+
+
+class Params(object):
+    def __init__(self):
+        super(Params, self).__init__()
+        self.index = None
+        self.worker_count = None
+        self.results_file = None
+
+        self.concurrency = 1
+        self.iterations = 1
+        self.ramp_up = 0
+        self.steps = 0
+        self.hold_for = 0
+
+        self.tests = None
 
 
 class Supervisor(Thread):
@@ -62,7 +77,6 @@ class Supervisor(Thread):
         self.tests = args
 
     def _concurrency_slicer(self, worker_count, concurrency):
-        params = (self.tests, self.iterations, self.ramp_up, self.steps)
         total_concurrency = 0
         inc = concurrency / float(worker_count)
         assert inc >= 1
@@ -73,7 +87,18 @@ class Supervisor(Thread):
             assert conc > 0
             assert total_concurrency >= 0
             log.debug("Idx: %s, concurrency: %s", idx, conc)
-            yield (idx, conc, self.result_file_template % idx,) + params
+
+            params = Params()
+            params.index = idx
+            params.concurrency = conc
+            params.results_file = self.result_file_template % idx
+            params.worker_count = worker_count
+            params.tests = self.tests
+            params.iterations = self.iterations
+            params.ramp_up = self.ramp_up
+            params.steps = self.steps
+
+            yield params
 
         assert total_concurrency == concurrency
 
@@ -89,26 +114,26 @@ class Supervisor(Thread):
 
 
 class Worker(ThreadPool):
-    def __init__(self, concurrency, results_file, tests, iterations, ramp_up, steps):
-        super(Worker, self).__init__(concurrency)
-        self.iterations = iterations
-        self.results_file = results_file
-        self.tests = tests
-        self.ramp_up = ramp_up
-        self.steps = steps
+    def __init__(self, params):
+        """
+        :type params: Params
+        """
+        super(Worker, self).__init__(params.concurrency)
+        self.params = params
 
     def start(self):
-        params = ((self.results_file, self.tests, self.iterations),) * self._processes
-        self.map(self.run_nose, params)
+        self.map(self.run_nose, self._get_thread_params())
         self.close()
 
     def run_nose(self, params):
         logging.debug("Starting nose iterations: %s", params)
-        report_file, files, iteration_limit = params
+        report_file, files, iteration_limit, delay = params
         assert isinstance(files, list)
         argv = [__file__, '-v']
         argv.extend(files)
         argv.extend(['--with-apiritif', '--nocapture', '--exe', '--nologcapture'])
+
+        time.sleep(delay)
 
         if report_file.lower().endswith(".ldjson"):
             writer = LDJSONSampleWriter(report_file)
@@ -127,6 +152,11 @@ class Worker(ThreadPool):
 
     def __reduce__(self):
         raise NotImplementedError()
+
+    def _get_thread_params(self):
+        for thr_idx in range(self._processes):
+            delay = thr_idx * float(self.params.ramp_up) / self.params.concurrency
+            yield self.params.results_file, self.params.tests, self.params.iterations, delay
 
 
 class LDJSONSampleWriter(object):
@@ -179,8 +209,7 @@ class JTLSampleWriter(LDJSONSampleWriter):
     def __enter__(self):
         obj = super(JTLSampleWriter, self).__enter__()
 
-        fieldnames = ["timeStamp", "elapsed", "label", "responseCode", "responseMessage",
-                      "success", "allThreads"]
+        fieldnames = ["timeStamp", "elapsed", "label", "responseCode", "responseMessage", "success", "allThreads"]
         self.writer = csv.DictWriter(self.out_stream, fieldnames=fieldnames, dialect=csv.excel)
         self.writer.writeheader()
         self.out_stream.flush()
@@ -524,9 +553,9 @@ def parse_options():
     parser = OptionParser()
     parser.add_option('', '--concurrency', action='store', type="int", default=1)
     parser.add_option('', '--iterations', action='store', type="int", default=sys.maxsize)
-    parser.add_option('', '--ramp-up', action='store', type="int", default=0)
+    parser.add_option('', '--ramp-up', action='store', type="float", default=0)
     parser.add_option('', '--steps', action='store', type="int", default=sys.maxsize)
-    parser.add_option('', '--hold-for', action='store', type="int", default=0)
+    parser.add_option('', '--hold-for', action='store', type="float", default=0)
     parser.add_option('', '--result-file-template', action='store', type="str", default="result-%s.csv")  # TODO?
     parser.add_option('', '--verbose', action='store_true', default=False)
     opts, args = parser.parse_args()
