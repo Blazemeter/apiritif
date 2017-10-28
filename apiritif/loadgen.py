@@ -43,8 +43,8 @@ def spawn_worker(params):
 class Params(object):
     def __init__(self):
         super(Params, self).__init__()
-        self.worker_index = None
-        self.worker_count = None
+        self.worker_index = 0
+        self.worker_count = 1
         self.results_file = None
 
         self.concurrency = 1
@@ -158,12 +158,12 @@ class Worker(ThreadPool):
         if not self.params.steps or self.params.steps < 0:
             self.params.steps = sys.maxsize
 
+        step_granularity = self.params.ramp_up / self.params.steps
+        ramp_up_per_thread = self.params.ramp_up / self.params.concurrency
         for thr_idx in range(self.params.concurrency):
-            ramp_up_per_thread = self.params.ramp_up / self.params.concurrency
             offset = self.params.worker_index * ramp_up_per_thread / float(self.params.worker_count)
             delay = offset + thr_idx * float(self.params.ramp_up) / self.params.concurrency
-            divider = self.params.ramp_up / self.params.steps
-            delay -= delay % divider if divider else 0
+            delay -= delay % step_granularity if step_granularity else 0
             yield self.params.results_file, self.params.tests, self.params.iterations, delay
 
 
