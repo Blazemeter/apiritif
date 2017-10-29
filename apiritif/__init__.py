@@ -31,8 +31,8 @@ from apiritif.utilities import *
 from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp
 
 log = logging.getLogger('apiritif')
-log.setLevel(logging.DEBUG)
-log.addHandler(logging.NullHandler())
+#log.setLevel(logging.DEBUG)
+#log.addHandler(logging.NullHandler())
 
 
 class http(object):

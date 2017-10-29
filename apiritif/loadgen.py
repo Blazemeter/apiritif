@@ -1,5 +1,4 @@
 """
-This is a toplevel package of Apiritif tool
 
 Copyright 2017 BlazeMeter Inc.
 
@@ -20,6 +19,7 @@ import csv
 import json
 import logging
 import multiprocessing
+import os
 import sys
 import time
 import traceback
@@ -27,8 +27,10 @@ from multiprocessing.pool import ThreadPool
 from optparse import OptionParser
 from threading import Thread
 
-import nose
+from nose.config import Config, all_config_files
+from nose.core import TestProgram
 from nose.plugins import Plugin
+from nose.plugins.manager import DefaultPluginManager
 
 import apiritif
 from apiritif.samples import ApiritifSampleExtractor, Sample
@@ -139,7 +141,7 @@ class Worker(ThreadPool):
         assert isinstance(params.tests, list)
         argv = [__file__, '-v']
         argv.extend(params.tests)
-        argv.extend(['--with-apiritif', '--nocapture', '--exe', '--nologcapture'])
+        argv.extend(['--with-apiritif', '--nocapture', '--exe', '--nologcapture', '--verbosity', '0'])
 
         start_time = time.time()
         time.sleep(params.delay)
@@ -153,8 +155,11 @@ class Worker(ThreadPool):
             iteration = 0
             plugin = ApiritifPlugin(writer)
 
+            config = Config(env=os.environ, files=all_config_files(), plugins=DefaultPluginManager())
+            config.stream = open(os.devnull, "w")  # FIXME: use "with", allow writing to file/log
+
             while True:
-                nose.run(addplugins=[plugin], argv=argv)
+                test_program = TestProgram(exit=False, argv=argv, config=config, addplugins=[plugin])
 
                 iteration += 1
                 if iteration >= params.iterations:
@@ -251,7 +256,7 @@ class JTLSampleWriter(LDJSONSampleWriter):
             "elapsed": int(1000 * sample.duration),
             "label": sample.test_case,
 
-            "responseCode": None,  # TODO
+            "responseCode": None,  # TODO: how to get this for last HTTP request?
             "responseMessage": sample.error_msg,
             "allThreads": self.concurrency,  # TODO: there will be a problem aggregating concurrency for rare samples
             "success": "true" if sample.status == "PASSED" else "false",
@@ -428,7 +433,7 @@ def cmdline_to_params():
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
 
     supervisor = Supervisor(cmdline_to_params())
     supervisor.start()
