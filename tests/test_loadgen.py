@@ -53,14 +53,14 @@ class TestLoadGen(TestCase):
         params1.worker_index = 0
 
         worker1 = Worker(params1)
-        res1 = [x[3] for x in worker1._get_thread_params()]
+        res1 = [x.delay for x in worker1._get_thread_params()]
         print(res1)
         self.assertEquals(params1.concurrency, len(res1))
 
         params2 = copy.deepcopy(params1)
         params2.worker_index = 1
         worker2 = Worker(params2)
-        res2 = [x[3] for x in worker2._get_thread_params()]
+        res2 = [x.delay for x in worker2._get_thread_params()]
         print(res2)
         self.assertEquals(params2.concurrency, len(res2))
 
@@ -80,6 +80,6 @@ class TestLoadGen(TestCase):
         params1.worker_index = 0
 
         worker1 = Worker(params1)
-        res1 = [x[3] for x in worker1._get_thread_params()]
+        res1 = [x.delay for x in worker1._get_thread_params()]
         print(res1)
         self.assertEquals(params1.concurrency, len(res1))

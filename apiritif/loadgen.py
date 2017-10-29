@@ -59,6 +59,8 @@ class Params(object):
         self.worker_count = 1
         self.report = None
 
+        self.delay = 0
+
         self.concurrency = 1
         self.iterations = 1
         self.ramp_up = 0
@@ -109,10 +111,11 @@ class Supervisor(Thread):
         log.info("Total workers: %s", self.params.worker_count)
 
         workers = multiprocessing.Pool(processes=self.params.worker_count)
-        workers.map(spawn_worker, self._concurrency_slicer())
+        args = list(self._concurrency_slicer())
+        workers.map(spawn_worker, args)
         workers.close()
         workers.join()
-        # TODO: watch the total test duration, if set
+        # TODO: watch the total test duration, if set, 'cause iteration might last very long
 
 
 class Worker(ThreadPool):
@@ -124,33 +127,43 @@ class Worker(ThreadPool):
         self.params = params
 
     def start(self):
-        self.map(self.run_nose, self._get_thread_params())
+        params = list(self._get_thread_params())
+        self.map(self.run_nose, params)
         self.close()
 
     def run_nose(self, params):
-        logging.debug("Starting nose iterations: %s", params)
-        report_file, files, iteration_limit, delay = params
-        assert isinstance(files, list)
+        """
+        :type params: Params
+        """
+        log.debug("[%s] Starting nose iterations: %s", params.worker_index, params)
+        assert isinstance(params.tests, list)
         argv = [__file__, '-v']
-        argv.extend(files)
+        argv.extend(params.tests)
         argv.extend(['--with-apiritif', '--nocapture', '--exe', '--nologcapture'])
 
-        time.sleep(delay)
+        start_time = time.time()
+        time.sleep(params.delay)
 
-        if report_file.lower().endswith(".ldjson"):
-            writer = LDJSONSampleWriter(report_file)
+        if params.report.lower().endswith(".ldjson"):
+            writer = LDJSONSampleWriter(params.report)
         else:
-            writer = JTLSampleWriter(report_file)
+            writer = JTLSampleWriter(params.report)
 
         with writer:
             iteration = 0
             plugin = ApiritifPlugin(writer)
+
             while True:
                 nose.run(addplugins=[plugin], argv=argv)
+
                 iteration += 1
-                if iteration >= iteration_limit:
+                if iteration >= params.iterations:
+                    log.debug("[%s] iteration limit reached: %s", params.worker_index, params.iterations)
                     break
-        log.debug("Done nose iterations")
+
+                if 0 < self.params.hold_for < (time.time() - start_time):
+                    log.debug("[%s] duration limit reached: %s", params.worker_index, params.hold_for)
+                    break
 
     def __reduce__(self):
         raise NotImplementedError()
@@ -165,7 +178,9 @@ class Worker(ThreadPool):
             offset = self.params.worker_index * ramp_up_per_thread / float(self.params.worker_count)
             delay = offset + thr_idx * float(self.params.ramp_up) / self.params.concurrency
             delay -= delay % step_granularity if step_granularity else 0
-            yield self.params.report, self.params.tests, self.params.iterations, delay
+            params = copy.deepcopy(self.params)
+            params.delay = delay
+            yield params
 
 
 class LDJSONSampleWriter(object):
