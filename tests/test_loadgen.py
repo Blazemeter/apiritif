@@ -3,10 +3,9 @@ import logging
 import os
 import tempfile
 import time
-from collections import namedtuple
 from unittest import TestCase
 
-from apiritif.loadgen import Worker, Supervisor, Params
+from apiritif.loadgen import Worker, Params, Supervisor
 
 dummy_tests = [os.path.join(os.path.dirname(__file__), "test_dummy.py")]
 
@@ -19,7 +18,7 @@ class TestLoadGen(TestCase):
         print(outfile.name)
         params = Params()
         params.concurrency = 2
-        params.results_file = outfile.name
+        params.report = outfile.name
         params.tests = dummy_tests
 
         worker = Worker(params)
@@ -28,8 +27,12 @@ class TestLoadGen(TestCase):
 
     def test_supervisor(self):
         outfile = tempfile.NamedTemporaryFile()
-        opts = namedtuple("opts", ["concurrency", "ramp_up", "iterations", "hold_for", "result_file_template", "steps"])
-        sup = Supervisor(opts(2, 0, 5, 0, outfile.name + "%s", 0), dummy_tests)
+        params = Params()
+        params.tests = dummy_tests
+        params.report = outfile.name + "%s"
+        params.concurrency = 2
+        params.iterations = 5
+        sup = Supervisor(params)
         sup.start()
         while sup.isAlive():
             time.sleep(1)
@@ -41,7 +44,7 @@ class TestLoadGen(TestCase):
 
         params1 = Params()
         params1.concurrency = 50
-        params1.results_file = outfile.name
+        params1.report = outfile.name
         params1.tests = dummy_tests
         params1.ramp_up = 60
         params1.steps = 5
@@ -69,7 +72,7 @@ class TestLoadGen(TestCase):
 
         params1 = Params()
         params1.concurrency = 50
-        params1.results_file = outfile.name
+        params1.report = outfile.name
         params1.tests = dummy_tests
         params1.ramp_up = 60
 

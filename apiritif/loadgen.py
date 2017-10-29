@@ -1,11 +1,20 @@
 """
-destination file format - how to work in functional (LDJSON) vs performance mode (CSV? JTL?)
-logging approach - is STDOUT/STDERR enough? how to minimize files written?
-how to implement hits/s control/shape?
+This is a toplevel package of Apiritif tool
 
-nosetests plugin (might be part of worker)
+Copyright 2017 BlazeMeter Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 """
-
 import copy
 import csv
 import json
@@ -22,9 +31,12 @@ import nose
 from nose.plugins import Plugin
 
 import apiritif
+from apiritif.samples import ApiritifSampleExtractor, Sample
 
 log = logging.getLogger("loadgen")
 
+
+# TODO how to implement hits/s control/shape?
 
 def spawn_worker(params):
     """
@@ -33,7 +45,7 @@ def spawn_worker(params):
     :type params: Params
     """
     log.info("Adding worker: idx=%s\tconcurrency=%s\tresults=%s", params.worker_index, params.concurrency,
-             params.results_file)
+             params.report)
 
     worker = Worker(params)
     worker.start()
@@ -45,7 +57,7 @@ class Params(object):
         super(Params, self).__init__()
         self.worker_index = 0
         self.worker_count = 1
-        self.results_file = None
+        self.report = None
 
         self.concurrency = 1
         self.iterations = 1
@@ -61,27 +73,21 @@ class Supervisor(Thread):
     apiritif-loadgen CLI utility
         overwatch workers, kill them when terminated
         probably reports through stdout log the names of report files
+    :type params: Params
     """
 
-    def __init__(self, options, args):
+    def __init__(self, params):
         super(Supervisor, self).__init__(target=self._start_workers)
         self.setDaemon(True)
         self.setName(self.__class__.__name__)
 
-        self.concurrency = options.concurrency
-        self.ramp_up = options.ramp_up
-        self.steps = options.steps
-        self.iterations = options.iterations
-        self.hold_for = options.hold_for
+        self.params = params
 
-        self.result_file_template = options.result_file_template
-        self.tests = args
-
-    def _concurrency_slicer(self, worker_count, concurrency):
+    def _concurrency_slicer(self, ):
         total_concurrency = 0
-        inc = concurrency / float(worker_count)
+        inc = self.params.concurrency / float(self.params.worker_count)
         assert inc >= 1
-        for idx in range(0, worker_count):
+        for idx in range(0, self.params.worker_count):
             progress = (idx + 1) * inc
             conc = int(round(progress - total_concurrency))
             total_concurrency += conc
@@ -89,26 +95,21 @@ class Supervisor(Thread):
             assert total_concurrency >= 0
             log.debug("Idx: %s, concurrency: %s", idx, conc)
 
-            params = Params()
+            params = copy.deepcopy(self.params)
             params.worker_index = idx
             params.concurrency = conc
-            params.results_file = self.result_file_template % idx
-            params.worker_count = worker_count
-            params.tests = self.tests
-            params.iterations = self.iterations
-            params.ramp_up = self.ramp_up
-            params.steps = self.steps
+            params.report = self.params.report % idx
+            params.worker_count = self.params.worker_count
 
             yield params
 
-        assert total_concurrency == concurrency
+        assert total_concurrency == self.params.concurrency
 
     def _start_workers(self):
-        worker_count = min(self.concurrency, multiprocessing.cpu_count())
-        log.info("Total workers: %s", worker_count)
+        log.info("Total workers: %s", self.params.worker_count)
 
-        workers = multiprocessing.Pool(processes=worker_count)
-        workers.map(spawn_worker, self._concurrency_slicer(worker_count, self.concurrency))
+        workers = multiprocessing.Pool(processes=self.params.worker_count)
+        workers.map(spawn_worker, self._concurrency_slicer())
         workers.close()
         workers.join()
         # TODO: watch the total test duration, if set
@@ -164,7 +165,7 @@ class Worker(ThreadPool):
             offset = self.params.worker_index * ramp_up_per_thread / float(self.params.worker_count)
             delay = offset + thr_idx * float(self.params.ramp_up) / self.params.concurrency
             delay -= delay % step_granularity if step_granularity else 0
-            yield self.params.results_file, self.params.tests, self.params.iterations, delay
+            yield self.params.report, self.params.tests, self.params.iterations, delay
 
 
 class LDJSONSampleWriter(object):
@@ -385,179 +386,7 @@ class ApiritifPlugin(Plugin):
         self.sample_writer.add(sample, self.test_count, self.success_count)
 
 
-class Sample(object):
-    def __init__(self, test_suite=None, test_case=None, status=None, start_time=None, duration=None,
-                 error_msg=None, error_trace=None):
-        self.test_suite = test_suite  # test label (test method name)
-        self.test_case = test_case  # test suite name (class name)
-        self.status = status  # test status (PASSED/FAILED/BROKEN/SKIPPED)
-        self.start_time = start_time  # test start time
-        self.duration = duration  # test duration
-        self.error_msg = error_msg  # short error message
-        self.error_trace = error_trace  # traceback of a failure
-        self.extras = {}  # extra info: ('file' - location, 'full_name' - full qualified name, 'decsription' - docstr)
-        self.subsamples = []  # subsamples list
-
-    def add_subsample(self, sample):
-        self.subsamples.append(sample)
-
-    def to_dict(self):
-        # type: () -> dict
-        return {
-            "test_suite": self.test_suite,
-            "test_case": self.test_case,
-            "status": self.status,
-            "start_time": self.start_time,
-            "duration": self.duration,
-            "error_msg": self.error_msg,
-            "error_trace": self.error_trace,
-            "extras": self.extras,
-            "subsamples": [sample.to_dict() for sample in self.subsamples],
-        }
-
-    def __repr__(self):
-        return "Sample(%r)" % self.to_dict()
-
-
-class ApiritifSampleExtractor(object):
-    def parse_recording(self, recording, test_case_sample):
-        """
-
-        :type recording: list[apiritif.Event]
-        :type test_case_sample: Sample
-        :rtype: list[Sample]
-        """
-        test_case_name = test_case_sample.test_case
-        active_transactions = [test_case_sample]
-        response_map = {}  # response -> sample
-        transactions_present = False
-        for item in recording:
-            if isinstance(item, apiritif.Request):
-                sample = Sample(
-                    test_suite=test_case_name,
-                    test_case=item.address,
-                    status="PASSED",
-                    start_time=item.timestamp,
-                    duration=item.response.elapsed.total_seconds(),
-                )
-                extras = self._extract_extras(item)
-                if extras:
-                    sample.extras.update(extras)
-                response_map[item.response] = sample
-                active_transactions[-1].add_subsample(sample)
-            elif isinstance(item, apiritif.TransactionStarted):
-                transactions_present = True
-                tran_sample = Sample(test_case=item.transaction_name, test_suite=test_case_name)
-                active_transactions.append(tran_sample)
-            elif isinstance(item, apiritif.TransactionEnded):
-                tran = item.transaction
-                tran_sample = active_transactions.pop()
-                assert tran_sample.test_case == item.transaction_name
-                tran_sample.start_time = tran.start_time()
-                tran_sample.duration = tran.duration()
-                if tran.success is None:
-                    tran_sample.status = "PASSED"
-                    for sample in tran_sample.subsamples:
-                        if sample.status in ("FAILED", "BROKEN"):
-                            tran_sample.status = sample.status
-                            tran_sample.error_msg = sample.error_msg
-                            tran_sample.error_trace = sample.error_trace
-                elif tran.success:
-                    tran_sample.status = "PASSED"
-                else:
-                    tran_sample.status = "FAILED"
-                    tran_sample.error_msg = tran.error_message
-
-                extras = copy.deepcopy(tran.extras())
-                extras.update(self._extras_dict(tran.name, "", tran.response_code(), "", {},
-                                                tran.response() or "", len(tran.response() or ""),
-                                                tran.duration(), tran.request() or "", {}, {}))
-                tran_sample.extras = extras
-
-                active_transactions[-1].add_subsample(tran_sample)
-            elif isinstance(item, apiritif.Assertion):
-                sample = response_map.get(item.response, None)
-                if sample is None:
-                    raise ValueError("Found assertion for unknown response")
-                if "assertions" not in sample.extras:
-                    sample.extras["assertions"] = []
-                sample.extras["assertions"].append({
-                    "name": item.name,
-                    "isFailed": False,
-                    "failureMessage": "",
-                })
-            elif isinstance(item, apiritif.AssertionFailure):
-                sample = response_map.get(item.response, None)
-                if sample is None:
-                    raise ValueError("Found assertion failure for unknown response")
-                for ass in sample.extras.get("assertions", []):
-                    if ass["name"] == item.name:
-                        ass["isFailed"] = True
-                        ass["failureMessage"] = item.failure_message
-                        sample.status = "FAILED"
-                        sample.error_msg = item.failure_message
-            else:
-                raise ValueError("Unknown kind of event in apiritif recording: %s" % item)
-
-        if len(active_transactions) != 1:
-            # TODO: shouldn't we auto-balance them?
-            raise ValueError("Can't parse apiritif recordings: unbalanced transactions")
-
-        toplevel_sample = active_transactions.pop()
-
-        # do not capture toplevel sample if transactions were used
-        if transactions_present:
-            return toplevel_sample.subsamples
-        else:
-            return [toplevel_sample]
-
-    @staticmethod
-    def _headers_from_dict(headers):
-        return "\n".join(key + ": " + value for key, value in headers.items())
-
-    @staticmethod
-    def _cookies_from_dict(cookies):
-        return "; ".join(key + "=" + value for key, value in cookies.items())
-
-    def _extras_dict(self, url, method, status_code, reason, response_headers, response_body, response_size,
-                     response_time, request_body, request_cookies, request_headers):
-        record = {
-            'responseCode': status_code,
-            'responseMessage': reason,
-            'responseTime': response_time,
-            'connectTime': 0,
-            'latency': 0,
-            'responseSize': response_size,
-            'requestSize': 0,
-            'requestMethod': method,
-            'requestURI': url,
-            'assertions': [],  # will be filled later
-            'responseBody': response_body,
-            'requestBody': request_body,
-            'requestCookies': request_cookies,
-            'requestHeaders': request_headers,
-            'responseHeaders': response_headers,
-        }
-        record["requestCookiesRaw"] = self._cookies_from_dict(record["requestCookies"])
-        record["responseBodySize"] = len(record["responseBody"])
-        record["requestBodySize"] = len(record["requestBody"])
-        record["requestCookiesSize"] = len(record["requestCookiesRaw"])
-        record["requestHeadersSize"] = len(self._headers_from_dict(record["requestHeaders"]))
-        record["responseHeadersSize"] = len(self._headers_from_dict(record["responseHeaders"]))
-        return record
-
-    def _extract_extras(self, request_event):
-        resp = request_event.response
-        req = request_event.request
-
-        return self._extras_dict(
-            req.url, req.method, resp.status_code, resp.reason,
-            dict(resp.headers), resp.text, len(resp.content), resp.elapsed.total_seconds(),
-            req.body or "", dict(request_event.session.cookies), dict(resp._request.headers)
-        )
-
-
-def parse_options():
+def cmdline_to_params():
     parser = OptionParser()
     parser.add_option('', '--concurrency', action='store', type="int", default=1)
     parser.add_option('', '--iterations', action='store', type="int", default=sys.maxsize)
@@ -567,15 +396,26 @@ def parse_options():
     parser.add_option('', '--result-file-template', action='store', type="str", default="result-%s.csv")  # TODO?
     parser.add_option('', '--verbose', action='store_true', default=False)
     opts, args = parser.parse_args()
-    return args, opts
+    log.debug("%s %s", opts, args)
+
+    params = Params()
+    params.concurrency = opts.concurrency
+    params.ramp_up = opts.ramp_up
+    params.steps = opts.steps
+    params.iterations = opts.iterations
+    params.hold_for = opts.hold_for
+
+    params.report = opts.result_file_template
+    params.tests = args
+    params.worker_count = min(params.concurrency, multiprocessing.cpu_count())
+
+    return params
 
 
 if __name__ == '__main__':
-    # do the subprocess starter utility
     logging.basicConfig(level=logging.DEBUG)
-    args1, opts1 = parse_options()
-    log.debug("%s %s", opts1, args1)
-    supervisor = Supervisor(opts1, args1)
+
+    supervisor = Supervisor(cmdline_to_params())
     supervisor.start()
     while supervisor.isAlive():
         time.sleep(1)
