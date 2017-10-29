@@ -238,7 +238,8 @@ class JTLSampleWriter(LDJSONSampleWriter):
     def __enter__(self):
         obj = super(JTLSampleWriter, self).__enter__()
 
-        fieldnames = ["timeStamp", "elapsed", "label", "responseCode", "responseMessage", "success", "allThreads"]
+        fieldnames = ["timeStamp", "elapsed", "Latency", "label", "responseCode", "responseMessage", "success",
+                      "allThreads"]
         self.writer = csv.DictWriter(self.out_stream, fieldnames=fieldnames, dialect=csv.excel)
         self.writer.writeheader()
         self.out_stream.flush()
@@ -254,6 +255,7 @@ class JTLSampleWriter(LDJSONSampleWriter):
         self.writer.writerow({
             "timeStamp": int(1000 * sample.start_time),
             "elapsed": int(1000 * sample.duration),
+            "Latency": 0,  # TODO:
             "label": sample.test_case,
 
             "responseCode": None,  # TODO: how to get this for last HTTP request?
@@ -433,7 +435,7 @@ def cmdline_to_params():
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO, stream=sys.stdout)
 
     supervisor = Supervisor(cmdline_to_params())
     supervisor.start()
