@@ -255,13 +255,17 @@ class JTLSampleWriter(LDJSONSampleWriter):
         :type test_count: int
         :type success_count: int
         """
+        response_code = sample.extras.get("responseCode")
+        # if transaction doesn't have responseCode set — try to grab it from last request
+        if response_code is None and sample.subsamples:
+            response_code = sample.subsamples[-1].extras.get("responseCode")
         self.writer.writerow({
             "timeStamp": int(1000 * sample.start_time),
             "elapsed": int(1000 * sample.duration),
             "Latency": 0,  # TODO:
             "label": sample.test_case,
 
-            "responseCode": None,  # TODO: how to get this for last HTTP request?
+            "responseCode": response_code,
             "responseMessage": sample.error_msg,
             "allThreads": self.concurrency,  # TODO: there will be a problem aggregating concurrency for rare samples
             "success": "true" if sample.status == "PASSED" else "false",
