@@ -71,6 +71,9 @@ class Params(object):
 
         self.tests = None
 
+    def __repr__(self):
+        return "%s" % self.__dict__
+
 
 class Supervisor(Thread):
     """
@@ -145,8 +148,8 @@ class Worker(ThreadPool):
         log.debug("[%s] Starting nose iterations: %s", params.worker_index, params)
         assert isinstance(params.tests, list)
         argv = [__file__, '-v']
-        argv.extend(params.tests)
         argv.extend(['--with-apiritif', '--nocapture', '--exe', '--nologcapture', '--verbosity', '0'])
+        argv.extend(params.tests)
 
         start_time = time.time()
         time.sleep(params.delay)
@@ -256,13 +259,14 @@ class JTLSampleWriter(LDJSONSampleWriter):
         :type success_count: int
         """
         response_code = sample.extras.get("responseCode")
-        # if transaction doesn't have responseCode set — try to grab it from last request
+        # if transaction doesn't have responseCode set - try to grab it from last request
         if response_code is None and sample.subsamples:
             response_code = sample.subsamples[-1].extras.get("responseCode")
+
         self.writer.writerow({
             "timeStamp": int(1000 * sample.start_time),
             "elapsed": int(1000 * sample.duration),
-            "Latency": 0,  # TODO:
+            "Latency": 0,  # TODO
             "label": sample.test_case,
 
             "responseCode": response_code,
@@ -422,7 +426,7 @@ def cmdline_to_params():
     parser.add_option('', '--ramp-up', action='store', type="float", default=0)
     parser.add_option('', '--steps', action='store', type="int", default=sys.maxsize)
     parser.add_option('', '--hold-for', action='store', type="float", default=0)
-    parser.add_option('', '--result-file-template', action='store', type="str", default="result-%s.csv")  # TODO?
+    parser.add_option('', '--result-file-template', action='store', type="str", default="result-%s.csv")
     parser.add_option('', '--verbose', action='store_true', default=False)
     opts, args = parser.parse_args()
     log.debug("%s %s", opts, args)

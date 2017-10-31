@@ -18,6 +18,7 @@ class TestLoadGen(TestCase):
         print(outfile.name)
         params = Params()
         params.concurrency = 2
+        params.iterations = 10
         params.report = outfile.name
         params.tests = dummy_tests
 
@@ -30,7 +31,7 @@ class TestLoadGen(TestCase):
         params = Params()
         params.tests = dummy_tests
         params.report = outfile.name + "%s"
-        params.concurrency = 2
+        params.concurrency = 9
         params.iterations = 5
         sup = Supervisor(params)
         sup.start()
