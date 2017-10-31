@@ -127,11 +127,16 @@ class Worker(ThreadPool):
         """
         super(Worker, self).__init__(params.concurrency)
         self.params = params
+        if self.params.report.lower().endswith(".ldjson"):
+            self._writer = LDJSONSampleWriter(self.params.report)
+        else:
+            self._writer = JTLSampleWriter(self.params.report)
 
     def start(self):
         params = list(self._get_thread_params())
-        self.map(self.run_nose, params)
-        self.close()
+        with self._writer:
+            self.map(self.run_nose, params)
+            self.close()
 
     def run_nose(self, params):
         """
@@ -146,29 +151,23 @@ class Worker(ThreadPool):
         start_time = time.time()
         time.sleep(params.delay)
 
-        if params.report.lower().endswith(".ldjson"):
-            writer = LDJSONSampleWriter(params.report)
-        else:
-            writer = JTLSampleWriter(params.report)
+        iteration = 0
+        plugin = ApiritifPlugin(self._writer)
 
-        with writer:
-            iteration = 0
-            plugin = ApiritifPlugin(writer)
+        config = Config(env=os.environ, files=all_config_files(), plugins=DefaultPluginManager())
+        config.stream = open(os.devnull, "w")  # FIXME: use "with", allow writing to file/log
 
-            config = Config(env=os.environ, files=all_config_files(), plugins=DefaultPluginManager())
-            config.stream = open(os.devnull, "w")  # FIXME: use "with", allow writing to file/log
+        while True:
+            test_program = TestProgram(exit=False, argv=argv, config=config, addplugins=[plugin])
 
-            while True:
-                test_program = TestProgram(exit=False, argv=argv, config=config, addplugins=[plugin])
+            iteration += 1
+            if iteration >= params.iterations:
+                log.debug("[%s] iteration limit reached: %s", params.worker_index, params.iterations)
+                break
 
-                iteration += 1
-                if iteration >= params.iterations:
-                    log.debug("[%s] iteration limit reached: %s", params.worker_index, params.iterations)
-                    break
-
-                if 0 < self.params.hold_for < (time.time() - start_time):
-                    log.debug("[%s] duration limit reached: %s", params.worker_index, params.hold_for)
-                    break
+            if 0 < self.params.hold_for < (time.time() - start_time):
+                log.debug("[%s] duration limit reached: %s", params.worker_index, params.hold_for)
+                break
 
     def __reduce__(self):
         raise NotImplementedError()
@@ -189,6 +188,10 @@ class Worker(ThreadPool):
 
 
 class LDJSONSampleWriter(object):
+    """
+    :type out_stream: file
+    """
+
     def __init__(self, output_file):
         super(LDJSONSampleWriter, self).__init__()
         self.concurrency = 0
@@ -436,6 +439,7 @@ def cmdline_to_params():
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+    apiritif.http.log.setLevel(logging.WARNING)
 
     supervisor = Supervisor(cmdline_to_params())
     supervisor.start()
