@@ -139,6 +139,10 @@ class Worker(ThreadPool):
         params = list(self._get_thread_params())
         with self._writer:
             self.map(self.run_nose, params)
+            log.info("Workers finished, awaiting result writer")
+            while not self._writer.is_queue_empty():
+                time.sleep(0.1)
+            log.info("Results written, shutting down")
             self.close()
 
     def run_nose(self, params):
@@ -220,6 +224,9 @@ class LDJSONSampleWriter(object):
 
     def add(self, sample, test_count, success_count):
         self._samples_queue.put_nowait((sample, test_count, success_count))
+
+    def is_queue_empty(self):
+        return self._samples_queue.empty()
 
     def _writer(self):
         while self._writing:
