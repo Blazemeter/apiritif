@@ -306,8 +306,6 @@ class ApiritifPlugin(Plugin):
     def finalize(self, result):
         """
         After all tests
-        :param result:
-        :return:
         """
         self.sample_writer.concurrency -= 1
         del result
