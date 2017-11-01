@@ -408,7 +408,13 @@ class ApiritifPlugin(Plugin):
         if not recording:
             return samples_processed
 
-        samples = self.apiritif_extractor.parse_recording(recording, sample)
+        try:
+            samples = self.apiritif_extractor.parse_recording(recording, sample)
+        except BaseException as exc:
+            log.debug("Couldn't parse recording: %s", traceback.format_exc())
+            log.warning("Couldn't parse recording: %s", exc)
+            samples = []
+
         for sample in samples:
             samples_processed += 1
             self._process_sample(sample)
