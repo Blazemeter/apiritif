@@ -459,7 +459,8 @@ def cmdline_to_params():
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+    logging.basicConfig(level=logging.INFO, stream=sys.stdout,
+                        format="%(levelname)s:%(process)s:%(thread)s:%(name)s:%(message)s")
     apiritif.http.log.setLevel(logging.WARNING)
 
     supervisor = Supervisor(cmdline_to_params())
