@@ -261,7 +261,7 @@ class _EventRecorder(object):
 
     def get_recording(self, label=None, pop=False):
         with self.lock:
-            thread_recording = self._recording[threading.get_ident()]
+            thread_recording = self._recording[threading.current_thread().ident]
             label = label or self._get_current_test_case_name() or ""
             if label not in thread_recording:
                 thread_recording[label] = []
