@@ -310,11 +310,10 @@ class ApiritifPlugin(Plugin):
         :return:
         """
         self.sample_writer.concurrency -= 1
-        del result
         if not self.test_count:
             raise RuntimeError("Nothing to test.")
 
-    def startTest(self, test):
+    def beforeTest(self, test):
         """
         before test run
         :param test:
@@ -333,6 +332,8 @@ class ApiritifPlugin(Plugin):
             "full_name": test_fqn,
             "description": test.shortDescription()
         })
+
+        self.test_count += 1
 
     def addError(self, test, error):
         """
@@ -385,7 +386,7 @@ class ApiritifPlugin(Plugin):
         self.current_sample.status = "PASSED"
         self.success_count += 1
 
-    def stopTest(self, test):
+    def afterTest(self, test):
         """
         after the test has been run
         :param test:
@@ -403,7 +404,7 @@ class ApiritifPlugin(Plugin):
         samples_processed = 0
         test_case = sample.test_case
 
-        recording = apiritif.recorder.get_recording(test_case, clear=True)
+        recording = apiritif.recorder.get_recording(test_case, pop=True)
         if not recording:
             return samples_processed
 
@@ -415,7 +416,6 @@ class ApiritifPlugin(Plugin):
         return samples_processed
 
     def _process_sample(self, sample):
-        self.test_count += 1
         self.sample_writer.add(sample, self.test_count, self.success_count)
 
 

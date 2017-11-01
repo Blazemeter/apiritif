@@ -18,7 +18,6 @@ limitations under the License.
 import copy
 import inspect
 import logging
-import multiprocessing
 import threading
 import time
 from collections import OrderedDict, defaultdict
@@ -247,10 +246,10 @@ class AssertionFailure(Event):
 
 class _EventRecorder(object):
     def __init__(self):
-        self._recording = OrderedDict()  # test_case: str -> [Event]
+        self._recording = defaultdict(OrderedDict)  # thread id -> (label -> [event])
         self.log = log.getChild('recorder')
         self.log.debug("Creating recorder")
-        self.lock = multiprocessing.Lock()
+        self.lock = threading.Lock()
 
     @staticmethod
     def _get_current_test_case_name():
@@ -260,17 +259,22 @@ class _EventRecorder(object):
                 return func_name
         return None
 
-    def get_recording(self, label=None, clear=False):
-        label = label or self._get_current_test_case_name() or ""
-        if label not in self._recording:
-            self._recording[label] = []
-        return self._recording.pop(label) if clear else self._recording[label]
+    def get_recording(self, label=None, pop=False):
+        with self.lock:
+            thread_recording = self._recording[threading.get_ident()]
+            label = label or self._get_current_test_case_name() or ""
+            if label not in thread_recording:
+                thread_recording[label] = []
+            return thread_recording.pop(label) if pop else thread_recording[label]
 
     def record_event(self, event):
         with self.lock:
             self.log.debug("Recording event %r", event)
-            recording = self.get_recording()
-            recording.append(event)
+            thread_recording = self._recording[threading.get_ident()]
+            label = self._get_current_test_case_name() or ""
+            if label not in thread_recording:
+                thread_recording[label] = []
+            thread_recording[label].append(event)
 
     def record_transaction_start(self, transaction):
         self.record_event(TransactionStarted(transaction))
