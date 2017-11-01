@@ -155,16 +155,18 @@ class Worker(ThreadPool):
         argv.extend(['--with-apiritif', '--nocapture', '--exe', '--nologcapture', '--verbosity', '0'])
         argv.extend(params.tests)
 
-        start_time = time.time()
+        end_time = self.params.ramp_up + self.params.hold_for
+        end_time += time.time() if end_time else 0
         time.sleep(params.delay)
 
         iteration = 0
         plugin = ApiritifPlugin(self._writer)
 
-        config = Config(env=os.environ, files=all_config_files(), plugins=DefaultPluginManager())
-        config.stream = open(os.devnull, "w")  # FIXME: use "with", allow writing to file/log
+        devnull = open(os.devnull, "w")  # FIXME: use "with", allow writing to file/log
 
         while True:
+            config = Config(env=os.environ, files=all_config_files(), plugins=DefaultPluginManager())
+            config.stream = devnull
             test_program = TestProgram(exit=False, argv=argv, config=config, addplugins=[plugin])
 
             iteration += 1
@@ -172,9 +174,11 @@ class Worker(ThreadPool):
                 log.debug("[%s] iteration limit reached: %s", params.worker_index, params.iterations)
                 break
 
-            if 0 < self.params.hold_for < (time.time() - start_time):
+            if 0 < end_time <= time.time():
                 log.debug("[%s] duration limit reached: %s", params.worker_index, params.hold_for)
                 break
+
+        devnull.close()
 
     def __reduce__(self):
         raise NotImplementedError()
