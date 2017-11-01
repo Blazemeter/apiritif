@@ -234,6 +234,9 @@ class LDJSONSampleWriter(object):
 
     def _writer(self):
         while self._writing:
+            if self._samples_queue.empty():
+                time.sleep(0.1)
+
             while not self._samples_queue.empty():
                 sample, test_count, success_count = self._samples_queue.get(block=True)
                 self._write_sample(sample, test_count, success_count)
