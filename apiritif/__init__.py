@@ -18,8 +18,10 @@ limitations under the License.
 import copy
 import inspect
 import logging
+import multiprocessing
+import threading
 import time
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from functools import wraps
 from io import BytesIO
 
@@ -243,11 +245,12 @@ class AssertionFailure(Event):
         return "Assertion(name=%r, failure_message=%r)" % (self.name, self.failure_message)
 
 
-# TODO: thread-safe version?
 class _EventRecorder(object):
     def __init__(self):
         self._recording = OrderedDict()  # test_case: str -> [Event]
         self.log = log.getChild('recorder')
+        self.log.debug("Creating recorder")
+        self.lock = multiprocessing.Lock()
 
     @staticmethod
     def _get_current_test_case_name():
@@ -264,9 +267,10 @@ class _EventRecorder(object):
         return self._recording.pop(label) if clear else self._recording[label]
 
     def record_event(self, event):
-        self.log.debug("Recording event %r", event)
-        recording = self.get_recording()
-        recording.append(event)
+        with self.lock:
+            self.log.debug("Recording event %r", event)
+            recording = self.get_recording()
+            recording.append(event)
 
     def record_transaction_start(self, transaction):
         self.record_event(TransactionStarted(transaction))
