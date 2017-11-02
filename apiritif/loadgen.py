@@ -309,6 +309,8 @@ class ApiritifPlugin(Plugin):
         self.success_count = 0
         self.current_sample = None
         self.apiritif_extractor = ApiritifSampleExtractor()
+        self.start_time = None
+        self.end_time = None
 
     def finalize(self, result):
         """
@@ -337,13 +339,19 @@ class ApiritifPlugin(Plugin):
 
         self.test_count += 1
 
+    def startTest(self, test):
+        self.start_time = time.time()
+
+    def stopTest(self, test):
+        self.end_time = time.time()
+
     def afterTest(self, test):
         """
         after the test has been run
         :param test:
         :return:
         """
-        self.current_sample.duration = time.time() - self.current_sample.start_time
+        self.current_sample.duration = self.end_time - self.current_sample.start_time
 
         samples_processed = self._process_apiritif_samples(self.current_sample)
         if not samples_processed:
@@ -353,9 +361,8 @@ class ApiritifPlugin(Plugin):
 
     def _process_apiritif_samples(self, sample):
         samples_processed = 0
-        test_case = sample.test_case
 
-        recording = apiritif.recorder.get_recording(test_case, pop=True)
+        recording = apiritif.recorder.pop_events(from_ts=self.start_time, to_ts=self.end_time)
         if not recording:
             return samples_processed
 
@@ -455,10 +462,8 @@ def cmdline_to_params():
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, stream=sys.stdout,
-                        format="%(levelname)s:%(process)s:%(thread)s:%(name)s:%(message)s")
+                        format="%(asctime)s:%(levelname)s:%(process)s:%(thread)s:%(name)s:%(message)s")
     apiritif.http.log.setLevel(logging.WARNING)
-
     supervisor = Supervisor(cmdline_to_params())
     supervisor.start()
-    while supervisor.isAlive():
-        time.sleep(1)
+    supervisor.join()

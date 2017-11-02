@@ -261,28 +261,29 @@ class _EventRecorder(object):
                 return func_name
         return None
 
-    def get_recording(self, label=None, pop=False):
+    def get_recording(self):
         rec = getattr(self.local, 'recording', None)
         if rec is None:
-            rec = defaultdict(OrderedDict)  # thread id -> (label -> [event])
-            self.local.recording = rec
-        thread_recording = rec[threading.current_thread().ident]
-        label = label or self._get_current_test_case_name() or ""
-        if label not in thread_recording:
-            thread_recording[label] = []
-        return thread_recording.pop(label) if pop else thread_recording[label]
+            self.local.recording = []
+        return self.local.recording
+
+    def pop_events(self, from_ts, to_ts):
+        recording = self.get_recording()
+        collected = []
+        new_recording = []
+        for event in recording:
+            if from_ts <= event.timestamp <= to_ts:
+                collected.append(event)
+            else:
+                new_recording.append(event)
+        recording.clear()
+        recording.extend(new_recording)
+        return collected
 
     def record_event(self, event):
         self.log.debug("Recording event %r", event)
-        rec = getattr(self.local, 'recording', None)
-        if rec is None:
-            rec = defaultdict(OrderedDict)  # thread id -> (label -> [event])
-            self.local.recording = rec
-        thread_recording = rec[threading.current_thread().ident]
-        label = self._get_current_test_case_name() or ""
-        if label not in thread_recording:
-            thread_recording[label] = []
-        thread_recording[label].append(event)
+        recording = self.get_recording()
+        recording.append(event)
 
     def record_transaction_start(self, tran):
         self.record_event(TransactionStarted(tran))
