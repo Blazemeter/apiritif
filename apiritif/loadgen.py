@@ -27,8 +27,8 @@ from multiprocessing.pool import ThreadPool
 from optparse import OptionParser
 from threading import Thread
 
+import nose
 from nose.config import Config, all_config_files
-from nose.core import TestProgram
 from nose.plugins import Plugin
 from nose.plugins.manager import DefaultPluginManager
 
@@ -161,24 +161,25 @@ class Worker(ThreadPool):
 
         iteration = 0
         plugin = ApiritifPlugin(self._writer)
+        self._writer.concurrency += 1
 
-        devnull = open(os.devnull, "w")  # FIXME: use "with", allow writing to file/log
+        config = Config(env=os.environ, files=all_config_files(), plugins=DefaultPluginManager())
+        config.stream = open(os.devnull, "w")  # FIXME: use "with", allow writing to file/log
+        try:
+            while True:
+                nose.run(exit=False, argv=argv, config=config, addplugins=[plugin])
 
-        while True:
-            config = Config(env=os.environ, files=all_config_files(), plugins=DefaultPluginManager())
-            config.stream = devnull
-            test_program = TestProgram(exit=False, argv=argv, config=config, addplugins=[plugin])
+                iteration += 1
+                if iteration >= params.iterations:
+                    log.debug("[%s] iteration limit reached: %s", params.worker_index, params.iterations)
+                    break
 
-            iteration += 1
-            if iteration >= params.iterations:
-                log.debug("[%s] iteration limit reached: %s", params.worker_index, params.iterations)
-                break
-
-            if 0 < end_time <= time.time():
-                log.debug("[%s] duration limit reached: %s", params.worker_index, params.hold_for)
-                break
-
-        devnull.close()
+                if 0 < end_time <= time.time():
+                    log.debug("[%s] duration limit reached: %s", params.worker_index, params.hold_for)
+                    break
+        finally:
+            self._writer.concurrency -= 1
+            config.stream.close()
 
     def __reduce__(self):
         raise NotImplementedError()
@@ -299,7 +300,7 @@ class ApiritifPlugin(Plugin):
     """
 
     name = 'apiritif'
-    enabled = True
+    enabled = False
 
     def __init__(self, sample_writer):
         super(ApiritifPlugin, self).__init__()
@@ -313,23 +314,19 @@ class ApiritifPlugin(Plugin):
         """
         Before any test runs
         open descriptor here
-        :return:
         """
-        self.sample_writer.concurrency += 1
+        pass
 
     def finalize(self, result):
         """
         After all tests
         """
-        self.sample_writer.concurrency -= 1
         if not self.test_count:
             raise RuntimeError("Nothing to test.")
 
     def beforeTest(self, test):
         """
         before test run
-        :param test:
-        :return:
         """
         test_file, _, _ = test.address()  # file path, module name, class.method
         test_fqn = test.id()  # [package].module.class.method
@@ -346,6 +343,20 @@ class ApiritifPlugin(Plugin):
         })
 
         self.test_count += 1
+
+    def afterTest(self, test):
+        """
+        after the test has been run
+        :param test:
+        :return:
+        """
+        self.current_sample.duration = time.time() - self.current_sample.start_time
+
+        samples_processed = self._process_apiritif_samples(self.current_sample)
+        if not samples_processed:
+            self._process_sample(self.current_sample)
+
+        self.current_sample = None
 
     def addError(self, test, error):
         """
@@ -397,20 +408,6 @@ class ApiritifPlugin(Plugin):
         """
         self.current_sample.status = "PASSED"
         self.success_count += 1
-
-    def afterTest(self, test):
-        """
-        after the test has been run
-        :param test:
-        :return:
-        """
-        self.current_sample.duration = time.time() - self.current_sample.start_time
-
-        samples_processed = self._process_apiritif_samples(self.current_sample)
-        if not samples_processed:
-            self._process_sample(self.current_sample)
-
-        self.current_sample = None
 
     def _process_apiritif_samples(self, sample):
         samples_processed = 0
