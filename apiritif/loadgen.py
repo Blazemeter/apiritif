@@ -310,13 +310,6 @@ class ApiritifPlugin(Plugin):
         self.current_sample = None
         self.apiritif_extractor = ApiritifSampleExtractor()
 
-    def begin(self):
-        """
-        Before any test runs
-        open descriptor here
-        """
-        pass
-
     def finalize(self, result):
         """
         After all tests
