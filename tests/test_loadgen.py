@@ -13,6 +13,18 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 class TestLoadGen(TestCase):
+    def test_thread(self):
+        outfile = tempfile.NamedTemporaryFile()
+        print(outfile.name)
+        params = Params()
+        params.concurrency = 2
+        params.iterations = 10
+        params.report = outfile.name
+        params.tests = dummy_tests
+
+        worker = Worker(params)
+        worker.run_nose(params)
+
     def test_worker(self):
         outfile = tempfile.NamedTemporaryFile()
         print(outfile.name)

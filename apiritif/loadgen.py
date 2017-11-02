@@ -27,8 +27,9 @@ from multiprocessing.pool import ThreadPool
 from optparse import OptionParser
 from threading import Thread
 
-import nose
 from nose.config import Config, all_config_files
+from nose.core import TestProgram
+from nose.loader import defaultTestLoader
 from nose.plugins import Plugin
 from nose.plugins.manager import DefaultPluginManager
 
@@ -151,9 +152,7 @@ class Worker(ThreadPool):
         """
         log.debug("[%s] Starting nose iterations: %s", params.worker_index, params)
         assert isinstance(params.tests, list)
-        argv = [__file__, '-v']
-        argv.extend(['--with-apiritif', '--nocapture', '--exe', '--nologcapture', '--verbosity', '0'])
-        argv.extend(params.tests)
+        # argv.extend(['--with-apiritif', '--nocapture', '--exe', '--nologcapture'])
 
         end_time = self.params.ramp_up + self.params.hold_for
         end_time += time.time() if end_time else 0
@@ -164,10 +163,13 @@ class Worker(ThreadPool):
         self._writer.concurrency += 1
 
         config = Config(env=os.environ, files=all_config_files(), plugins=DefaultPluginManager())
+        config.plugins.addPlugins(extraplugins=[plugin])
+        config.testNames = params.tests
+        config.verbosity = 0
         config.stream = open(os.devnull, "w")  # FIXME: use "with", allow writing to file/log
         try:
             while True:
-                nose.run(exit=False, argv=argv, config=config, addplugins=[plugin])
+                ApiritifTestProgram(config=config)
 
                 iteration += 1
                 if iteration >= params.iterations:
@@ -197,6 +199,14 @@ class Worker(ThreadPool):
             params = copy.deepcopy(self.params)
             params.delay = delay
             yield params
+
+
+class ApiritifTestProgram(TestProgram):
+    def parseArgs(self, argv):
+        self.exit = False
+        self.testNames = self.config.testNames
+        self.testLoader = defaultTestLoader(config=self.config)
+        self.createTests()
 
 
 class LDJSONSampleWriter(object):

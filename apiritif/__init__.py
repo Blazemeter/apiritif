@@ -253,14 +253,6 @@ class _EventRecorder(object):
         self.log = log.getChild('recorder')
         self.log.debug("Creating recorder")
 
-    @staticmethod
-    def _get_current_test_case_name():
-        for entry in inspect.stack():
-            _, _, _, func_name, _, _ = entry
-            if func_name.startswith("test"):  # is this heuristic good enough?
-                return func_name
-        return None
-
     def get_recording(self):
         rec = getattr(self.local, 'recording', None)
         if rec is None:
@@ -276,7 +268,7 @@ class _EventRecorder(object):
                 collected.append(event)
             else:
                 new_recording.append(event)
-        recording.clear()
+        del recording[:]
         recording.extend(new_recording)
         return collected
 
