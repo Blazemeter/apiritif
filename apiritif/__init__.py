@@ -20,7 +20,7 @@ import inspect
 import logging
 import threading
 import time
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict
 from functools import wraps
 from io import BytesIO
 
@@ -262,7 +262,7 @@ class _EventRecorder(object):
         return None
 
     def get_recording(self, label=None, pop=False):
-        thread_recording = self.local.recording[threading.current_thread().ident]
+        thread_recording = self.local.recording
         label = label or self._get_current_test_case_name() or ""
         if label not in thread_recording:
             thread_recording[label] = []
@@ -270,11 +270,10 @@ class _EventRecorder(object):
 
     def record_event(self, event):
         self.log.debug("Recording event %r", event)
-        rec = getattr(self.local, 'recording', None)
-        if rec is None:
-            rec = defaultdict(OrderedDict)  # thread id -> (label -> [event])
-            self.local.recording = rec
-        thread_recording = rec[threading.current_thread().ident]
+        thread_recording = getattr(self.local, 'recording', None)
+        if thread_recording is None:
+            thread_recording = OrderedDict()  # thread id -> (label -> [event])
+            self.local.recording = thread_recording
         label = self._get_current_test_case_name() or ""
         if label not in thread_recording:
             thread_recording[label] = []
