@@ -262,7 +262,11 @@ class _EventRecorder(object):
         return None
 
     def get_recording(self, label=None, pop=False):
-        thread_recording = self.local.recording[threading.current_thread().ident]
+        rec = getattr(self.local, 'recording', None)
+        if rec is None:
+            rec = defaultdict(OrderedDict)  # thread id -> (label -> [event])
+            self.local.recording = rec
+        thread_recording = rec[threading.current_thread().ident]
         label = label or self._get_current_test_case_name() or ""
         if label not in thread_recording:
             thread_recording[label] = []
