@@ -32,8 +32,10 @@ from apiritif.utilities import *
 from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp
 
 log = logging.getLogger('apiritif')
-#log.setLevel(logging.DEBUG)
-#log.addHandler(logging.NullHandler())
+
+
+# log.setLevel(logging.DEBUG)
+# log.addHandler(logging.NullHandler())
 
 
 class http(object):
@@ -245,11 +247,11 @@ class AssertionFailure(Event):
 
 
 class _EventRecorder(object):
+    local = threading.local()
+
     def __init__(self):
-        self._recording = defaultdict(OrderedDict)  # thread id -> (label -> [event])
         self.log = log.getChild('recorder')
         self.log.debug("Creating recorder")
-        self.lock = threading.Lock()
 
     @staticmethod
     def _get_current_test_case_name():
@@ -260,27 +262,29 @@ class _EventRecorder(object):
         return None
 
     def get_recording(self, label=None, pop=False):
-        with self.lock:
-            thread_recording = self._recording[threading.current_thread().ident]
-            label = label or self._get_current_test_case_name() or ""
-            if label not in thread_recording:
-                thread_recording[label] = []
-            return thread_recording.pop(label) if pop else thread_recording[label]
+        thread_recording = self.local.recording[threading.current_thread().ident]
+        label = label or self._get_current_test_case_name() or ""
+        if label not in thread_recording:
+            thread_recording[label] = []
+        return thread_recording.pop(label) if pop else thread_recording[label]
 
     def record_event(self, event):
-        with self.lock:
-            self.log.debug("Recording event %r", event)
-            thread_recording = self._recording[threading.current_thread().ident]
-            label = self._get_current_test_case_name() or ""
-            if label not in thread_recording:
-                thread_recording[label] = []
-            thread_recording[label].append(event)
+        self.log.debug("Recording event %r", event)
+        rec = getattr(self.local, 'recording', None)
+        if rec is None:
+            rec = defaultdict(OrderedDict)  # thread id -> (label -> [event])
+            self.local.recording = rec
+        thread_recording = rec[threading.current_thread().ident]
+        label = self._get_current_test_case_name() or ""
+        if label not in thread_recording:
+            thread_recording[label] = []
+        thread_recording[label].append(event)
 
-    def record_transaction_start(self, transaction):
-        self.record_event(TransactionStarted(transaction))
+    def record_transaction_start(self, tran):
+        self.record_event(TransactionStarted(tran))
 
-    def record_transaction_end(self, transaction):
-        self.record_event(TransactionEnded(transaction))
+    def record_transaction_end(self, tran):
+        self.record_event(TransactionEnded(tran))
 
     def record_http_request(self, method, address, request, response, session):
         self.record_event(Request(method, address, request, response, session))

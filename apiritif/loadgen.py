@@ -351,6 +351,30 @@ class ApiritifPlugin(Plugin):
 
         self.current_sample = None
 
+    def _process_apiritif_samples(self, sample):
+        samples_processed = 0
+        test_case = sample.test_case
+
+        recording = apiritif.recorder.get_recording(test_case, pop=True)
+        if not recording:
+            return samples_processed
+
+        try:
+            samples = self.apiritif_extractor.parse_recording(recording, sample)
+        except BaseException as exc:
+            log.debug("Couldn't parse recording: %s", traceback.format_exc())
+            log.warning("Couldn't parse recording: %s", exc)
+            samples = []
+
+        for sample in samples:
+            samples_processed += 1
+            self._process_sample(sample)
+
+        return samples_processed
+
+    def _process_sample(self, sample):
+        self.sample_writer.add(sample, self.test_count, self.success_count)
+
     def addError(self, test, error):
         """
         when a test raises an uncaught exception
@@ -401,30 +425,6 @@ class ApiritifPlugin(Plugin):
         """
         self.current_sample.status = "PASSED"
         self.success_count += 1
-
-    def _process_apiritif_samples(self, sample):
-        samples_processed = 0
-        test_case = sample.test_case
-
-        recording = apiritif.recorder.get_recording(test_case, pop=True)
-        if not recording:
-            return samples_processed
-
-        try:
-            samples = self.apiritif_extractor.parse_recording(recording, sample)
-        except BaseException as exc:
-            log.debug("Couldn't parse recording: %s", traceback.format_exc())
-            log.warning("Couldn't parse recording: %s", exc)
-            samples = []
-
-        for sample in samples:
-            samples_processed += 1
-            self._process_sample(sample)
-
-        return samples_processed
-
-    def _process_sample(self, sample):
-        self.sample_writer.add(sample, self.test_count, self.success_count)
 
 
 def cmdline_to_params():
