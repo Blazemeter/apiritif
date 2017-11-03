@@ -25,3 +25,5 @@
 
 - have field in response for parsed JSON 
 - handle file upload requests - give sugar 
+- complete endpoint concept with path component
+- support arbitrary python code pieces

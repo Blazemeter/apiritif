@@ -16,10 +16,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import copy
-import inspect
 import logging
+import threading
 import time
-from collections import OrderedDict
 from functools import wraps
 from io import BytesIO
 
@@ -27,12 +26,10 @@ import jsonpath_rw
 import requests
 from lxml import etree
 
-from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp
 from apiritif.utilities import *
+from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp
 
 log = logging.getLogger('apiritif')
-log.setLevel(logging.DEBUG)
-log.addHandler(logging.NullHandler())
 
 
 class http(object):
@@ -243,36 +240,42 @@ class AssertionFailure(Event):
         return "Assertion(name=%r, failure_message=%r)" % (self.name, self.failure_message)
 
 
-# TODO: thread-safe version?
 class _EventRecorder(object):
+    local = threading.local()
+
     def __init__(self):
-        self._recording = OrderedDict()  # test_case: str -> [Event]
         self.log = log.getChild('recorder')
+        self.log.debug("Creating recorder")
 
-    @staticmethod
-    def _get_current_test_case_name():
-        for entry in inspect.stack():
-            _, _, _, func_name, _, _ = entry
-            if func_name.startswith("test"):  # is this heuristic good enough?
-                return func_name
-        return None
+    def get_recording(self):
+        rec = getattr(self.local, 'recording', None)
+        if rec is None:
+            self.local.recording = []
+        return self.local.recording
 
-    def get_recording(self, label=None):
-        label = label or self._get_current_test_case_name() or ""
-        if label not in self._recording:
-            self._recording[label] = []
-        return self._recording[label]
+    def pop_events(self, from_ts, to_ts):
+        recording = self.get_recording()
+        collected = []
+        new_recording = []
+        for event in recording:
+            if from_ts <= event.timestamp <= to_ts:
+                collected.append(event)
+            else:
+                new_recording.append(event)
+        del recording[:]
+        recording.extend(new_recording)
+        return collected
 
     def record_event(self, event):
         self.log.debug("Recording event %r", event)
         recording = self.get_recording()
         recording.append(event)
 
-    def record_transaction_start(self, transaction):
-        self.record_event(TransactionStarted(transaction))
+    def record_transaction_start(self, tran):
+        self.record_event(TransactionStarted(tran))
 
-    def record_transaction_end(self, transaction):
-        self.record_event(TransactionEnded(transaction))
+    def record_transaction_end(self, tran):
+        self.record_event(TransactionEnded(tran))
 
     def record_http_request(self, method, address, request, response, session):
         self.record_event(Request(method, address, request, response, session))
