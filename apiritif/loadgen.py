@@ -283,7 +283,7 @@ class JTLSampleWriter(LDJSONSampleWriter):
         :type test_count: int
         :type success_count: int
         """
-        bytes = sample.extras.get("responseHeadersSize") + 2 + sample.extras.get("responseBodySize")
+        bytes = sample.extras.get("responseHeadersSize", 0) + 2 + sample.extras.get("responseBodySize", 0)
 
         self.writer.writerow({
             "timeStamp": int(1000 * sample.start_time),
