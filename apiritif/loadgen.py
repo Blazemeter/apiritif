@@ -27,6 +27,7 @@ from multiprocessing.pool import ThreadPool
 from optparse import OptionParser
 from threading import Thread
 
+import pytest
 from nose.config import Config, all_config_files
 from nose.core import TestProgram
 from nose.loader import defaultTestLoader
@@ -139,7 +140,7 @@ class Worker(ThreadPool):
     def start(self):
         params = list(self._get_thread_params())
         with self._writer:
-            self.map(self.run_nose, params)
+            self.map(self.run_pytest, params)
             log.info("Workers finished, awaiting result writer")
             while not self._writer.is_queue_empty():
                 time.sleep(0.1)
@@ -159,7 +160,7 @@ class Worker(ThreadPool):
         time.sleep(params.delay)
 
         iteration = 0
-        plugin = ApiritifPlugin(self._writer)
+        plugin = NosePlugin(self._writer)
         self._writer.concurrency += 1
 
         config = Config(env=os.environ, files=all_config_files(), plugins=DefaultPluginManager())
@@ -182,6 +183,39 @@ class Worker(ThreadPool):
         finally:
             self._writer.concurrency -= 1
             config.stream.close()
+
+    def run_pytest(self, params):
+        """
+        :type params: Params
+        """
+        log.debug("[%s] Starting pytest iterations: %s", params.worker_index, params)
+        assert isinstance(params.tests, list)
+
+        end_time = self.params.ramp_up + self.params.hold_for
+        end_time += time.time() if end_time else 0
+        time.sleep(params.delay)
+
+        iteration = 0
+        plugin = PyTestPlugin(self._writer)
+        self._writer.concurrency += 1
+
+        old_out = sys.stdout
+        try:
+            sys.stdout = open(os.devnull, 'w')
+            while True:
+                pytest.main(["-s"] + params.tests, plugins=[plugin])
+
+                iteration += 1
+                if iteration >= params.iterations:
+                    log.debug("[%s] iteration limit reached: %s", params.worker_index, params.iterations)
+                    break
+
+                if 0 < end_time <= time.time():
+                    log.debug("[%s] duration limit reached: %s", params.worker_index, params.hold_for)
+                    break
+        finally:
+            sys.stdout = old_out
+            self._writer.concurrency -= 1
 
     def __reduce__(self):
         raise NotImplementedError()
@@ -302,7 +336,7 @@ class JTLSampleWriter(LDJSONSampleWriter):
 
 
 # noinspection PyPep8Naming
-class ApiritifPlugin(Plugin):
+class NosePlugin(Plugin):
     """
     Saves test results in a format suitable for Taurus.
     :type sample_writer: LDJSONSampleWriter
@@ -312,7 +346,7 @@ class ApiritifPlugin(Plugin):
     enabled = False
 
     def __init__(self, sample_writer):
-        super(ApiritifPlugin, self).__init__()
+        super(NosePlugin, self).__init__()
         self.sample_writer = sample_writer
         self.test_count = 0
         self.success_count = 0
@@ -441,6 +475,99 @@ class ApiritifPlugin(Plugin):
         """
         self.current_sample.status = "PASSED"
         self.success_count += 1
+
+
+class PyTestPlugin(object):
+    def __init__(self, sample_writer):
+        self.sample_writer = sample_writer
+        self.test_count = 0
+        self.failed_tests = 0
+        self.passed_tests = 0
+        self.current_sample = None
+        self.apiritif_extractor = ApiritifSampleExtractor()
+        self.start_time = None
+        self.end_time = None
+
+    def _fill_sample(self, report, call, item, status):
+        filename, lineno, _ = report.location
+
+        if self.current_sample is None:
+            self.current_sample = Sample()
+            self.current_sample.test_case = item.name
+            self.current_sample.test_suite = item.module.__name__
+            self.current_sample.start_time = call.start
+            self.current_sample.extras = {"filename": filename, "lineno": lineno}
+
+        self.current_sample.status = status
+        self.current_sample.duration = time.time() - self.current_sample.start_time
+
+        if call.excinfo is not None:
+            self.current_sample.error_msg = call.excinfo.exconly().strip()
+            self.current_sample.error_trace = "\n".join(traceback.format_tb(call.excinfo.tb)).strip()
+
+    def _report_sample(self):
+        if self.current_sample.status == "PASSED":
+            self.passed_tests += 1
+        elif self.current_sample.status in ["BROKEN", "FAILED"]:
+            self.failed_tests += 1
+
+        samples_processed = self._process_apiritif_samples(self.current_sample)
+        if not samples_processed:
+            self._process_sample(self.current_sample)
+
+        self.current_sample = None
+
+    def _process_sample(self, sample):
+        self.sample_writer.add(sample, self.test_count, self.passed_tests)
+
+    def _process_apiritif_samples(self, sample):
+        samples_processed = 0
+
+        recording = apiritif.recorder.pop_events(from_ts=self.start_time, to_ts=self.end_time)
+        if not recording:
+            return samples_processed
+
+        try:
+            samples = self.apiritif_extractor.parse_recording(recording, sample)
+        except BaseException as exc:
+            log.debug("Couldn't parse recording: %s", traceback.format_exc())
+            log.warning("Couldn't parse recording: %s", exc)
+            samples = []
+
+        for sample in samples:
+            samples_processed += 1
+            self._process_sample(sample)
+
+        return samples_processed
+
+    @pytest.mark.hookwrapper
+    def pytest_runtest_makereport(self, item, call):
+        outcome = (yield)
+        report = outcome.get_result()
+        filename, lineno, test_name = report.location
+        if report.when == 'call':
+            if report.passed:
+                self._fill_sample(report, call, item, "PASSED")
+            elif report.failed:
+                self._fill_sample(report, call, item, "FAILED")
+            elif report.skipped:
+                self._fill_sample(report, call, item, "SKIPPED")
+        elif report.when == 'setup':
+            self.test_count += 1
+            self.start_time = time.time()
+            if report.failed:
+                self._fill_sample(report, call, item, "BROKEN")
+            elif report.skipped:
+                self._fill_sample(report, call, item, "SKIPPED")
+        elif report.when == 'teardown':
+            self.end_time = time.time()
+            self.current_sample.duration = self.end_time - self.current_sample.start_time
+            if not report.passed:
+                if self.current_sample.status not in ["FAILED", "BROKEN"]:
+                    self._fill_sample(report, call, item, "BROKEN")
+                else:
+                    self.current_sample.status = "BROKEN"
+            self._report_sample()
 
 
 def cmdline_to_params():

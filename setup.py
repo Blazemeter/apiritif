@@ -29,5 +29,5 @@ setup(
     download_url='https://github.com/Blazemeter/apiritif',
     docs_url='https://github.com/Blazemeter/apiritif',
 
-    install_requires=['requests>=2.11.1', 'jsonpath-rw', 'lxml'],
+    install_requires=['requests>=2.11.1', 'jsonpath-rw', 'lxml', 'nose', 'pytest'],
 )
