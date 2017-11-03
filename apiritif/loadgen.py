@@ -40,6 +40,8 @@ log = logging.getLogger("loadgen")
 
 
 # TODO how to implement hits/s control/shape?
+# TODO: VU ID for script
+# TODO: disable assertions for load mode
 
 def spawn_worker(params):
     """
