@@ -102,10 +102,23 @@ class ApiritifSampleExtractor(object):
                     tran_sample.status = "FAILED"
                     tran_sample.error_msg = tran.error_message
 
+                extras = {}
+                last_extras = tran_sample.subsamples[-1].extras if tran_sample.subsamples else {}
+                name = tran.name
+                method = last_extras.get("requestMethod") or ""
+                resp_code = tran.response_code() or last_extras.get("responseCode")
+                reason = last_extras.get("responseMessage") or ""
+                headers = last_extras.get("requestHeaders") or {}
+                response_body = tran.response() or last_extras.get("responseBody") or ""
+                response_time = tran.duration() or last_extras.get("responseTime") or 0.0
+                request_body = tran.request() or last_extras.get("requestBody") or ""
+                request_cookies = last_extras.get("requestCookies") or {}
+                request_headers = last_extras.get("requestHeaders") or {}
+
                 extras = copy.deepcopy(tran.extras())
-                extras.update(self._extras_dict(tran.name, "", tran.response_code(), "", {},
-                                                tran.response() or "", len(tran.response() or ""),
-                                                tran.duration(), tran.request() or "", {}, {}))
+                extras.update(self._extras_dict(name, method, resp_code, reason, headers,
+                                                response_body, len(response_body), response_time,
+                                                request_body, request_cookies, request_headers))
                 tran_sample.extras = extras
 
                 active_transactions[-1].add_subsample(tran_sample)

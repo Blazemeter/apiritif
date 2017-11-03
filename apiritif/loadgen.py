@@ -270,7 +270,7 @@ class JTLSampleWriter(LDJSONSampleWriter):
         obj = super(JTLSampleWriter, self).__enter__()
 
         fieldnames = ["timeStamp", "elapsed", "Latency", "label", "responseCode", "responseMessage", "success",
-                      "allThreads"]
+                      "allThreads", "bytes"]
         self.writer = csv.DictWriter(self.out_stream, fieldnames=fieldnames, dialect=csv.excel)
         self.writer.writeheader()
         self.out_stream.flush()
@@ -283,10 +283,14 @@ class JTLSampleWriter(LDJSONSampleWriter):
         :type test_count: int
         :type success_count: int
         """
+
+
         response_code = sample.extras.get("responseCode")
         # if transaction doesn't have responseCode set - try to grab it from last request
         if response_code is None and sample.subsamples:
             response_code = sample.subsamples[-1].extras.get("responseCode")
+
+        bytes = sample.extras.get("responseHeadersSize") + 2 + sample.extras.get("responseBodySize")
 
         self.writer.writerow({
             "timeStamp": int(1000 * sample.start_time),
@@ -294,8 +298,10 @@ class JTLSampleWriter(LDJSONSampleWriter):
             "Latency": 0,  # TODO
             "label": sample.test_case,
 
+            "bytes": bytes,
+
             "responseCode": response_code,
-            "responseMessage": sample.error_msg,
+            "responseMessage": sample.extras.get("responseMessage", sample.error_msg),
             "allThreads": self.concurrency,  # TODO: there will be a problem aggregating concurrency for rare samples
             "success": "true" if sample.status == "PASSED" else "false",
         })
