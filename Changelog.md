@@ -1,8 +1,9 @@
 # Changelog
 
-## 0.4 (next)
+## 0.4 <sup>10 nov 2017</sup>
 
 - add utility functions: `format_date()`, `random_uniform()`, `random_gauss()` and `random_string()`
+- add loadgen utility
 
 
 ## 0.3 <sup>3 may 2017</sup>
