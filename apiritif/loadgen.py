@@ -49,6 +49,7 @@ def spawn_worker(params):
 
     :type params: Params
     """
+    setup_logging()
     log.info("Adding worker: idx=%s\tconcurrency=%s\tresults=%s", params.worker_index, params.concurrency,
              params.report)
 
@@ -120,6 +121,7 @@ class Supervisor(Thread):
 
         workers = multiprocessing.Pool(processes=self.params.worker_count)
         args = list(self._concurrency_slicer())
+
         workers.map(spawn_worker, args)
         workers.close()
         workers.join()
@@ -471,10 +473,14 @@ def cmdline_to_params():
     return params
 
 
-if __name__ == '__main__':
+def setup_logging():
     logging.basicConfig(level=logging.INFO, stream=sys.stdout,
                         format="%(asctime)s:%(levelname)s:%(process)s:%(thread)s:%(name)s:%(message)s")
     apiritif.http.log.setLevel(logging.WARNING)
+
+
+if __name__ == '__main__':
+    setup_logging()
     supervisor = Supervisor(cmdline_to_params())
     supervisor.start()
     supervisor.join()
