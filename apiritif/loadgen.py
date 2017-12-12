@@ -49,9 +49,6 @@ def spawn_worker(params):
 
     :type params: Params
     """
-    log.info("Adding worker: idx=%s\tconcurrency=%s\tresults=%s", params.worker_index, params.concurrency,
-             params.report)
-
     worker = Worker(params)
     worker.start()
     worker.join()
@@ -120,6 +117,10 @@ class Supervisor(Thread):
 
         workers = multiprocessing.Pool(processes=self.params.worker_count)
         args = list(self._concurrency_slicer())
+
+        for item in args:
+            log.info("Adding worker: idx=%s\tconcurrency=%s\tresults=%s", item.worker_index, item.concurrency,
+                     item.report)
         workers.map(spawn_worker, args)
         workers.close()
         workers.join()
