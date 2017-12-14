@@ -35,6 +35,7 @@ from nose.plugins.manager import DefaultPluginManager
 
 import apiritif
 from apiritif.samples import ApiritifSampleExtractor, Sample
+from apiritif.utils import is_windows
 
 log = logging.getLogger("loadgen")
 
@@ -273,7 +274,8 @@ class JTLSampleWriter(LDJSONSampleWriter):
 
         fieldnames = ["timeStamp", "elapsed", "Latency", "label", "responseCode", "responseMessage", "success",
                       "allThreads", "bytes"]
-        self.writer = csv.DictWriter(self.out_stream, fieldnames=fieldnames, dialect=csv.excel)
+        endline = '\r\n' if is_windows() else '\n'
+        self.writer = csv.DictWriter(self.out_stream, fieldnames=fieldnames, dialect=csv.excel, endline=endline)
         self.writer.writeheader()
         self.out_stream.flush()
 

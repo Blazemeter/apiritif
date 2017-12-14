@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import platform
 import re
 
 
@@ -44,3 +45,7 @@ def assert_not_regexp(regex, text, match=False, msg=None):
         if re.findall(regex, text):
             msg = msg or "Regex %r unexpectedly found something in text %r" % (regex, shorten(text, 100))
             raise AssertionError(msg)
+
+
+def is_windows():
+    return platform.system() == 'Windows'
