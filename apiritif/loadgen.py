@@ -257,7 +257,7 @@ class LDJSONSampleWriter(object):
                 self._write_sample(sample, test_count, success_count)
 
     def _write_sample(self, sample, test_count, success_count):
-        self.out_stream.write("%s\n" % json.dumps(sample.to_dict()))
+        self.out_stream.write(json.dumps(sample.to_dict()) + "\n")
         self.out_stream.flush()
 
         report_pattern = "%s,Total:%d Passed:%d Failed:%d\n"
@@ -275,7 +275,8 @@ class JTLSampleWriter(LDJSONSampleWriter):
 
         fieldnames = ["timeStamp", "elapsed", "Latency", "label", "responseCode", "responseMessage", "success",
                       "allThreads", "bytes"]
-        self.writer = csv.DictWriter(self.out_stream, fieldnames=fieldnames, dialect=csv.excel)
+        endline = '\n'  # \r will be preprended automatically because out_stream is opened in text mode
+        self.writer = csv.DictWriter(self.out_stream, fieldnames=fieldnames, dialect=csv.excel, lineterminator=endline)
         self.writer.writeheader()
         self.out_stream.flush()
 
