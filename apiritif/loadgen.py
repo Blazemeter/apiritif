@@ -49,7 +49,7 @@ def spawn_worker(params):
 
     :type params: Params
     """
-    setup_logging()
+    setup_logging(params)
     log.info("Adding worker: idx=%s\tconcurrency=%s\tresults=%s", params.worker_index, params.concurrency,
              params.report)
 
@@ -72,6 +72,8 @@ class Params(object):
         self.ramp_up = 0
         self.steps = 0
         self.hold_for = 0
+
+        self.verbose = False
 
         self.tests = None
 
@@ -169,8 +171,9 @@ class Worker(ThreadPool):
         config = Config(env=os.environ, files=all_config_files(), plugins=DefaultPluginManager())
         config.plugins.addPlugins(extraplugins=[plugin])
         config.testNames = params.tests
-        config.verbosity = 0
-        config.stream = open(os.devnull, "w")  # FIXME: use "with", allow writing to file/log
+        config.verbosity = 3 if params.verbose else 0
+        if params.verbose:
+            config.stream = open(os.devnull, "w")  # FIXME: use "with", allow writing to file/log
         try:
             while True:
                 ApiritifTestProgram(config=config)
@@ -185,7 +188,8 @@ class Worker(ThreadPool):
                     break
         finally:
             self._writer.concurrency -= 1
-            config.stream.close()
+            if params.verbose:
+                config.stream.close()
 
     def __reduce__(self):
         raise NotImplementedError()
@@ -470,18 +474,24 @@ def cmdline_to_params():
     params.report = opts.result_file_template
     params.tests = args
     params.worker_count = min(params.concurrency, multiprocessing.cpu_count())
+    params.verbose = opts.verbose
 
     return params
 
 
-def setup_logging():
-    logging.basicConfig(level=logging.INFO, stream=sys.stdout,
-                        format="%(asctime)s:%(levelname)s:%(process)s:%(thread)s:%(name)s:%(message)s")
+def setup_logging(params):
+    logformat = "%(asctime)s:%(levelname)s:%(process)s:%(thread)s:%(name)s:%(message)s"
     apiritif.http.log.setLevel(logging.WARNING)
+    if params.verbose:
+        logging.basicConfig(level=logging.DEBUG, stream=sys.stdout, format=logformat)
+    else:
+        logging.basicConfig(level=logging.INFO, stream=sys.stdout, format=logformat)
+    apiritif.log.setLevel(logging.WARNING)  # TODO: do we need to include apiritif debug logs in verbose mode?
 
 
 if __name__ == '__main__':
-    setup_logging()
-    supervisor = Supervisor(cmdline_to_params())
+    params = cmdline_to_params()
+    setup_logging(params)
+    supervisor = Supervisor(params)
     supervisor.start()
     supervisor.join()
