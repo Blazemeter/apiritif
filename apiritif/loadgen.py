@@ -481,6 +481,7 @@ def cmdline_to_params():
 
 def setup_logging(params):
     logformat = "%(asctime)s:%(levelname)s:%(process)s:%(thread)s:%(name)s:%(message)s"
+    apiritif.http.log.setLevel(logging.WARNING)
     if params.verbose:
         logging.basicConfig(level=logging.DEBUG, stream=sys.stdout, format=logformat)
     else:
