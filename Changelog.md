@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- add utility functions: `encode_url()`, `base64_encode()` and `base64_decode()`
+
 ## 0.4 <sup>10 nov 2017</sup>
 
 - add utility functions: `format_date()`, `random_uniform()`, `random_gauss()` and `random_string()`
