@@ -112,7 +112,8 @@ def format_date(format_string=None, datetime_obj=None):
 
 
 def base64_decode(encoded):
-    return base64.b64decode(encoded)
+    decoded = base64.b64decode(encoded)
+    return decoded.decode()
 
 
 def base64_encode(plaintext):
