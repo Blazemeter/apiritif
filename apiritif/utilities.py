@@ -15,10 +15,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import base64
 import random
 import re
 import string
+import sys
 from datetime import datetime
+
+if sys.version_info < (3, 0):
+    from urllib import quote_plus
+else:
+    from urllib.parse import quote_plus
 
 
 def random_uniform(start, stop=None):
@@ -102,3 +109,19 @@ def format_date(format_string=None, datetime_obj=None):
     else:
         formatter = SimpleDateFormat(format_string)
         return formatter.format_datetime(datetime_obj)
+
+
+def base64_decode(encoded):
+    decoded = base64.b64decode(encoded)
+    return decoded.decode()
+
+
+def base64_encode(plaintext):
+    if not isinstance(plaintext, bytes):
+        plaintext = plaintext.encode()
+    encoded = base64.b64encode(plaintext)
+    return encoded.decode()
+
+
+def encode_url(chars):
+    return quote_plus(chars)

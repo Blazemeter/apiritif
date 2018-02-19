@@ -37,3 +37,12 @@ class TestUtilities(unittest.TestCase):
         timestamp = datetime.fromtimestamp(1292789130)
         formatted = utilities.format_date(datetime_obj=timestamp)
         self.assertEqual("1292789130000", formatted)
+
+    def test_base64_encode(self):
+        self.assertEqual(utilities.base64_encode('foobar'), 'Zm9vYmFy')
+
+    def test_base64_decode(self):
+        self.assertEqual(utilities.base64_decode('Zm9vYmFy'), 'foobar')
+
+    def test_encode_url(self):
+        self.assertEqual(utilities.encode_url('Foo Bar'), 'Foo+Bar')
