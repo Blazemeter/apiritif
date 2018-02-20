@@ -1,6 +1,8 @@
 import unittest
 from datetime import datetime
 
+import re
+
 from apiritif import utilities
 
 
@@ -46,3 +48,8 @@ class TestUtilities(unittest.TestCase):
 
     def test_encode_url(self):
         self.assertEqual(utilities.encode_url('Foo Bar'), 'Foo+Bar')
+
+    def test_uuid(self):
+        uuid = utilities.uuid()
+        match = re.match(r'^[0-9a-z\-]+$', uuid)
+        self.assertIsNotNone(match)
