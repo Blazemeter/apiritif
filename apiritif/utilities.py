@@ -21,6 +21,7 @@ import re
 import string
 import sys
 from datetime import datetime
+from uuid import uuid4
 
 if sys.version_info < (3, 0):
     from urllib import quote_plus
@@ -125,3 +126,7 @@ def base64_encode(plaintext):
 
 def encode_url(chars):
     return quote_plus(chars)
+
+
+def uuid():
+    return str(uuid4())
