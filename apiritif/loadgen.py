@@ -434,7 +434,6 @@ class ApiritifPlugin(Plugin):
         :return:
         """
         # status=FAILED
-        print(error)
         assertion_name = error[0].__name__
         error_msg = str(error[1]).split('\n')[0]
         error_trace = self._get_trace(error)
