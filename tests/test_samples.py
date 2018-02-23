@@ -30,24 +30,48 @@ class TestSamples(TestCase):
         writer = CachingWriter()
         nose.run(argv=[__file__, test_file, '-v'], addplugins=[Recorder(writer)])
         samples = writer.samples
-        self.assertEqual(len(samples), 4)
+        self.assertEqual(len(samples), 7)
 
-        nested = samples[0]
+        single = samples[0]
+        self.assertEqual('test_1_single_transaction', single.test_suite)
+        self.assertEqual('single-transaction', single.test_case)
+        self.assertEqual(single.status, "PASSED")
+
+        first, second = samples[1:3]
+        self.assertEqual(first.status, "PASSED")
+        self.assertEqual(first.test_suite, 'test_2_two_transactions')
+        self.assertEqual(first.test_case, 'transaction-1')
+        self.assertEqual(second.status, "PASSED")
+        self.assertEqual(second.test_suite, 'test_2_two_transactions')
+        self.assertEqual(second.test_case, 'transaction-2')
+
+        nested = samples[3]
         inner = nested.subsamples[0]
-        self.assertEqual('test_nested_transactions.outer', nested.test_suite + '.' + nested.test_case)
+        self.assertEqual('test_3_nested_transactions.outer', nested.test_suite + '.' + nested.test_case)
         self.assertEqual('outer.inner', inner.test_suite + '.' + inner.test_case)
         self.assertEqual(nested.status, "PASSED")
         self.assertEqual(inner.status, "PASSED")
 
-        single = samples[1]
-        self.assertEqual('test_single_transaction', single.test_suite)
-        self.assertEqual('single-transaction', single.test_case)
-        self.assertEqual(single.status, "PASSED")
+        no_tran = samples[4]
+        self.assertEqual(no_tran.status, "PASSED")
+        self.assertEqual(no_tran.test_suite, "TestTransactions")
+        self.assertEqual(no_tran.test_case, "test_4_no_transactions")
 
-        first, second = samples[2:4]
-        self.assertEqual(first.status, "PASSED")
-        self.assertEqual(first.test_suite, 'test_two_transactions')
-        self.assertEqual(first.test_case, 'transaction-1')
-        self.assertEqual(second.status, "PASSED")
-        self.assertEqual(second.test_suite, 'test_two_transactions')
-        self.assertEqual(second.test_case, 'transaction-2')
+        with_assert = samples[5]
+        self.assertEqual(with_assert.status, "PASSED")
+        self.assertEqual(with_assert.test_suite, "test_5_apiritif_assertions")
+        self.assertEqual(with_assert.test_case, "http://blazedemo.com/")
+        self.assertEqual(len(with_assert.assertions), 1)
+        assertion = with_assert.assertions[0]
+        self.assertEqual(assertion.name, "assert_ok")
+        self.assertEqual(assertion.failed, False)
+
+        assert_failed = samples[6]
+        self.assertEqual(assert_failed.status, "FAILED")
+        self.assertEqual(assert_failed.test_suite, "test_6_apiritif_assertions_failed")
+        self.assertEqual(assert_failed.test_case, "http://blazedemo.com/")
+        self.assertEqual(len(assert_failed.assertions), 1)
+        assertion = assert_failed.assertions[0]
+        self.assertEqual(assertion.name, "assert_failed")
+        self.assertEqual(assertion.failed, True)
+        self.assertEqual(assertion.error_message, "Request to http://blazedemo.com/ didn't fail (200)")
