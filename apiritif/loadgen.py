@@ -420,7 +420,10 @@ class ApiritifPlugin(Plugin):
     def _get_trace(error):
         if sys.version > '3':
             # noinspection PyArgumentList
-            lines = traceback.format_exception(*error, chain=not isinstance(error[1], str))
+            exct, excv, trace = error
+            if isinstance(excv, str):
+                excv = exct(excv)
+            lines = traceback.format_exception(exct, excv, trace, chain=True)
         else:
             lines = traceback.format_exception(*error)
         return ''.join(lines).rstrip()
