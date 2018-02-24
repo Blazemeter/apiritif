@@ -19,6 +19,27 @@ import apiritif
 import copy
 
 
+class Assertion(object):
+    def __init__(self, name, ):
+        self.name = name
+        self.failed = False
+        self.error_message = None
+        self.error_trace = None
+
+    def set_failed(self, error_message, error_trace=""):
+        self.failed = True
+        self.error_message = error_message
+        self.error_trace = error_trace
+
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "failed": self.failed,
+            "error_msg": self.error_message,
+            "error_trace": self.error_trace,
+        }
+
+
 class Sample(object):
     def __init__(self, test_suite=None, test_case=None, status=None, start_time=None, duration=None,
                  error_msg=None, error_trace=None):
@@ -31,12 +52,45 @@ class Sample(object):
         self.error_trace = error_trace  # traceback of a failure
         self.extras = {}  # extra info: ('file' - location, 'full_name' - full qualified name, 'decsription' - docstr)
         self.subsamples = []  # subsamples list
+        self.assertions = []  # list of assertions
+        self.parent_sample = None  # pointer to parent sample
+
+    def set_failed(self, error_msg, error_trace):
+        current = self
+        while current is not None:
+            current.status = "FAILED"
+            current.error_msg = error_msg
+            current.error_trace = error_trace
+            current = current.parent_sample
+
+    def set_parent(self, parent):
+        self.parent_sample = parent
 
     def add_subsample(self, sample):
+        sample.set_parent(self)
         self.subsamples.append(sample)
+
+    def add_assertion(self, name):
+        self.assertions.append(Assertion(name))
+
+    def set_assertion_failed(self, name, error_message, error_trace=""):
+        for ass in self.assertions:
+            if ass.name == name:
+                ass.set_failed(error_message, error_trace)
+        self.set_failed(error_message, error_trace)
 
     def to_dict(self):
         # type: () -> dict
+        extras = copy.deepcopy(self.extras)
+        if "assertions" not in extras:
+            extras["assertions"] = []
+        for ass in self.assertions:
+            extras["assertions"].append({
+                "name": ass.name,
+                "isFailed": ass.failed,
+                "errorMessage": ass.error_message,
+            })
+
         return {
             "test_suite": self.test_suite,
             "test_case": self.test_case,
@@ -45,7 +99,8 @@ class Sample(object):
             "duration": self.duration,
             "error_msg": self.error_msg,
             "error_trace": self.error_trace,
-            "extras": self.extras,
+            "extras": extras,
+            "assertions": [ass.to_dict() for ass in self.assertions],
             "subsamples": [sample.to_dict() for sample in self.subsamples],
         }
 
@@ -54,6 +109,11 @@ class Sample(object):
 
 
 class ApiritifSampleExtractor(object):
+    def __init__(self):
+        self.transactions_present = False
+        self.active_transactions = []
+        self.response_map = {}  # response -> sample
+
     def parse_recording(self, recording, test_case_sample):
         """
 
@@ -61,102 +121,95 @@ class ApiritifSampleExtractor(object):
         :type test_case_sample: Sample
         :rtype: list[Sample]
         """
-        test_case_name = test_case_sample.test_case
-        active_transactions = [test_case_sample]
-        response_map = {}  # response -> sample
-        transactions_present = False
+        self.active_transactions.append(test_case_sample)
         for item in recording:
             if isinstance(item, apiritif.Request):
-                sample = Sample(
-                    test_suite=test_case_name,
-                    test_case=item.address,
-                    status="PASSED",
-                    start_time=item.timestamp,
-                    duration=item.response.elapsed.total_seconds(),
-                )
-                extras = self._extract_extras(item)
-                if extras:
-                    sample.extras.update(extras)
-                response_map[item.response] = sample
-                active_transactions[-1].add_subsample(sample)
+                self._parse_request(item)
             elif isinstance(item, apiritif.TransactionStarted):
-                transactions_present = True
-                tran_sample = Sample(test_case=item.transaction_name, test_suite=test_case_name)
-                active_transactions.append(tran_sample)
+                self._parse_transaction_started(item)
             elif isinstance(item, apiritif.TransactionEnded):
-                tran = item.transaction
-                tran_sample = active_transactions.pop()
-                assert tran_sample.test_case == item.transaction_name
-                tran_sample.start_time = tran.start_time()
-                tran_sample.duration = tran.duration()
-                if tran.success is None:
-                    tran_sample.status = "PASSED"
-                    for sample in tran_sample.subsamples:
-                        if sample.status in ("FAILED", "BROKEN"):
-                            tran_sample.status = sample.status
-                            tran_sample.error_msg = sample.error_msg
-                            tran_sample.error_trace = sample.error_trace
-                elif tran.success:
-                    tran_sample.status = "PASSED"
-                else:
-                    tran_sample.status = "FAILED"
-                    tran_sample.error_msg = tran.error_message
-
-                extras = {}
-                last_extras = tran_sample.subsamples[-1].extras if tran_sample.subsamples else {}
-                name = tran.name
-                method = last_extras.get("requestMethod") or ""
-                resp_code = tran.response_code() or last_extras.get("responseCode")
-                reason = last_extras.get("responseMessage") or ""
-                headers = last_extras.get("requestHeaders") or {}
-                response_body = tran.response() or last_extras.get("responseBody") or ""
-                response_time = tran.duration() or last_extras.get("responseTime") or 0.0
-                request_body = tran.request() or last_extras.get("requestBody") or ""
-                request_cookies = last_extras.get("requestCookies") or {}
-                request_headers = last_extras.get("requestHeaders") or {}
-
-                extras = copy.deepcopy(tran.extras())
-                extras.update(self._extras_dict(name, method, resp_code, reason, headers,
-                                                response_body, len(response_body), response_time,
-                                                request_body, request_cookies, request_headers))
-                tran_sample.extras = extras
-
-                active_transactions[-1].add_subsample(tran_sample)
+                self._parse_transaction_ended(item)
             elif isinstance(item, apiritif.Assertion):
-                sample = response_map.get(item.response, None)
-                if sample is None:
-                    raise ValueError("Found assertion for unknown response")
-                if "assertions" not in sample.extras:
-                    sample.extras["assertions"] = []
-                sample.extras["assertions"].append({
-                    "name": item.name,
-                    "isFailed": False,
-                    "failureMessage": "",
-                })
+                self._parse_assertion(item)
             elif isinstance(item, apiritif.AssertionFailure):
-                sample = response_map.get(item.response, None)
-                if sample is None:
-                    raise ValueError("Found assertion failure for unknown response")
-                for ass in sample.extras.get("assertions", []):
-                    if ass["name"] == item.name:
-                        ass["isFailed"] = True
-                        ass["failureMessage"] = item.failure_message
-                        sample.status = "FAILED"
-                        sample.error_msg = item.failure_message
+                self._parse_assertion_failure(item)
             else:
                 raise ValueError("Unknown kind of event in apiritif recording: %s" % item)
 
-        if len(active_transactions) != 1:
+        if len(self.active_transactions) != 1:
             # TODO: shouldn't we auto-balance them?
             raise ValueError("Can't parse apiritif recordings: unbalanced transactions")
 
-        toplevel_sample = active_transactions.pop()
+        toplevel_sample = self.active_transactions.pop()
 
-        # do not capture toplevel sample if transactions were used
-        if transactions_present:
+        # if toplevel sample consists of multiple transactions - exclude it, record transactions only
+        if self.transactions_present:
             return toplevel_sample.subsamples
         else:
             return [toplevel_sample]
+
+    def _parse_request(self, item):
+        current_tran = self.active_transactions[-1]
+        sample = Sample(
+            test_suite=current_tran.test_case,
+            test_case=item.address,
+            status="PASSED",
+            start_time=item.timestamp,
+            duration=item.response.elapsed.total_seconds(),
+        )
+        extras = self._extract_extras(item)
+        if extras:
+            sample.extras.update(extras)
+        self.response_map[item.response] = sample
+        self.active_transactions[-1].add_subsample(sample)
+
+    def _parse_transaction_started(self, item):
+        self.transactions_present = True
+        current_tran = self.active_transactions[-1]
+        tran_sample = Sample(status="PASSED", test_case=item.transaction_name, test_suite=current_tran.test_case)
+        self.active_transactions.append(tran_sample)
+
+    def _parse_transaction_ended(self, item):
+        tran = item.transaction
+        tran_sample = self.active_transactions.pop()
+        assert tran_sample.test_case == item.transaction_name
+        tran_sample.start_time = tran.start_time()
+        tran_sample.duration = tran.duration()
+        if tran.success is not None:
+            if tran.success:
+                tran_sample.status = "PASSED"
+            else:
+                tran_sample.status = "FAILED"
+                tran_sample.error_msg = tran.error_message
+        last_extras = tran_sample.subsamples[-1].extras if tran_sample.subsamples else {}
+        name = tran.name
+        method = last_extras.get("requestMethod") or ""
+        resp_code = tran.response_code() or last_extras.get("responseCode")
+        reason = last_extras.get("responseMessage") or ""
+        headers = last_extras.get("requestHeaders") or {}
+        response_body = tran.response() or last_extras.get("responseBody") or ""
+        response_time = tran.duration() or last_extras.get("responseTime") or 0.0
+        request_body = tran.request() or last_extras.get("requestBody") or ""
+        request_cookies = last_extras.get("requestCookies") or {}
+        request_headers = last_extras.get("requestHeaders") or {}
+        extras = copy.deepcopy(tran.extras())
+        extras.update(self._extras_dict(name, method, resp_code, reason, headers,
+                                        response_body, len(response_body), response_time,
+                                        request_body, request_cookies, request_headers))
+        tran_sample.extras = extras
+        self.active_transactions[-1].add_subsample(tran_sample)
+
+    def _parse_assertion(self, item):
+        sample = self.response_map.get(item.response, None)
+        if sample is None:
+            raise ValueError("Found assertion for unknown response")
+        sample.add_assertion(item.name)
+
+    def _parse_assertion_failure(self, item):
+        sample = self.response_map.get(item.response, None)
+        if sample is None:
+            raise ValueError("Found assertion failure for unknown response")
+        sample.set_assertion_failed(item.name, item.failure_message, "")
 
     @staticmethod
     def _headers_from_dict(headers):

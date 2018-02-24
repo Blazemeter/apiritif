@@ -408,16 +408,22 @@ class ApiritifPlugin(Plugin):
         :return:
         """
         # test_dict will be None if startTest wasn't called (i.e. exception in setUp/setUpClass)
+        # status=BROKEN
         if self.current_sample is not None:
-            self.current_sample.status = "BROKEN"
-            self.current_sample.error_msg = str(error[1]).split('\n')[0]
-            self.current_sample.error_trace = self._get_trace(error)
+            assertion_name = error[0].__name__
+            error_msg = str(error[1]).split('\n')[0]
+            error_trace = self._get_trace(error)
+            self.current_sample.add_assertion(assertion_name)
+            self.current_sample.set_assertion_failed(assertion_name, error_msg, error_trace)
 
     @staticmethod
     def _get_trace(error):
         if sys.version > '3':
             # noinspection PyArgumentList
-            lines = traceback.format_exception(*error, chain=not isinstance(error[1], str))
+            exct, excv, trace = error
+            if isinstance(excv, str):
+                excv = exct(excv)
+            lines = traceback.format_exception(exct, excv, trace, chain=True)
         else:
             lines = traceback.format_exception(*error)
         return ''.join(lines).rstrip()
@@ -430,9 +436,12 @@ class ApiritifPlugin(Plugin):
 
         :return:
         """
-        self.current_sample.status = "FAILED"
-        self.current_sample.error_msg = str(error[1]).split('\n')[0]
-        self.current_sample.error_trace = self._get_trace(error)
+        # status=FAILED
+        assertion_name = error[0].__name__
+        error_msg = str(error[1]).split('\n')[0]
+        error_trace = self._get_trace(error)
+        self.current_sample.add_assertion(assertion_name)
+        self.current_sample.set_assertion_failed(assertion_name, error_msg, error_trace)
 
     def addSkip(self, test):
         """

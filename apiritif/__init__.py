@@ -100,7 +100,7 @@ class http(object):
 class transaction(object):
     def __init__(self, name):
         self.name = name
-        self.success = True
+        self.success = None  # None | True | False
         self.error_message = None
         self._request = None
         self._response = None
@@ -115,7 +115,7 @@ class transaction(object):
 
     def __exit__(self, exc_type, exc_value, traceback):
         if exc_value is not None:
-            self.fail()
+            self.fail("%s: %s" % (exc_type.__name__, str(exc_value)))
         self.finish()
 
     def start(self):

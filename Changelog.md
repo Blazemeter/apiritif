@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- add utility functions: `encode_url()`, `base64_encode()` and `base64_decode()`
+- add utility functions: `encode_url()`, `base64_encode()`, `base64_decode()` and `uuid()`
+- fix sample handling for nested transactions
 
 ## 0.4 <sup>10 nov 2017</sup>
 
