@@ -3,7 +3,9 @@
 ## Unreleased
 
 - add utility functions: `encode_url()`, `base64_encode()`, `base64_decode()` and `uuid()`
-- fix sample handling for nested transactions
+- fix sample handling (statuses, error messages, assertions) for nested transactions
+- add `assertions` field to samples
+- fix `responseMessage` JTL field writing in load testing mode
 
 ## 0.4 <sup>10 nov 2017</sup>
 
