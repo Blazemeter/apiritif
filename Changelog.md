@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.6.1 <sup>2 mar 2018</sup>
+- correcting release
+
 ## 0.6 <sup>2 mar 2018</sup>
 
 - add utility functions: `encode_url()`, `base64_encode()`, `base64_decode()` and `uuid()`
