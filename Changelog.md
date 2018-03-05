@@ -1,5 +1,8 @@
 # Changelog
 
+## (unreleased)
+- use correct `latency`/`responseTime` fields format in sample's extras
+
 ## 0.6.1 <sup>2 mar 2018</sup>
 - correcting release
 
