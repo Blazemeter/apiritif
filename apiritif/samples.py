@@ -23,8 +23,8 @@ class Assertion(object):
     def __init__(self, name, ):
         self.name = name
         self.failed = False
-        self.error_message = None
-        self.error_trace = None
+        self.error_message = ""
+        self.error_trace = ""
 
     def set_failed(self, error_message, error_trace=""):
         self.failed = True
@@ -224,9 +224,9 @@ class ApiritifSampleExtractor(object):
         record = {
             'responseCode': status_code,
             'responseMessage': reason,
-            'responseTime': response_time,
+            'responseTime': int(response_time * 1000),
             'connectTime': 0,
-            'latency': 0,
+            'latency': int(response_time * 1000),
             'responseSize': response_size,
             'requestSize': 0,
             'requestMethod': method,
