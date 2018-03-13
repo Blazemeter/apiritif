@@ -75,3 +75,26 @@ class TestSamples(TestCase):
         self.assertEqual(assertion.name, "assert_failed")
         self.assertEqual(assertion.failed, True)
         self.assertEqual(assertion.error_message, "Request to http://blazedemo.com/ didn't fail (200)")
+
+    def test_label_single_transaction(self):
+        test_file = RESOURCES_DIR + "/test_single_transaction.py"
+        self.assertTrue(os.path.exists(test_file))
+        writer = CachingWriter()
+        nose.run(argv=[__file__, test_file, '-v'], addplugins=[Recorder(writer)])
+        samples = writer.samples
+        self.assertEqual(len(samples), 2)
+        first, second = samples
+
+        self.assertEqual(first.test_suite, "test_requests")
+        self.assertEqual(first.test_case, "blazedemo 123")
+        self.assertEqual(1, len(first.subsamples))
+        first_req = first.subsamples[0]
+        self.assertEqual(first_req.test_suite, "blazedemo 123")
+        self.assertEqual(first_req.test_case, 'http://demo.blazemeter.com/echo.php?echo=123')
+
+        self.assertEqual(second.test_suite, "test_requests")
+        self.assertEqual(second.test_case, "blazedemo 456")
+        self.assertEqual(1, len(second.subsamples))
+        second_req = second.subsamples[0]
+        self.assertEqual(second_req.test_suite, "blazedemo 456")
+        self.assertEqual(second_req.test_case, 'http://demo.blazemeter.com/echo.php?echo=456')
