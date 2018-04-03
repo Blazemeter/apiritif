@@ -166,7 +166,7 @@ class Worker(ThreadPool):
 
         iteration = 0
         plugin = ApiritifPlugin(self._writer)
-        self._writer.concurrency += 1
+        self._writer.concurrency += params.worker_count
 
         config = Config(env=os.environ, files=all_config_files(), plugins=DefaultPluginManager())
         config.plugins.addPlugins(extraplugins=[plugin])
@@ -187,7 +187,7 @@ class Worker(ThreadPool):
                     log.debug("[%s] duration limit reached: %s", params.worker_index, params.hold_for)
                     break
         finally:
-            self._writer.concurrency -= 1
+            self._writer.concurrency -= params.worker_count
             if params.verbose:
                 config.stream.close()
 
