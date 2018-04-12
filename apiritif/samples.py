@@ -53,6 +53,7 @@ class Sample(object):
         self.extras = {}  # extra info: ('file' - location, 'full_name' - full qualified name, 'decsription' - docstr)
         self.subsamples = []  # subsamples list
         self.assertions = []  # list of assertions
+        self.path = []  # sample path (i.e. [package, package, module, suite, case, transaction])
         self.parent_sample = None  # pointer to parent sample
 
     def set_failed(self, error_msg, error_trace):
@@ -102,6 +103,7 @@ class Sample(object):
             "extras": extras,
             "assertions": [ass.to_dict() for ass in self.assertions],
             "subsamples": [sample.to_dict() for sample in self.subsamples],
+            "path": self.path,
         }
 
     def __repr__(self):
@@ -142,11 +144,7 @@ class ApiritifSampleExtractor(object):
 
         toplevel_sample = self.active_transactions.pop()
 
-        # if toplevel sample consists of multiple transactions - exclude it, record transactions only
-        if self.transactions_present:
-            return toplevel_sample.subsamples
-        else:
-            return [toplevel_sample]
+        return [toplevel_sample]
 
     def _parse_request(self, item):
         current_tran = self.active_transactions[-1]
@@ -157,6 +155,7 @@ class ApiritifSampleExtractor(object):
             start_time=item.timestamp,
             duration=item.response.elapsed.total_seconds(),
         )
+        sample.path = current_tran.path + [{"type": "request", "value": item.address}]
         extras = self._extract_extras(item)
         if extras:
             sample.extras.update(extras)
@@ -167,6 +166,7 @@ class ApiritifSampleExtractor(object):
         self.transactions_present = True
         current_tran = self.active_transactions[-1]
         tran_sample = Sample(status="PASSED", test_case=item.transaction_name, test_suite=current_tran.test_case)
+        tran_sample.path = current_tran.path + [{"type": "transaction", "value": item.transaction_name}]
         self.active_transactions.append(tran_sample)
 
     def _parse_transaction_ended(self, item):

@@ -352,12 +352,13 @@ class ApiritifPlugin(Plugin):
         """
         before test run
         """
-        test_file, _, _ = test.address()  # file path, module name, class.method
+        addr = test.address()  # file path, package.subpackage.module, class.method
+        test_file, module_fqn, class_method = addr
         test_fqn = test.id()  # [package].module.class.method
-        class_name, method_name = test_fqn.split('.')[-2:]
+        suite_name, case_name = test_fqn.split('.')[-2:]
 
-        self.current_sample = Sample(test_case=method_name,
-                                     test_suite=class_name,
+        self.current_sample = Sample(test_case=case_name,
+                                     test_suite=suite_name,
                                      start_time=time.time(),
                                      status="SKIPPED")
         self.current_sample.extras.update({
@@ -365,7 +366,20 @@ class ApiritifPlugin(Plugin):
             "full_name": test_fqn,
             "description": test.shortDescription()
         })
+        self.current_sample.path = []
+        module_fqn_parts = module_fqn.split('.')
+        for item in module_fqn_parts[:-1]:
+            self.current_sample.path.append({"type": "package", "value": item})
+        self.current_sample.path.append({"type": "module", "value": module_fqn_parts[-1]})
 
+        if "." in class_method:  # TestClass.test_method
+            class_name, method_name = class_method.split('.')[:2]
+            self.current_sample.path.extend([{"type": "class", "value": class_name},
+                                             {"type": "method", "value": method_name}])
+        else:  # test_func
+            self.current_sample.path.append({"type": "func", "value": module_fqn_parts[-1]})
+
+        log.debug("Test method path: %r", self.current_sample.path)
         self.test_count += 1
 
     def startTest(self, test):
