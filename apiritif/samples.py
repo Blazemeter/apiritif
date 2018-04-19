@@ -40,6 +40,18 @@ class Assertion(object):
         }
 
 
+class PathComponent(object):
+    def __init__(self, type, value):
+        self.type = type
+        self.value = value
+
+    def to_dict(self):
+        return {
+            "type": self.type,
+            "value": self.value,
+        }
+
+
 class Sample(object):
     def __init__(self, test_suite=None, test_case=None, status=None, start_time=None, duration=None,
                  error_msg=None, error_trace=None):
@@ -103,7 +115,7 @@ class Sample(object):
             "extras": extras,
             "assertions": [ass.to_dict() for ass in self.assertions],
             "subsamples": [sample.to_dict() for sample in self.subsamples],
-            "path": self.path,
+            "path": [comp.to_dict() for comp in self.path],
         }
 
     def __repr__(self):
@@ -155,7 +167,7 @@ class ApiritifSampleExtractor(object):
             start_time=item.timestamp,
             duration=item.response.elapsed.total_seconds(),
         )
-        sample.path = current_tran.path + [{"type": "request", "value": item.address}]
+        sample.path = current_tran.path + [PathComponent("request", item.address)]
         extras = self._extract_extras(item)
         if extras:
             sample.extras.update(extras)
@@ -166,7 +178,7 @@ class ApiritifSampleExtractor(object):
         self.transactions_present = True
         current_tran = self.active_transactions[-1]
         tran_sample = Sample(status="PASSED", test_case=item.transaction_name, test_suite=current_tran.test_case)
-        tran_sample.path = current_tran.path + [{"type": "transaction", "value": item.transaction_name}]
+        tran_sample.path = current_tran.path + [PathComponent("transaction", item.transaction_name)]
         self.active_transactions.append(tran_sample)
 
     def _parse_transaction_ended(self, item):

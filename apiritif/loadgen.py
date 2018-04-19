@@ -34,7 +34,7 @@ from nose.plugins import Plugin
 from nose.plugins.manager import DefaultPluginManager
 
 import apiritif
-from apiritif.samples import ApiritifSampleExtractor, Sample
+from apiritif.samples import ApiritifSampleExtractor, Sample, PathComponent
 
 log = logging.getLogger("loadgen")
 
@@ -356,6 +356,8 @@ class ApiritifPlugin(Plugin):
         test_file, module_fqn, class_method = addr
         test_fqn = test.id()  # [package].module.class.method
         suite_name, case_name = test_fqn.split('.')[-2:]
+        log.info("Addr: %r", addr)
+        log.info("id: %r", test_fqn)
 
         self.current_sample = Sample(test_case=case_name,
                                      test_suite=suite_name,
@@ -366,18 +368,17 @@ class ApiritifPlugin(Plugin):
             "full_name": test_fqn,
             "description": test.shortDescription()
         })
-        self.current_sample.path = []
         module_fqn_parts = module_fqn.split('.')
         for item in module_fqn_parts[:-1]:
-            self.current_sample.path.append({"type": "package", "value": item})
-        self.current_sample.path.append({"type": "module", "value": module_fqn_parts[-1]})
+            self.current_sample.path.append(PathComponent("package", item))
+        self.current_sample.path.append(PathComponent("module", module_fqn_parts[-1]))
 
         if "." in class_method:  # TestClass.test_method
             class_name, method_name = class_method.split('.')[:2]
-            self.current_sample.path.extend([{"type": "class", "value": class_name},
-                                             {"type": "method", "value": method_name}])
+            self.current_sample.path.extend([PathComponent("class", class_name),
+                                             PathComponent("method", method_name)])
         else:  # test_func
-            self.current_sample.path.append({"type": "func", "value": module_fqn_parts[-1]})
+            self.current_sample.path.append(PathComponent("func", class_method))
 
         log.debug("Test method path: %r", self.current_sample.path)
         self.test_count += 1
