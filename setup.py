@@ -21,6 +21,8 @@ setup(
     packages=['apiritif'],
     version="0.6.1",
     description='Python framework for API testing',
+    long_description=open('README.md').read(),
+    long_description_content_type='text/markdown',
     license='Apache 2.0',
     platform='any',
     author='Dimitri Pribysh',
