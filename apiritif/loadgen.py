@@ -292,6 +292,28 @@ class JTLSampleWriter(LDJSONSampleWriter):
         :type test_count: int
         :type success_count: int
         """
+        self._write_request_subsamples(sample)
+
+    def _get_sample_type(self, sample):
+        if sample.path:
+            last = sample.path[-1]
+            return last.type
+        else:
+            return None
+
+    def _write_request_subsamples(self, sample):
+        if self._get_sample_type(sample) == "request":
+            self._write_single_sample(sample)
+        elif sample.subsamples:
+            for sub in sample.subsamples:
+                self._write_request_subsamples(sub)
+        else:
+            self._write_single_sample(sample)
+
+    def _write_single_sample(self, sample):
+        """
+        :type sample: Sample
+        """
         bytes = sample.extras.get("responseHeadersSize", 0) + 2 + sample.extras.get("responseBodySize", 0)
 
         message = sample.error_msg
