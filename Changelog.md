@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.6.3 <sup>25 apr 2018</sup>
+- correct sample writing in load testing mode
+
 ## 0.6.2 <sup>25 apr 2018</sup>
 - use correct `latency`/`responseTime` fields format in sample's extras
 - write test `path` (used to identify parts of test) to be used by Taurus
