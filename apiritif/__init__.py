@@ -21,6 +21,7 @@ import threading
 import time
 from functools import wraps
 from io import BytesIO
+from string import Template
 
 import jsonpath_rw
 import requests
@@ -30,7 +31,6 @@ from apiritif.utilities import *
 from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp
 
 log = logging.getLogger('apiritif')
-
 
 class http(object):
     log = log.getChild('http')
@@ -95,7 +95,33 @@ class http(object):
     @staticmethod
     def head(address, **kwargs):
         return http.request("HEAD", address, **kwargs)
+            
+class Apply(Template):
+    
+    def __init__(self, template):
+        super(Apply, self).__init__(template)
+        self.variables = {}
+    
+    def __repr__(self):
+        return repr(self.safe_substitute(self.variables))
 
+    def __str__(self):
+        return self.safe_substitute(self.variables)
+    
+class Template():
+
+    def __init__(self, variables=None):
+        if dict:
+            self.variables = variables
+        else:
+            self.variables = {}
+        self.tmpl = Apply("")
+    
+    def apply(self, template):
+        self.tmpl.template = template
+        self.tmpl.variables = self.variables
+        return str(self.tmpl)
+        
 
 class transaction(object):
     def __init__(self, name):
