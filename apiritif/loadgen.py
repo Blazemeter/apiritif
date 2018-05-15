@@ -176,7 +176,9 @@ class Worker(ThreadPool):
             config.stream = open(os.devnull, "w")  # FIXME: use "with", allow writing to file/log
         try:
             while True:
+                log.info("Starting iteration: start_time=%.3f", time.time())
                 ApiritifTestProgram(config=config)
+                log.info("Finishing iteration: end_time=%.3f", time.time())
 
                 iteration += 1
                 if iteration >= params.iterations:
