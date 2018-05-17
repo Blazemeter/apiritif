@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.6.4 <sup>17 may 2018</sup>
+- record iteration beginning/end in logs for Taurus
+
 ## 0.6.3 <sup>25 apr 2018</sup>
 - correct sample writing in load testing mode
 
