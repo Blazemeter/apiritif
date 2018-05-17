@@ -381,8 +381,8 @@ class ApiritifPlugin(Plugin):
         test_file, module_fqn, class_method = addr
         test_fqn = test.id()  # [package].module.class.method
         suite_name, case_name = test_fqn.split('.')[-2:]
-        log.info("Addr: %r", addr)
-        log.info("id: %r", test_fqn)
+        log.debug("Addr: %r", addr)
+        log.debug("id: %r", test_fqn)
 
         self.current_sample = Sample(test_case=case_name,
                                      test_suite=suite_name,
