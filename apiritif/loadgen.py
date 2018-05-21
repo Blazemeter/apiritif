@@ -177,10 +177,7 @@ class Worker(ThreadPool):
         try:
             while True:
                 iteration += 1
-
-                log.info("Starting iteration:: index=%d,start_time=%.3f", iteration, time.time())
                 ApiritifTestProgram(config=config)
-                log.info("Finishing iteration:: index=%d,end_time=%.3f", iteration, time.time())
 
                 if iteration >= params.iterations:
                     log.debug("[%s] iteration limit reached: %s", params.worker_index, params.iterations)
@@ -362,7 +359,7 @@ class ApiritifPlugin(Plugin):
         self.test_count = 0
         self.success_count = 0
         self.current_sample = None
-        self.apiritif_extractor = ApiritifSampleExtractor()
+        self.apiritif_extractor = ApiritifSampleExtractor(log)
         self.start_time = None
         self.end_time = None
 

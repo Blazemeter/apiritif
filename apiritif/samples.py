@@ -14,6 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import logging
 
 import apiritif
 import copy
@@ -123,10 +124,11 @@ class Sample(object):
 
 
 class ApiritifSampleExtractor(object):
-    def __init__(self):
+    def __init__(self, parent_log):
         self.transactions_present = False
         self.active_transactions = []
         self.response_map = {}  # response -> sample
+        self.log = parent_log.getChild('extractor')
 
     def parse_recording(self, recording, test_case_sample):
         """
@@ -180,6 +182,8 @@ class ApiritifSampleExtractor(object):
         tran_sample = Sample(status="PASSED", test_case=item.transaction_name, test_suite=current_tran.test_case)
         tran_sample.path = current_tran.path + [PathComponent("transaction", item.transaction_name)]
         self.active_transactions.append(tran_sample)
+        self.log.info("Transaction started:: name=%s,start_time=%.3f",
+                      item.transaction.name, item.transaction.start_time())
 
     def _parse_transaction_ended(self, item):
         tran = item.transaction
@@ -210,6 +214,8 @@ class ApiritifSampleExtractor(object):
                                         request_body, request_cookies, request_headers))
         tran_sample.extras = extras
         self.active_transactions[-1].add_subsample(tran_sample)
+        self.log.info("Transaction ended:: name=%s,duration=%.3f",
+                      item.transaction.name, item.transaction.duration())
 
     def _parse_assertion(self, item):
         sample = self.response_map.get(item.response, None)
