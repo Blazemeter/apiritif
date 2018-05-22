@@ -278,7 +278,7 @@ class _EventRecorder(object):
     def record_transaction_start(self, tran):
         self.record_event(TransactionStarted(tran))
         if isinstance(tran, transaction_logged):
-            self.log.info("Transaction started:: start_time=%.3f,name=%s,", tran.start_time(),tran.name)
+            self.log.info("Transaction started:: start_time=%.3f,name=%s", tran.start_time(),tran.name)
 
     def record_transaction_end(self, tran):
         self.record_event(TransactionEnded(tran))
