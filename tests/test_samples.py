@@ -30,14 +30,20 @@ class TestSamples(TestCase):
         writer = CachingWriter()
         nose.run(argv=[__file__, test_file, '-v'], addplugins=[Recorder(writer)])
         samples = writer.samples
-        self.assertEqual(len(samples), 7)
+        self.assertEqual(len(samples), 6)
 
         single = samples[0]
-        self.assertEqual('test_1_single_transaction', single.test_suite)
-        self.assertEqual('single-transaction', single.test_case)
-        self.assertEqual(single.status, "PASSED")
+        self.assertEqual(single.test_suite, 'TestTransactions')
+        self.assertEqual(single.test_case, 'test_1_single_transaction')
+        tran = single.subsamples[0]
+        self.assertEqual('test_1_single_transaction', tran.test_suite)
+        self.assertEqual('single-transaction', tran.test_case)
+        self.assertEqual(tran.status, "PASSED")
 
-        first, second = samples[1:3]
+        two_trans = samples[1]
+        self.assertEqual(two_trans.test_case, 'test_2_two_transactions')
+        self.assertEqual(len(two_trans.subsamples), 2)
+        first, second = two_trans.subsamples
         self.assertEqual(first.status, "PASSED")
         self.assertEqual(first.test_suite, 'test_2_two_transactions')
         self.assertEqual(first.test_case, 'transaction-1')
@@ -45,33 +51,37 @@ class TestSamples(TestCase):
         self.assertEqual(second.test_suite, 'test_2_two_transactions')
         self.assertEqual(second.test_case, 'transaction-2')
 
-        nested = samples[3]
-        inner = nested.subsamples[0]
-        self.assertEqual('test_3_nested_transactions.outer', nested.test_suite + '.' + nested.test_case)
+        nested = samples[2]
+        middle = nested.subsamples[0]
+        self.assertEqual('test_3_nested_transactions.outer', middle.test_suite + '.' + middle.test_case)
+        self.assertEqual(middle.status, "PASSED")
+        inner = middle.subsamples[0]
         self.assertEqual('outer.inner', inner.test_suite + '.' + inner.test_case)
-        self.assertEqual(nested.status, "PASSED")
         self.assertEqual(inner.status, "PASSED")
 
-        no_tran = samples[4]
+        no_tran = samples[3]
         self.assertEqual(no_tran.status, "PASSED")
         self.assertEqual(no_tran.test_suite, "TestTransactions")
         self.assertEqual(no_tran.test_case, "test_4_no_transactions")
 
-        with_assert = samples[5]
+        with_assert = samples[4]
         self.assertEqual(with_assert.status, "PASSED")
-        self.assertEqual(with_assert.test_suite, "test_5_apiritif_assertions")
-        self.assertEqual(with_assert.test_case, "http://blazedemo.com/")
-        self.assertEqual(len(with_assert.assertions), 1)
-        assertion = with_assert.assertions[0]
+        self.assertEqual(len(with_assert.subsamples), 1)
+        request = with_assert.subsamples[0]
+        self.assertEqual(request.test_suite, "test_5_apiritif_assertions")
+        self.assertEqual(request.test_case, "http://blazedemo.com/")
+        self.assertEqual(len(request.assertions), 1)
+        assertion = request.assertions[0]
         self.assertEqual(assertion.name, "assert_ok")
         self.assertEqual(assertion.failed, False)
 
-        assert_failed = samples[6]
+        assert_failed = samples[5]
         self.assertEqual(assert_failed.status, "FAILED")
-        self.assertEqual(assert_failed.test_suite, "test_6_apiritif_assertions_failed")
-        self.assertEqual(assert_failed.test_case, "http://blazedemo.com/")
-        self.assertEqual(len(assert_failed.assertions), 1)
-        assertion = assert_failed.assertions[0]
+        request = assert_failed.subsamples[0]
+        self.assertEqual(request.test_suite, "test_6_apiritif_assertions_failed")
+        self.assertEqual(request.test_case, "http://blazedemo.com/")
+        self.assertEqual(len(request.assertions), 1)
+        assertion = request.assertions[0]
         self.assertEqual(assertion.name, "assert_failed")
         self.assertEqual(assertion.failed, True)
         self.assertEqual(assertion.error_message, "Request to http://blazedemo.com/ didn't fail (200)")
@@ -82,8 +92,11 @@ class TestSamples(TestCase):
         writer = CachingWriter()
         nose.run(argv=[__file__, test_file, '-v'], addplugins=[Recorder(writer)])
         samples = writer.samples
-        self.assertEqual(len(samples), 2)
-        first, second = samples
+        self.assertEqual(len(samples), 1)
+
+        toplevel = samples[0]
+        self.assertEqual(2, len(toplevel.subsamples))
+        first, second = toplevel.subsamples
 
         self.assertEqual(first.test_suite, "test_requests")
         self.assertEqual(first.test_case, "blazedemo 123")

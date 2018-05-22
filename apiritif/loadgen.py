@@ -34,7 +34,7 @@ from nose.plugins import Plugin
 from nose.plugins.manager import DefaultPluginManager
 
 import apiritif
-from apiritif.samples import ApiritifSampleExtractor, Sample
+from apiritif.samples import ApiritifSampleExtractor, Sample, PathComponent
 
 log = logging.getLogger("loadgen")
 
@@ -292,6 +292,28 @@ class JTLSampleWriter(LDJSONSampleWriter):
         :type test_count: int
         :type success_count: int
         """
+        self._write_request_subsamples(sample)
+
+    def _get_sample_type(self, sample):
+        if sample.path:
+            last = sample.path[-1]
+            return last.type
+        else:
+            return None
+
+    def _write_request_subsamples(self, sample):
+        if self._get_sample_type(sample) == "request":
+            self._write_single_sample(sample)
+        elif sample.subsamples:
+            for sub in sample.subsamples:
+                self._write_request_subsamples(sub)
+        else:
+            self._write_single_sample(sample)
+
+    def _write_single_sample(self, sample):
+        """
+        :type sample: Sample
+        """
         bytes = sample.extras.get("responseHeadersSize", 0) + 2 + sample.extras.get("responseBodySize", 0)
 
         message = sample.error_msg
@@ -352,12 +374,15 @@ class ApiritifPlugin(Plugin):
         """
         before test run
         """
-        test_file, _, _ = test.address()  # file path, module name, class.method
+        addr = test.address()  # file path, package.subpackage.module, class.method
+        test_file, module_fqn, class_method = addr
         test_fqn = test.id()  # [package].module.class.method
-        class_name, method_name = test_fqn.split('.')[-2:]
+        suite_name, case_name = test_fqn.split('.')[-2:]
+        log.info("Addr: %r", addr)
+        log.info("id: %r", test_fqn)
 
-        self.current_sample = Sample(test_case=method_name,
-                                     test_suite=class_name,
+        self.current_sample = Sample(test_case=case_name,
+                                     test_suite=suite_name,
                                      start_time=time.time(),
                                      status="SKIPPED")
         self.current_sample.extras.update({
@@ -365,7 +390,19 @@ class ApiritifPlugin(Plugin):
             "full_name": test_fqn,
             "description": test.shortDescription()
         })
+        module_fqn_parts = module_fqn.split('.')
+        for item in module_fqn_parts[:-1]:
+            self.current_sample.path.append(PathComponent("package", item))
+        self.current_sample.path.append(PathComponent("module", module_fqn_parts[-1]))
 
+        if "." in class_method:  # TestClass.test_method
+            class_name, method_name = class_method.split('.')[:2]
+            self.current_sample.path.extend([PathComponent("class", class_name),
+                                             PathComponent("method", method_name)])
+        else:  # test_func
+            self.current_sample.path.append(PathComponent("func", class_method))
+
+        log.debug("Test method path: %r", self.current_sample.path)
         self.test_count += 1
 
     def startTest(self, test):
