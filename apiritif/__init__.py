@@ -173,6 +173,10 @@ class transaction(object):
         return tmpl % (self.name, self.success)
 
 
+class transaction_logged(transaction):
+    pass
+
+
 class Event(object):
     def __init__(self):
         self.timestamp = time.time()
@@ -273,9 +277,13 @@ class _EventRecorder(object):
 
     def record_transaction_start(self, tran):
         self.record_event(TransactionStarted(tran))
+        if isinstance(tran, transaction_logged):
+            self.log.info("Transaction started:: start_time=%.3f,name=%s", tran.start_time(),tran.name)
 
     def record_transaction_end(self, tran):
         self.record_event(TransactionEnded(tran))
+        if isinstance(tran, transaction_logged):
+            self.log.info("Transaction ended:: duration=%.3f,name=%s", tran.duration(), tran.name)
 
     def record_http_request(self, method, address, request, response, session):
         self.record_event(Request(method, address, request, response, session))

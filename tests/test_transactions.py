@@ -1,7 +1,8 @@
+import logging
 import time
 import unittest
 
-from apiritif import http, transaction
+from apiritif import http, transaction, transaction_logged
 
 target = http.target('https://jsonplaceholder.typicode.com')
 target.keep_alive(True)
@@ -59,3 +60,7 @@ class TestRequests(unittest.TestCase):
             tran.set_response("Response body")
             tran.set_response_code(201)
             tran.attach_extra("user", user_input)
+
+    def test_9_transaction_logged(self):
+        with transaction_logged("Label") as tran:
+            logging.warning("TODO: capture logging to assert for result")

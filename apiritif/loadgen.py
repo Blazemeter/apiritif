@@ -176,9 +176,12 @@ class Worker(ThreadPool):
             config.stream = open(os.devnull, "w")  # FIXME: use "with", allow writing to file/log
         try:
             while True:
-                ApiritifTestProgram(config=config)
-
                 iteration += 1
+
+                log.debug("Starting iteration:: index=%d,start_time=%.3f", iteration, time.time())
+                ApiritifTestProgram(config=config)
+                log.debug("Finishing iteration:: index=%d,end_time=%.3f", iteration, time.time())
+
                 if iteration >= params.iterations:
                     log.debug("[%s] iteration limit reached: %s", params.worker_index, params.iterations)
                     break
@@ -378,8 +381,8 @@ class ApiritifPlugin(Plugin):
         test_file, module_fqn, class_method = addr
         test_fqn = test.id()  # [package].module.class.method
         suite_name, case_name = test_fqn.split('.')[-2:]
-        log.info("Addr: %r", addr)
-        log.info("id: %r", test_fqn)
+        log.debug("Addr: %r", addr)
+        log.debug("id: %r", test_fqn)
 
         self.current_sample = Sample(test_case=case_name,
                                      test_suite=suite_name,
@@ -543,7 +546,7 @@ def setup_logging(params):
         logging.basicConfig(level=logging.DEBUG, stream=sys.stdout, format=logformat)
     else:
         logging.basicConfig(level=logging.INFO, stream=sys.stdout, format=logformat)
-    apiritif.log.setLevel(logging.WARNING)  # TODO: do we need to include apiritif debug logs in verbose mode?
+    apiritif.log.setLevel(logging.INFO)  # TODO: do we need to include apiritif debug logs in verbose mode?
 
 
 if __name__ == '__main__':
