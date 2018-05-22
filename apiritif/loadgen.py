@@ -178,9 +178,9 @@ class Worker(ThreadPool):
             while True:
                 iteration += 1
 
-                log.info("Starting iteration:: index=%d,start_time=%.3f", iteration, time.time())
+                log.debug("Starting iteration:: index=%d,start_time=%.3f", iteration, time.time())
                 ApiritifTestProgram(config=config)
-                log.info("Finishing iteration:: index=%d,end_time=%.3f", iteration, time.time())
+                log.debug("Finishing iteration:: index=%d,end_time=%.3f", iteration, time.time())
 
                 if iteration >= params.iterations:
                     log.debug("[%s] iteration limit reached: %s", params.worker_index, params.iterations)
@@ -546,7 +546,7 @@ def setup_logging(params):
         logging.basicConfig(level=logging.DEBUG, stream=sys.stdout, format=logformat)
     else:
         logging.basicConfig(level=logging.INFO, stream=sys.stdout, format=logformat)
-    apiritif.log.setLevel(logging.WARNING)  # TODO: do we need to include apiritif debug logs in verbose mode?
+    apiritif.log.setLevel(logging.INFO)  # TODO: do we need to include apiritif debug logs in verbose mode?
 
 
 if __name__ == '__main__':
