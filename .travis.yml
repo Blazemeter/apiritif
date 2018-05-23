@@ -13,7 +13,7 @@ matrix:
 
 
 install:
-- pip install codecov nose jsonpath-rw lxml
+- pip install codecov nose jsonpath-rw lxml unicodecsv
 script: coverage run -m nose
 after_success:
   - codecov
