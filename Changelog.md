@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.6.5 <sup>22 May 2018</sup>
+- record transactions start/end in logs for Taurus
+
 ## 0.6.4 <sup>17 may 2018</sup>
 - record iteration beginning/end in logs for Taurus
 
