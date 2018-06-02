@@ -15,8 +15,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import apiritif
 import copy
+
+import apiritif
 
 
 class Assertion(object):
@@ -67,6 +68,7 @@ class Sample(object):
         self.assertions = []  # list of assertions
         self.path = []  # sample path (i.e. [package, package, module, suite, case, transaction])
         self.parent_sample = None  # pointer to parent sample
+        self.worker_id = None  # concurrency group identifier
 
     def set_failed(self, error_msg, error_trace):
         current = self
@@ -116,6 +118,7 @@ class Sample(object):
             "assertions": [ass.to_dict() for ass in self.assertions],
             "subsamples": [sample.to_dict() for sample in self.subsamples],
             "path": [comp.to_dict() for comp in self.path],
+            "workerID": self.worker_id
         }
 
     def __repr__(self):
