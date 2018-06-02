@@ -25,7 +25,7 @@ import time
 import traceback
 from multiprocessing.pool import ThreadPool
 from optparse import OptionParser
-from threading import Thread, current_thread
+from threading import Thread
 
 from nose.config import Config, all_config_files
 from nose.core import TestProgram
@@ -388,7 +388,6 @@ class ApiritifPlugin(Plugin):
                                      test_suite=suite_name,
                                      start_time=time.time(),
                                      status="SKIPPED")
-        self.current_sample.worker_id = id(current_thread())
         self.current_sample.extras.update({
             "file": test_file,
             "full_name": test_fqn,
