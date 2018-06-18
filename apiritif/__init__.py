@@ -32,6 +32,15 @@ from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp
 log = logging.getLogger('apiritif')
 
 
+class TimeoutError(Exception):
+    pass
+
+
+class ConnectionError(Exception):
+    pass
+
+
+
 class http(object):
     log = log.getChild('http')
 
@@ -63,7 +72,14 @@ class http(object):
         request = requests.Request(method, address,
                                    params=params, headers=headers, cookies=cookies, json=json, data=data)
         prepared = request.prepare()
-        response = session.send(prepared, allow_redirects=allow_redirects, timeout=timeout)
+        try:
+            response = session.send(prepared, allow_redirects=allow_redirects, timeout=timeout)
+        except requests.exceptions.Timeout:
+            raise TimeoutError("Connection to %s timed out" % address)
+        except requests.exceptions.ConnectionError:
+            raise ConnectionError("Connection to %s failed" % address)
+        except BaseException:
+            raise
         http.log.info("Response: %s %s", response.status_code, response.reason)
         http.log.debug("Response headers: %r", response.headers)
         http.log.debug("Response cookies: %r", dict(response.cookies))
