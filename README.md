@@ -137,7 +137,13 @@ response.assert_ok().assert_in_body("Example")
 
 ## Transactions
 
-TODO: transactions
+Apiritif allows to group multiple requests or actions into a transaction using a `transaction` context manager.
+
+```python
+with transaction("group"):
+    http.get("https://blazedemo.com/first").assert_ok()
+    http.get("https://blazedemo.com/second").assert_ok()
+```
 
 ## Taurus Integration
 
