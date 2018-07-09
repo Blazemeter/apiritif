@@ -145,6 +145,14 @@ with transaction("group"):
     http.get("https://blazedemo.com/second").assert_ok()
 ```
 
+Transaction defines the name for the test. This will be displayed on the BlazeMeter report.
+
+```
+with apiritif.transaction('My Test Name'):
+  response = target.get(self.url, headers=headers)
+  response.assert_2xx()
+```
+
 ## Taurus Integration
 
 TODO: describe that Taurus can extract Apiritif's action log and handle it.
