@@ -384,6 +384,9 @@ class ApiritifPlugin(Plugin):
         log.debug("Addr: %r", addr)
         log.debug("id: %r", test_fqn)
 
+        if class_method is None:
+            class_method = case_name
+
         self.current_sample = Sample(test_case=case_name,
                                      test_suite=suite_name,
                                      start_time=time.time(),
@@ -420,6 +423,8 @@ class ApiritifPlugin(Plugin):
         :param test:
         :return:
         """
+        if self.end_time is None:
+            self.end_time = time.time()
         self.current_sample.duration = self.end_time - self.current_sample.start_time
 
         samples_processed = self._process_apiritif_samples(self.current_sample)
