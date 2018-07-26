@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.6 (unreleased)
+- unicode-related fixings for CSV reports
+- support CONNECT and OPTIONS methods
+
 ## 0.6.5 <sup>22 May 2018</sup>
 - record transactions start/end in logs for Taurus
 

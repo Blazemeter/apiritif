@@ -112,6 +112,14 @@ class http(object):
     def head(address, **kwargs):
         return http.request("HEAD", address, **kwargs)
 
+    @staticmethod
+    def options(address, **kwargs):
+        return http.request("OPTIONS", address, **kwargs)
+
+    @staticmethod
+    def connect(address, **kwargs):
+        return http.request("CONNECT", address, **kwargs)
+
 
 class transaction(object):
     def __init__(self, name):
@@ -434,6 +442,12 @@ class HTTPTarget(object):
 
     def head(self, path, **kwargs):
         return self.request("HEAD", path, **kwargs)
+
+    def options(self, path, **kwargs):
+        return self.request("OPTIONS", path, **kwargs)
+
+    def connect(self, path, **kwargs):
+        return self.request("CONNECT", path, **kwargs)
 
 
 class HTTPResponse(object):
