@@ -20,3 +20,10 @@ class TestRequests(TestCase):
 
     def test_delete(self):
         http.delete('http://blazedemo.com/?tag=delete')
+
+    def test_options(self):
+        http.options('http://blazedemo.com/echo.php?echo=options')
+
+    def test_connect(self):
+        target = http.target('http://blazedemo.com/', auto_assert_ok=False)
+        target.connect('/echo.php?echo=connect')
