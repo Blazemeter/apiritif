@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import copy
-import csv
+import unicodecsv as csv
 import json
 import logging
 import multiprocessing
@@ -238,7 +238,7 @@ class LDJSONSampleWriter(object):
         self._writer_thread.setName(self.__class__.__name__)
 
     def __enter__(self):
-        self.out_stream = open(self.output_file, "wt")
+        self.out_stream = open(self.output_file, "wb")
         self._writing = True
         self._writer_thread.start()
         return self
@@ -283,7 +283,7 @@ class JTLSampleWriter(LDJSONSampleWriter):
         fieldnames = ["timeStamp", "elapsed", "Latency", "label", "responseCode", "responseMessage", "success",
                       "allThreads", "bytes"]
         endline = '\n'  # \r will be preprended automatically because out_stream is opened in text mode
-        self.writer = csv.DictWriter(self.out_stream, fieldnames=fieldnames, dialect=csv.excel, lineterminator=endline)
+        self.writer = csv.DictWriter(self.out_stream, fieldnames=fieldnames, dialect=csv.excel, lineterminator=endline, encoding='utf-8')
         self.writer.writeheader()
         self.out_stream.flush()
 
@@ -384,6 +384,9 @@ class ApiritifPlugin(Plugin):
         log.debug("Addr: %r", addr)
         log.debug("id: %r", test_fqn)
 
+        if class_method is None:
+            class_method = case_name
+
         self.current_sample = Sample(test_case=case_name,
                                      test_suite=suite_name,
                                      start_time=time.time(),
@@ -420,6 +423,8 @@ class ApiritifPlugin(Plugin):
         :param test:
         :return:
         """
+        if self.end_time is None:
+            self.end_time = time.time()
         self.current_sample.duration = self.end_time - self.current_sample.start_time
 
         samples_processed = self._process_apiritif_samples(self.current_sample)

@@ -32,6 +32,15 @@ from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp
 log = logging.getLogger('apiritif')
 
 
+class TimeoutError(Exception):
+    pass
+
+
+class ConnectionError(Exception):
+    pass
+
+
+
 class http(object):
     log = log.getChild('http')
 
@@ -63,7 +72,14 @@ class http(object):
         request = requests.Request(method, address,
                                    params=params, headers=headers, cookies=cookies, json=json, data=data)
         prepared = request.prepare()
-        response = session.send(prepared, allow_redirects=allow_redirects, timeout=timeout)
+        try:
+            response = session.send(prepared, allow_redirects=allow_redirects, timeout=timeout)
+        except requests.exceptions.Timeout:
+            raise TimeoutError("Connection to %s timed out" % address)
+        except requests.exceptions.ConnectionError:
+            raise ConnectionError("Connection to %s failed" % address)
+        except BaseException:
+            raise
         http.log.info("Response: %s %s", response.status_code, response.reason)
         http.log.debug("Response headers: %r", response.headers)
         http.log.debug("Response cookies: %r", dict(response.cookies))
@@ -95,6 +111,14 @@ class http(object):
     @staticmethod
     def head(address, **kwargs):
         return http.request("HEAD", address, **kwargs)
+
+    @staticmethod
+    def options(address, **kwargs):
+        return http.request("OPTIONS", address, **kwargs)
+
+    @staticmethod
+    def connect(address, **kwargs):
+        return http.request("CONNECT", address, **kwargs)
 
 
 class transaction(object):
@@ -278,12 +302,12 @@ class _EventRecorder(object):
     def record_transaction_start(self, tran):
         self.record_event(TransactionStarted(tran))
         if isinstance(tran, transaction_logged):
-            self.log.info("Transaction started:: start_time=%.3f,name=%s", tran.start_time(),tran.name)
+            self.log.info(u"Transaction started:: start_time=%.3f,name=%s", tran.start_time(),tran.name)
 
     def record_transaction_end(self, tran):
         self.record_event(TransactionEnded(tran))
         if isinstance(tran, transaction_logged):
-            self.log.info("Transaction ended:: duration=%.3f,name=%s", tran.duration(), tran.name)
+            self.log.info(u"Transaction ended:: duration=%.3f,name=%s", tran.duration(), tran.name)
 
     def record_http_request(self, method, address, request, response, session):
         self.record_event(Request(method, address, request, response, session))
@@ -418,6 +442,12 @@ class HTTPTarget(object):
 
     def head(self, path, **kwargs):
         return self.request("HEAD", path, **kwargs)
+
+    def options(self, path, **kwargs):
+        return self.request("OPTIONS", path, **kwargs)
+
+    def connect(self, path, **kwargs):
+        return self.request("CONNECT", path, **kwargs)
 
 
 class HTTPResponse(object):
