@@ -147,10 +147,8 @@ class Worker(ThreadPool):
         with self._writer:
             self.map(self.run_nose, params)
             log.info("Workers finished, awaiting result writer")
-            while not self._writer.is_queue_empty():
+            while not self._writer.is_queue_empty() and self._writer.is_alive():
                 time.sleep(0.1)
-                if not self._writer.is_alive():
-                    break
             log.info("Results written, shutting down")
             self.close()
 
