@@ -270,6 +270,7 @@ class LDJSONSampleWriter(object):
                 except BaseException as exc:
                     log.debug("Processing sample failed: %s\n%s", str(exc), traceback.format_exc())
                     log.warning("Couldn't process sample, skipping")
+                    continue
 
     def _write_sample(self, sample, test_count, success_count):
         line = json.dumps(sample.to_dict()) + "\n"
