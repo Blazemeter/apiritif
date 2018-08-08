@@ -149,6 +149,8 @@ class Worker(ThreadPool):
             log.info("Workers finished, awaiting result writer")
             while not self._writer.is_queue_empty():
                 time.sleep(0.1)
+                if not self._writer.is_alive():
+                    break
             log.info("Results written, shutting down")
             self.close()
 
@@ -242,6 +244,9 @@ class LDJSONSampleWriter(object):
         self._writing = True
         self._writer_thread.start()
         return self
+
+    def is_alive(self):
+        return self._writer_thread.is_alive()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._writing = False
