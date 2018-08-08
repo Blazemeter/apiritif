@@ -1,6 +1,7 @@
 # Changelog
 
 ## 0.6.7 (unreleased)
+- fix unicode-related crash for LDJSON-based report
 
 ## 0.6.6 <sup>7 Aug 2018</sup>
 - unicode-related fixings for CSV reports
