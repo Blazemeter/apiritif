@@ -260,8 +260,9 @@ class LDJSONSampleWriter(object):
                 time.sleep(0.1)
 
             while not self._samples_queue.empty():
+                item = self._samples_queue.get(block=True)
                 try:
-                    sample, test_count, success_count = self._samples_queue.get(block=True)
+                    sample, test_count, success_count = item
                     self._write_sample(sample, test_count, success_count)
                 except BaseException as exc:
                     log.debug("Processing sample failed: %s\n%s", str(exc), traceback.format_exc())
