@@ -147,7 +147,7 @@ class Worker(ThreadPool):
         with self._writer:
             self.map(self.run_nose, params)
             log.info("Workers finished, awaiting result writer")
-            while not self._writer.is_queue_empty():
+            while not self._writer.is_queue_empty() and self._writer.is_alive():
                 time.sleep(0.1)
             log.info("Results written, shutting down")
             self.close()
@@ -243,6 +243,9 @@ class LDJSONSampleWriter(object):
         self._writer_thread.start()
         return self
 
+    def is_alive(self):
+        return self._writer_thread.is_alive()
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._writing = False
         self._writer_thread.join()
@@ -260,11 +263,18 @@ class LDJSONSampleWriter(object):
                 time.sleep(0.1)
 
             while not self._samples_queue.empty():
-                sample, test_count, success_count = self._samples_queue.get(block=True)
-                self._write_sample(sample, test_count, success_count)
+                item = self._samples_queue.get(block=True)
+                try:
+                    sample, test_count, success_count = item
+                    self._write_sample(sample, test_count, success_count)
+                except BaseException as exc:
+                    log.debug("Processing sample failed: %s\n%s", str(exc), traceback.format_exc())
+                    log.warning("Couldn't process sample, skipping")
+                    continue
 
     def _write_sample(self, sample, test_count, success_count):
-        self.out_stream.write(json.dumps(sample.to_dict()) + "\n")
+        line = json.dumps(sample.to_dict()) + "\n"
+        self.out_stream.write(line.encode('utf-8'))
         self.out_stream.flush()
 
         report_pattern = "%s,Total:%d Passed:%d Failed:%d\n"

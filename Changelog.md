@@ -1,8 +1,13 @@
 # Changelog
 
-## 0.6.6 (unreleased)
+## 0.6.7 <sup>8 Aug 2018</sup>
+- fix unicode-related crash for LDJSON-based report
+- be more defensive against possible multiprocessing errors, prevent crashing
+
+## 0.6.6 <sup>7 Aug 2018</sup>
 - unicode-related fixings for CSV reports
 - support CONNECT and OPTIONS methods
+- fixup multiprocessing crash
 
 ## 0.6.5 <sup>22 May 2018</sup>
 - record transactions start/end in logs for Taurus
