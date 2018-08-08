@@ -96,3 +96,19 @@ class TestLoadGen(TestCase):
         res1 = [x.delay for x in worker1._get_thread_params()]
         print(res1)
         self.assertEquals(params1.concurrency, len(res1))
+
+    def test_unicode_ldjson(self):
+        outfile = tempfile.NamedTemporaryFile(suffix=".ldjson")
+        print(outfile.name)
+        params = Params()
+        params.concurrency = 2
+        params.iterations = 1
+        params.report = outfile.name
+        params.tests = dummy_tests
+
+        worker = Worker(params)
+        worker.start()
+        worker.join()
+
+        with open(outfile.name) as fds:
+            print(fds.read())
