@@ -44,6 +44,11 @@ class CSVFeeder(Feeder):
         self.reader = csv.DictReader(self.fds, encoding='utf-8')
         self.next()
 
+    def reopen(self):
+        if self.fds is not None:
+            self.fds.seek(0)
+            self.reader = csv.DictReader(self.fds, encoding='utf-8')
+
     def close(self):
         if self.fds is not None:
             self.fds.close()
@@ -53,8 +58,7 @@ class CSVFeeder(Feeder):
         try:
             items = next(self.reader)
         except StopIteration:
-            self.close()
-            self.open()
+            self.reopen()
             return self.next()
 
         for key, value in items.items():
