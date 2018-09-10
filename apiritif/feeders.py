@@ -19,7 +19,7 @@ import abc
 import unicodecsv as csv
 
 
-class Feeder(abc.ABC):
+class Feeder(object):
     def __init__(self, vars):
         self.vars = vars
 
