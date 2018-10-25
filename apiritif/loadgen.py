@@ -34,6 +34,7 @@ from nose.plugins import Plugin
 from nose.plugins.manager import DefaultPluginManager
 
 import apiritif
+from apiritif.feeders import Feeder
 from apiritif.samples import ApiritifSampleExtractor, Sample, PathComponent
 
 log = logging.getLogger("loadgen")
@@ -218,6 +219,10 @@ class ApiritifTestProgram(TestProgram):
         self.testNames = self.config.testNames
         self.testLoader = defaultTestLoader(config=self.config)
         self.createTests()
+
+    def runTests(self):
+        Feeder.step_all_feeders()
+        super(ApiritifTestProgram, self).runTests()
 
 
 class LDJSONSampleWriter(object):
