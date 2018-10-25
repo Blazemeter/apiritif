@@ -16,18 +16,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import abc
-import os
-import threading
 
 import unicodecsv as csv
+
+from apiritif.utils import NormalShutdown
 
 
 class Feeder(object):
     instances = []
 
-    def __init__(self, vars):
-        self.vars = vars
-        Feeder.instances.append(self)
+    def __init__(self, vars_dict, register=True):
+        self.vars_dict = vars_dict
+        if register:
+            Feeder.instances.append(self)
 
     @abc.abstractmethod
     def open(self):
@@ -39,20 +40,19 @@ class Feeder(object):
 
     @classmethod
     def step_all_feeders(cls):
-        print('pid=%d, tid=%d, step_all_feeders' % (os.getpid(), threading.get_ident()))
         for instance in cls.instances:
             instance.step()
 
 
 class CSVFeeder(Feeder):
-    def __init__(self, filename, vars, open=True):
-        super(CSVFeeder, self).__init__(vars)
+    def __init__(self, filename, vars_dict, loop=True, register=True, auto_open=True):
+        super(CSVFeeder, self).__init__(vars_dict, register=register)
         self.filename = filename
         self.fds = None
         self.reader = None
-        if open:
+        self.loop = loop
+        if auto_open:
             self.open()
-        # TODO: 'loop' flag
 
     def open(self):
         self.fds = open(self.filename, 'rb')
@@ -69,12 +69,13 @@ class CSVFeeder(Feeder):
         self.reader = None
 
     def step(self):
-        print('stepping csv feeder')
         try:
             items = next(self.reader)
         except StopIteration:
+            if not self.loop:
+                raise NormalShutdown("CSV file exhausted")
             self.reopen()
             return self.step()
 
         for key, value in items.items():
-            self.vars[key] = value
+            self.vars_dict[key] = value

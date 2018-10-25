@@ -1,4 +1,5 @@
 import copy
+import json
 import logging
 import os
 import tempfile
@@ -8,6 +9,7 @@ from unittest import TestCase
 from apiritif.loadgen import Worker, Params, Supervisor
 
 dummy_tests = [os.path.join(os.path.dirname(__file__), "test_dummy.py")]
+csv_tests = [os.path.join(os.path.dirname(__file__), "resources", "test_csv.py")]
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -112,3 +114,24 @@ class TestLoadGen(TestCase):
 
         with open(outfile.name) as fds:
             print(fds.read())
+
+    def test_something(self):
+        outfile = tempfile.NamedTemporaryFile(suffix=".ldjson")
+        print(outfile.name)
+        params = Params()
+        params.concurrency = 1
+        params.iterations = 3
+        params.report = outfile.name
+        params.tests = csv_tests
+
+        worker = Worker(params)
+        worker.start()
+        worker.join()
+
+        with open(outfile.name) as fds:
+            samples = [json.loads(line) for line in fds.readlines()]
+
+        self.assertEqual(3, len(samples))
+        subs = [sample['subsamples'][0] for sample in samples]
+        labels = [sample['test_case'] for sample in subs]
+        self.assertEqual(['1-foo', '2-bar', '3-baz'], labels)
