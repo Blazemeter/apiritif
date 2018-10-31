@@ -305,6 +305,7 @@ class JTLSampleWriter(LDJSONSampleWriter):
         :type test_count: int
         :type success_count: int
         """
+        self._write_single_sample(sample)
         self._write_request_subsamples(sample)
 
     def _get_sample_type(self, sample):
