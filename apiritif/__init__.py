@@ -142,16 +142,16 @@ class transaction(object):
             self.fail("%s: %s" % (exc_type.__name__, str(exc_value)))
         self.finish()
 
-    def start(self):
+    def start(self, start_time=None):
         if self._start_ts is None:
-            self._start_ts = time.time()
+            self._start_ts = start_time or time.time()
             recorder.record_transaction_start(self)
 
-    def finish(self):
+    def finish(self, end_time=None):
         if self._start_ts is None:
             raise ValueError("Can't finish non-started transaction %s" % self.name)
         if self._finish_ts is None:
-            self._finish_ts = time.time()
+            self._finish_ts = end_time or time.time()
             recorder.record_transaction_end(self)
 
     def finished(self):
