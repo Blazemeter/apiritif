@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.0 <sup>dec 20 2018</sup>
+- extend transaction API to provide a way to set start/end time
+- introduce `python -m apiritif` launcher
+
 ## 0.6.7 <sup>8 Aug 2018</sup>
 - fix unicode-related crash for LDJSON-based report
 - be more defensive against possible multiprocessing errors, prevent crashing
