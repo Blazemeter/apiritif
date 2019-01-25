@@ -548,7 +548,8 @@ def cmdline_to_params():
 
     params.report = opts.result_file_template
     params.tests = args
-    params.worker_count = min(params.concurrency, multiprocessing.cpu_count())
+    cpu_count = 2 #multiprocessing.cpu_count()
+    params.worker_count = min(params.concurrency, cpu_count)
     params.verbose = opts.verbose
 
     return params
