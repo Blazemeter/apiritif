@@ -52,7 +52,8 @@ def spawn_worker(params):
     setup_logging(params)
     log.info("Adding worker: idx=%s\tconcurrency=%s\tresults=%s", params.worker_index, params.concurrency,
              params.report)
-
+    print("Adding worker: idx=%s\tconcurrency=%s\tresults=%s"% (params.worker_index, params.concurrency,
+             params.report))
     worker = Worker(params)
     worker.start()
     worker.join()
@@ -63,6 +64,7 @@ class Params(object):
         super(Params, self).__init__()
         self.worker_index = 0
         self.worker_count = 1
+        self.thread_index = 0
         self.report = None
 
         self.delay = 0
@@ -103,16 +105,18 @@ class Supervisor(Thread):
         for idx in range(0, self.params.worker_count):
             progress = (idx + 1) * inc
             conc = int(round(progress - total_concurrency))
-            total_concurrency += conc
             assert conc > 0
             assert total_concurrency >= 0
             log.debug("Idx: %s, concurrency: %s", idx, conc)
 
             params = copy.deepcopy(self.params)
             params.worker_index = idx
+            params.thread_index = total_concurrency     # for process it's index of first thread
             params.concurrency = conc
             params.report = self.params.report % idx
             params.worker_count = self.params.worker_count
+
+            total_concurrency += conc
 
             yield params
 
@@ -136,6 +140,7 @@ class Worker(ThreadPool):
         :type params: Params
         """
         super(Worker, self).__init__(params.concurrency)
+        print("in worker: %s" % params.worker_index)
         self.params = params
         if self.params.report.lower().endswith(".ldjson"):
             self._writer = LDJSONSampleWriter(self.params.report)
@@ -157,6 +162,7 @@ class Worker(ThreadPool):
         :type params: Params
         """
         log.debug("[%s] Starting nose iterations: %s", params.worker_index, params)
+        print("%s:%s" % (params.worker_index, params.thread_index))
         assert isinstance(params.tests, list)
         # argv.extend(['--with-apiritif', '--nocapture', '--exe', '--nologcapture'])
 
@@ -208,6 +214,7 @@ class Worker(ThreadPool):
             delay = offset + thr_idx * float(self.params.ramp_up) / self.params.concurrency
             delay -= delay % step_granularity if step_granularity else 0
             params = copy.deepcopy(self.params)
+            params.thread_index = self.params.thread_index + thr_idx
             params.delay = delay
             yield params
 
@@ -548,8 +555,7 @@ def cmdline_to_params():
 
     params.report = opts.result_file_template
     params.tests = args
-    cpu_count = 2 #multiprocessing.cpu_count()
-    params.worker_count = min(params.concurrency, cpu_count)
+    params.worker_count = min(params.concurrency, multiprocessing.cpu_count())
     params.verbose = opts.verbose
 
     return params

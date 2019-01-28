@@ -1,4 +1,5 @@
 import threading
+import hashlib
 import os
 import logging
 import random
@@ -13,7 +14,8 @@ import apiritif
 from apiritif.feeders import CSVFeeder
 
 vars = {}
-data_feeder = CSVFeeder('/home/taras/Projects/apiritif/wip/cs/data.csv', vars)
+
+data_feeder = CSVFeeder(os.path.join(os.path.dirname(__file__), "data/source.csv"), vars)
 
 
 class TestSimple(unittest.TestCase):
@@ -33,5 +35,12 @@ class TestSimple(unittest.TestCase):
 
     def test_2_log_it(self):
         with open("/tmp/apiritif.log", "a") as _file:
-            _file.write("%s:%s{%s:%s}\n" % (os.getpid(), threading.current_thread(), vars["name"], vars["pass"]))
+            pid = str(os.getpid())
+            tid = str(threading.current_thread().ident)
+            hid = hashlib.md5()
+            hid.update(pid.encode())
+            hid.update(tid.encode())
+            log_line = "%s. %s:%s {%s:%s}\n" % (hid.hexdigest()[:3], pid[-3:], tid[-3:], vars["name"], vars["pass"])
+            print(log_line)
+            _file.write(log_line)
 

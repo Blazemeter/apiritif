@@ -13,6 +13,29 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 class TestLoadGen(TestCase):
+    def test_thread_proc(self):
+        log = "/tmp/apiritif.log"
+        if os.path.exists(log):
+            os.remove(log)
+        script = os.path.dirname(os.path.realpath(__file__)) + "/resources/test_requests.py"
+        outfile = tempfile.NamedTemporaryFile()
+        report = outfile.name + "%s.csv"
+        outfile.close()
+        print(report)
+        params = Params()
+        params.concurrency = 3
+        params.iterations = 2
+        params.report = report
+        params.tests = [script]
+        params.worker_count = 2
+
+        sup = Supervisor(params)
+        sup.start()
+        sup.join()
+        with open(log) as f:
+            content = f.readlines()
+        a = 1 + 1
+
     def test_thread(self):
         outfile = tempfile.NamedTemporaryFile()
         print(outfile.name)
