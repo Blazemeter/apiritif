@@ -20,6 +20,7 @@ import abc
 import unicodecsv as csv
 
 from apiritif.utils import NormalShutdown
+from apiritif.loadgen import local_data
 
 
 class Feeder(object):
@@ -85,10 +86,13 @@ class CSVFeeder(Feeder):
     #     super(CSVFeeder, self).__init__()
 
     def read_vars(self):
-        self.step()
+        num = local_data.thread_index + local_data.total_concurrency * local_data.iteration     # todo: mod...
+        local_data.csv_data = {"name": "user%s" % num, "pass": "%s" % num}
+
+        #self.step()
 
     def get_vars(self):
-        return self.vars_dict
+        return local_data.csv_data
 
     @classmethod
     def get_local_feeder(cls, index=0, count=1, loop=True):

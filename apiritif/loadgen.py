@@ -25,7 +25,7 @@ import time
 import traceback
 from multiprocessing.pool import ThreadPool
 from optparse import OptionParser
-from threading import Thread
+from threading import Thread, local
 
 from nose.config import Config, all_config_files
 from nose.core import TestProgram
@@ -37,6 +37,7 @@ import apiritif
 from apiritif.samples import ApiritifSampleExtractor, Sample, PathComponent
 
 log = logging.getLogger("loadgen")
+local_data = local()
 
 
 # TODO how to implement hits/s control/shape?
@@ -70,6 +71,7 @@ class Params(object):
         self.delay = 0
 
         self.concurrency = 1
+        self.total_concurrency = self.concurrency
         self.iterations = 1
         self.ramp_up = 0
         self.steps = 0
@@ -111,8 +113,9 @@ class Supervisor(Thread):
 
             params = copy.deepcopy(self.params)
             params.worker_index = idx
-            params.thread_index = total_concurrency     # for process it's index of first thread
+            params.thread_index = total_concurrency     # for process it's index of the first thread
             params.concurrency = conc
+            params.total_concurrency = params.concurrency
             params.report = self.params.report % idx
             params.worker_count = self.params.worker_count
 
@@ -140,7 +143,6 @@ class Worker(ThreadPool):
         :type params: Params
         """
         super(Worker, self).__init__(params.concurrency)
-        print("in worker: %s" % params.worker_index)
         self.params = params
         if self.params.report.lower().endswith(".ldjson"):
             self._writer = LDJSONSampleWriter(self.params.report)
@@ -171,6 +173,10 @@ class Worker(ThreadPool):
         time.sleep(params.delay)
 
         iteration = 0
+
+        local_data.total_concurrency = params.total_concurrency
+        local_data.thread_index = params.thread_index
+
         plugin = ApiritifPlugin(self._writer)
         self._writer.concurrency += 1
 
@@ -182,6 +188,7 @@ class Worker(ThreadPool):
             config.stream = open(os.devnull, "w")  # FIXME: use "with", allow writing to file/log
         try:
             while True:
+                local_data.iteration = iteration
                 iteration += 1
 
                 log.debug("Starting iteration:: index=%d,start_time=%.3f", iteration, time.time())

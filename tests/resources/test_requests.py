@@ -28,12 +28,13 @@ class TestSimple(unittest.TestCase):
         for key, val in new_vars.items():
             vars[key] = val
 
-    def test_1_httpblazedemocomnamepass(self):
-        with apiritif.transaction('http://blazedemo.com/{}/{}'.format(vars['name'], vars['pass'])):
-            pass
-            #response = apiritif.http.get('http://blazedemo.com/{}/{}'.format(vars['name'], vars['pass']))
+    def test_first(self):
+        print("!!%s!!" % data_feeder.get_vars())
+        pass
+        # with apiritif.transaction('http://blazedemo.com/{}/{}'.format(vars['name'], vars['pass'])):
+            # response = apiritif.http.get('http://blazedemo.com/{}/{}'.format(vars['name'], vars['pass']))
 
-    def test_2_log_it(self):
+    def test_second(self):
         with open("/tmp/apiritif.log", "a") as _file:
             pid = str(os.getpid())
             tid = str(threading.current_thread().ident)
