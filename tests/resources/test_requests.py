@@ -13,9 +13,8 @@ import os
 import apiritif
 from apiritif.feeders import CSVFeeder
 
-vars = {}
 
-data_feeder = CSVFeeder(os.path.join(os.path.dirname(__file__), "data/source.csv"), vars)
+data_feeder = CSVFeeder(os.path.join(os.path.dirname(__file__), "data/source.csv"))
 
 
 class TestSimple(unittest.TestCase):
@@ -24,9 +23,7 @@ class TestSimple(unittest.TestCase):
         data_feeder.read_vars()
 
     def setUp(self):
-        new_vars = data_feeder.get_vars()
-        for key, val in new_vars.items():
-            vars[key] = val
+        self.vars = data_feeder.get_vars()
 
     def test_first(self):
         print("!!%s!!" % data_feeder.get_vars())
@@ -41,7 +38,8 @@ class TestSimple(unittest.TestCase):
             hid = hashlib.md5()
             hid.update(pid.encode())
             hid.update(tid.encode())
-            log_line = "%s. %s:%s {%s:%s}\n" % (hid.hexdigest()[:3], pid[-3:], tid[-3:], vars["name"], vars["pass"])
+            log_line = "%s. %s:%s {%s:%s}\n" % (
+                hid.hexdigest()[:3], pid[-3:], tid[-3:], self.vars["name"], self.vars["pass"])
             print(log_line)
             _file.write(log_line)
 

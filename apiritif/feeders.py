@@ -45,10 +45,10 @@ class Feeder(object):
             instance.step()
 
 
-class CSVFeeder(Feeder):
-    def __init__(self, filename, vars_dict, loop=True, register=True, auto_open=True):
-        super(CSVFeeder, self).__init__(vars_dict, register=register)
+class CSVFeeder(object):
+    def __init__(self, filename, loop=True, auto_open=True):
         self.filename = filename
+        self.size = None
         self.fds = None
         self.reader = None
         self.loop = loop
@@ -58,6 +58,16 @@ class CSVFeeder(Feeder):
     def open(self):
         self.fds = open(self.filename, 'rb')
         self.reader = csv.DictReader(self.fds, encoding='utf-8')
+        self.size = len(list(self.reader))      # todo: except first line?
+
+    def get(self, n):
+        if not self.fds:
+            self.open()
+        if not self.size:
+            raise StopIteration()
+        pos = n % self.size
+        self.fds.seek(pos)
+        return next(self.fds)
 
     def reopen(self):
         if self.fds is not None:
@@ -78,18 +88,13 @@ class CSVFeeder(Feeder):
             self.reopen()
             return self.step()
 
-        for key, value in items.items():
-            self.vars_dict[key] = value
-
     # def __init__(self, fname, index=0, step=1):
     #     # todo: fill fields
     #     super(CSVFeeder, self).__init__()
 
     def read_vars(self):
-        num = local_data.thread_index + local_data.total_concurrency * local_data.iteration     # todo: mod...
-        local_data.csv_data = {"name": "user%s" % num, "pass": "%s" % num}
-
-        #self.step()
+        num = local_data.thread_index + local_data.total_concurrency * local_data.iteration
+        local_data.csv_data = {"name": "user-%s" % num, "pass": "p%sp" % num} #self.get(num)
 
     def get_vars(self):
         return local_data.csv_data

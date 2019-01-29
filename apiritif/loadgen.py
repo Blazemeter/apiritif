@@ -115,7 +115,7 @@ class Supervisor(Thread):
             params.worker_index = idx
             params.thread_index = total_concurrency     # for process it's index of the first thread
             params.concurrency = conc
-            params.total_concurrency = params.concurrency
+            params.total_concurrency = self.params.concurrency
             params.report = self.params.report % idx
             params.worker_count = self.params.worker_count
 
