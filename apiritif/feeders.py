@@ -16,12 +16,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import abc
+import threading
 
 import unicodecsv as csv
 from itertools import cycle, islice
 
 from apiritif.utils import NormalShutdown
-from apiritif.loadgen import local_data
+from apiritif.loadgen import thread_indexes
+
+storage = threading.local()
 
 
 class Feeder(object):
@@ -48,18 +51,21 @@ class Feeder(object):
 
 class CSVFeeder(object):
     def __init__(self, filename, loop=True, auto_open=True):
+        self.first = None
+        self.step = None
         self.filename = filename
         self.size = None
         self.fds = None
         self.reader = None
         self.loop = loop
+        self.csv = None
         if auto_open:
             self.open()
 
     def open(self):
         self.fds = open(self.filename, 'rb')
         self.reader = cycle(csv.DictReader(self.fds, encoding='utf-8'))
-        local_data.csv = None
+        self.csv = None
 
     def get(self, n):
         if not self.fds:
@@ -94,19 +100,26 @@ class CSVFeeder(object):
     #     super(CSVFeeder, self).__init__()
 
     def read_vars(self):
-        step = local_data.total_concurrency
-        first = local_data.thread_index
-
-        if not local_data.csv:
-            local_data.csv = next(islice(self.reader, first, first + 1))
+        if self.csv:
+            self.csv = next(islice(self.reader, self.first, self.first + 1))
         else:
-            local_data.csv = next(islice(self.reader, step - 1, step))
+            self.csv = next(islice(self.reader, self.step - 1, self.step))
 
     def get_vars(self):
-        return local_data.csv
+        return self.csv
 
     @classmethod
     def get_local_feeder(cls, index=0, count=1, loop=True):
         # fname?
         # todo: implement it
         pass
+
+    @classmethod
+    def per_thread(cls, filename):
+        instance = getattr(storage, 'instance', None)
+        if instance is None:
+            instance = CSVFeeder(filename)
+            instance.step, instance.first = thread_indexes()  # TODO: maybe use constructor fields
+            storage.instance = instance
+            print("Created feeder #%s: %s/%s" % (id(instance), instance.step, instance.first))
+        return instance

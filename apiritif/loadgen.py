@@ -37,7 +37,6 @@ import apiritif
 from apiritif.samples import ApiritifSampleExtractor, Sample, PathComponent
 
 log = logging.getLogger("loadgen")
-local_data = local()
 
 
 # TODO how to implement hits/s control/shape?
@@ -53,11 +52,29 @@ def spawn_worker(params):
     setup_logging(params)
     log.info("Adding worker: idx=%s\tconcurrency=%s\tresults=%s", params.worker_index, params.concurrency,
              params.report)
-    print("Adding worker: idx=%s\tconcurrency=%s\tresults=%s"% (params.worker_index, params.concurrency,
-             params.report))
     worker = Worker(params)
     worker.start()
     worker.join()
+
+
+thread_local = local()
+
+
+def thread_indexes(total=None, index=None):
+    initialized = getattr(thread_local, 'initialized', None)
+    if initialized is None:
+        thread_local.initialized = True
+        thread_local.total = 1
+        thread_local.index = 0
+        print("Initializing thread_local")
+
+    if total is not None:
+        thread_local.total = total
+
+    if index is not None:
+        thread_local.index = index
+
+    return thread_local.total, thread_local.index
 
 
 class Params(object):
@@ -113,7 +130,7 @@ class Supervisor(Thread):
 
             params = copy.deepcopy(self.params)
             params.worker_index = idx
-            params.thread_index = total_concurrency     # for process it's index of the first thread
+            params.thread_index = total_concurrency  # for subprocess it's index of its first thread
             params.concurrency = conc
             params.total_concurrency = self.params.concurrency
             params.report = self.params.report % idx
@@ -164,7 +181,6 @@ class Worker(ThreadPool):
         :type params: Params
         """
         log.debug("[%s] Starting nose iterations: %s", params.worker_index, params)
-        print("%s:%s" % (params.worker_index, params.thread_index))
         assert isinstance(params.tests, list)
         # argv.extend(['--with-apiritif', '--nocapture', '--exe', '--nologcapture'])
 
@@ -174,10 +190,7 @@ class Worker(ThreadPool):
 
         iteration = 0
 
-        local_data.total_concurrency = params.total_concurrency
-        local_data.thread_index = params.thread_index
-        local_data.feeder = None
-        local_data.csv_data = None
+        thread_indexes(params.total_concurrency, params.thread_index)
 
         plugin = ApiritifPlugin(self._writer)
         self._writer.concurrency += 1
@@ -190,7 +203,6 @@ class Worker(ThreadPool):
             config.stream = open(os.devnull, "w")  # FIXME: use "with", allow writing to file/log
         try:
             while True:
-                local_data.iteration = iteration    # fixme: remove it?
                 iteration += 1
 
                 log.debug("Starting iteration:: index=%d,start_time=%.3f", iteration, time.time())
@@ -309,7 +321,8 @@ class JTLSampleWriter(LDJSONSampleWriter):
         fieldnames = ["timeStamp", "elapsed", "Latency", "label", "responseCode", "responseMessage", "success",
                       "allThreads", "bytes"]
         endline = '\n'  # \r will be preprended automatically because out_stream is opened in text mode
-        self.writer = csv.DictWriter(self.out_stream, fieldnames=fieldnames, dialect=csv.excel, lineterminator=endline, encoding='utf-8')
+        self.writer = csv.DictWriter(self.out_stream, fieldnames=fieldnames, dialect=csv.excel, lineterminator=endline,
+                                     encoding='utf-8')
         self.writer.writeheader()
         self.out_stream.flush()
 

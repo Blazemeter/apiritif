@@ -1,35 +1,29 @@
-import threading
 import hashlib
 import os
-import logging
-import random
-import string
-import sys
-import time
+import threading
 import unittest
 
-import os
-
-import apiritif
 from apiritif.feeders import CSVFeeder
-from apiritif.loadgen import local_data
 
 
 class TestSimple(unittest.TestCase):
+    def __init__(self, methodName='runTest'):
+        super(TestSimple, self).__init__(methodName)
+        self.feeder = CSVFeeder.per_thread(os.path.join(os.path.dirname(__file__), "data/source.csv"))
+        self.feeder.read_vars()
+
     @classmethod
     def setUpClass(cls):
-        if not local_data.feeder:
-            local_data.feeder = CSVFeeder(os.path.join(os.path.dirname(__file__), "data/source.csv"))
-        local_data.feeder.read_vars()
+        pass
 
     def setUp(self):
-        self.vars = local_data.feeder.get_vars()
+        self.vars = self.feeder.get_vars()
 
     def test_first(self):
-        print("!!%s!!" % local_data.feeder.get_vars())
+        print("!!%s!!" % self.feeder.get_vars())
         pass
         # with apiritif.transaction('http://blazedemo.com/{}/{}'.format(vars['name'], vars['pass'])):
-            # response = apiritif.http.get('http://blazedemo.com/{}/{}'.format(vars['name'], vars['pass']))
+        # response = apiritif.http.get('http://blazedemo.com/{}/{}'.format(vars['name'], vars['pass']))
 
     def test_second(self):
         with open("/tmp/apiritif.log", "a") as _file:
@@ -42,4 +36,3 @@ class TestSimple(unittest.TestCase):
                 hid.hexdigest()[:3], pid[-3:], tid[-3:], self.vars["name"], self.vars["pass"])
             print(log_line)
             _file.write(log_line)
-
