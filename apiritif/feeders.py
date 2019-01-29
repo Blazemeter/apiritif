@@ -18,6 +18,7 @@ limitations under the License.
 import abc
 
 import unicodecsv as csv
+from itertools import cycle, islice
 
 from apiritif.utils import NormalShutdown
 from apiritif.loadgen import local_data
@@ -57,8 +58,8 @@ class CSVFeeder(object):
 
     def open(self):
         self.fds = open(self.filename, 'rb')
-        self.reader = csv.DictReader(self.fds, encoding='utf-8')
-        self.size = len(list(self.reader))      # todo: except first line?
+        self.reader = cycle(csv.DictReader(self.fds, encoding='utf-8'))
+        local_data.csv = None
 
     def get(self, n):
         if not self.fds:
@@ -93,11 +94,16 @@ class CSVFeeder(object):
     #     super(CSVFeeder, self).__init__()
 
     def read_vars(self):
-        num = local_data.thread_index + local_data.total_concurrency * local_data.iteration
-        local_data.csv_data = {"name": "user-%s" % num, "pass": "p%sp" % num} #self.get(num)
+        step = local_data.total_concurrency
+        first = local_data.thread_index
+
+        if not local_data.csv:
+            local_data.csv = next(islice(self.reader, first, first + 1))
+        else:
+            local_data.csv = next(islice(self.reader, step - 1, step))
 
     def get_vars(self):
-        return local_data.csv_data
+        return local_data.csv
 
     @classmethod
     def get_local_feeder(cls, index=0, count=1, loop=True):

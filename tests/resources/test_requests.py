@@ -12,21 +12,21 @@ import os
 
 import apiritif
 from apiritif.feeders import CSVFeeder
-
-
-data_feeder = CSVFeeder(os.path.join(os.path.dirname(__file__), "data/source.csv"))
+from apiritif.loadgen import local_data
 
 
 class TestSimple(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        data_feeder.read_vars()
+        if not local_data.feeder:
+            local_data.feeder = CSVFeeder(os.path.join(os.path.dirname(__file__), "data/source.csv"))
+        local_data.feeder.read_vars()
 
     def setUp(self):
-        self.vars = data_feeder.get_vars()
+        self.vars = local_data.feeder.get_vars()
 
     def test_first(self):
-        print("!!%s!!" % data_feeder.get_vars())
+        print("!!%s!!" % local_data.feeder.get_vars())
         pass
         # with apiritif.transaction('http://blazedemo.com/{}/{}'.format(vars['name'], vars['pass'])):
             # response = apiritif.http.get('http://blazedemo.com/{}/{}'.format(vars['name'], vars['pass']))

@@ -176,6 +176,8 @@ class Worker(ThreadPool):
 
         local_data.total_concurrency = params.total_concurrency
         local_data.thread_index = params.thread_index
+        local_data.feeder = None
+        local_data.csv_data = None
 
         plugin = ApiritifPlugin(self._writer)
         self._writer.concurrency += 1
@@ -188,7 +190,7 @@ class Worker(ThreadPool):
             config.stream = open(os.devnull, "w")  # FIXME: use "with", allow writing to file/log
         try:
             while True:
-                local_data.iteration = iteration
+                local_data.iteration = iteration    # fixme: remove it?
                 iteration += 1
 
                 log.debug("Starting iteration:: index=%d,start_time=%.3f", iteration, time.time())
