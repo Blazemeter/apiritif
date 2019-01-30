@@ -51,76 +51,34 @@ class Feeder(object):
 
 
 class CSVFeeder(object):
-    def __init__(self, filename, loop=True, auto_open=True):
-        self.first = None
-        self.step = None
+    def __init__(self, filename, loop=True):
+        self.storage = threading.local()
         self.filename = filename
-        self.size = None
-        self.fds = None
-        self.reader = None
         self.loop = loop
-        self.csv = None
-        if auto_open:
-            self.open()
 
     def open(self):
-        self.fds = open(self.filename, 'rb')
-        self.reader = cycle(csv.DictReader(self.fds, encoding='utf-8'))
-        self.csv = None
-
-    def get(self, n):
-        if not self.fds:
-            self.open()
-        if not self.size:
-            raise StopIteration()
-        pos = n % self.size
-        self.fds.seek(pos)
-        return next(self.fds)
-
-    def reopen(self):
-        if self.fds is not None:
-            self.fds.seek(0)
-            self.reader = csv.DictReader(self.fds, encoding='utf-8')
+        self.storage.fds = open(self.filename, 'rb')
+        self.storage.reader = cycle(csv.DictReader(self.storage.fds, encoding='utf-8'))
+        self.storage.csv = None
+        self.storage.step, self.storage.first = thread_indexes()  # TODO: maybe use constructor fields
 
     def close(self):
-        if self.fds is not None:
-            self.fds.close()
-        self.reader = None
-
-    def step(self):
-        try:
-            items = next(self.reader)
-        except StopIteration:
-            if not self.loop:
-                raise NormalShutdown("CSV file exhausted")
-            self.reopen()
-            return self.step()
-
-    # def __init__(self, fname, index=0, step=1):
-    #     # todo: fill fields
-    #     super(CSVFeeder, self).__init__()
+        if self.storage.fds is not None:
+            self.storage.fds.close()
+        self.storage.reader = None
 
     def read_vars(self):
-        if not self.csv:    # first element
-            self.csv = next(islice(self.reader, self.first, self.first + 1))
+        if not getattr(self.storage, "reader", None):
+            self.open()
+
+        if not getattr(self.storage, "reader", None):
+            return      # todo: exception?
+
+        if not self.storage.csv:    # first element
+            self.storage.csv = next(islice(self.storage.reader, self.storage.first, self.storage.first + 1))
         else:               # next one
-            self.csv = next(islice(self.reader, self.step - 1, self.step))
+            self.storage.csv = next(islice(self.storage.reader, self.storage.step - 1, self.storage.step))
 
     def get_vars(self):
-        return self.csv
+        return self.storage.csv
 
-    @classmethod
-    def get_local_feeder(cls, index=0, count=1, loop=True):
-        # fname?
-        # todo: implement it
-        pass
-
-    @classmethod
-    def per_thread(cls, filename):
-        instance = getattr(storage, 'instance', None)
-        if instance is None:
-            instance = CSVFeeder(filename)
-            instance.step, instance.first = thread_indexes()    # TODO: maybe use constructor fields
-            storage.instance = instance
-            print("Created feeder #%s: %s/%s: pid: %s" % (id(instance), instance.step, instance.first, os.getpid()))
-        return instance

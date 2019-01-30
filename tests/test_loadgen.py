@@ -36,6 +36,7 @@ class TestLoadGen(TestCase):
             content = f.readlines()
         a = 1 + 1
 
+
     def test_thread(self):
         outfile = tempfile.NamedTemporaryFile()
         print(outfile.name)

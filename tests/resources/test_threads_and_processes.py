@@ -4,7 +4,7 @@ import unittest
 from apiritif import thread_indexes
 from apiritif.feeders import CSVFeeder
 
-feeder = CSVFeeder.per_thread(os.path.join(os.path.dirname(__file__), "data/source.csv"))
+feeder = CSVFeeder(os.path.join(os.path.dirname(__file__), "data/source.csv"))
 log_file = "/tmp/apiritif.log"
 
 
