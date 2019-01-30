@@ -161,6 +161,7 @@ class Worker(ThreadPool):
         """
         :type params: Params
         """
+        thread_indexes(params.total_concurrency, params.thread_index)
         log.debug("[%s] Starting nose iterations: %s", params.worker_index, params)
         assert isinstance(params.tests, list)
         # argv.extend(['--with-apiritif', '--nocapture', '--exe', '--nologcapture'])
@@ -168,10 +169,6 @@ class Worker(ThreadPool):
         end_time = self.params.ramp_up + self.params.hold_for
         end_time += time.time() if end_time else 0
         time.sleep(params.delay)
-
-        iteration = 0
-
-        thread_indexes(params.total_concurrency, params.thread_index)
 
         plugin = ApiritifPlugin(self._writer)
         self._writer.concurrency += 1
@@ -182,13 +179,15 @@ class Worker(ThreadPool):
         config.verbosity = 3 if params.verbose else 0
         if params.verbose:
             config.stream = open(os.devnull, "w")  # FIXME: use "with", allow writing to file/log
+
+        iteration = 0
         try:
             while True:
-                iteration += 1
-
                 log.debug("Starting iteration:: index=%d,start_time=%.3f", iteration, time.time())
                 ApiritifTestProgram(config=config)
                 log.debug("Finishing iteration:: index=%d,end_time=%.3f", iteration, time.time())
+
+                iteration += 1
 
                 if iteration >= params.iterations:
                     log.debug("[%s] iteration limit reached: %s", params.worker_index, params.iterations)
