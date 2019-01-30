@@ -25,7 +25,7 @@ import time
 import traceback
 from multiprocessing.pool import ThreadPool
 from optparse import OptionParser
-from threading import Thread, local
+from threading import Thread
 
 from nose.config import Config, all_config_files
 from nose.core import TestProgram
@@ -34,6 +34,7 @@ from nose.plugins import Plugin
 from nose.plugins.manager import DefaultPluginManager
 
 import apiritif
+from apiritif.local import thread_indexes
 from apiritif.samples import ApiritifSampleExtractor, Sample, PathComponent
 
 log = logging.getLogger("loadgen")
@@ -55,26 +56,6 @@ def spawn_worker(params):
     worker = Worker(params)
     worker.start()
     worker.join()
-
-
-thread_local = local()
-
-
-def thread_indexes(total=None, index=None):
-    initialized = getattr(thread_local, 'initialized', None)
-    if initialized is None:
-        thread_local.initialized = True
-        thread_local.total = 1
-        thread_local.index = 0
-        print("Initializing thread_local")
-
-    if total is not None:
-        thread_local.total = total
-
-    if index is not None:
-        thread_local.index = index
-
-    return thread_local.total, thread_local.index
 
 
 class Params(object):

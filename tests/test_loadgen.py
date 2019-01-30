@@ -39,8 +39,8 @@ class TestLoadGen(TestCase):
         outfile.close()
         print(report)
         params = Params()
-        params.concurrency = 2
-        params.iterations = 10
+        params.concurrency = 1
+        params.iterations = 1
         params.report = report
         params.tests = [script]
         params.worker_count = 1

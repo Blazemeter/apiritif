@@ -17,12 +17,13 @@ limitations under the License.
 """
 import abc
 import threading
+import os
 
 import unicodecsv as csv
 from itertools import cycle, islice
 
 from apiritif.utils import NormalShutdown
-from apiritif.loadgen import thread_indexes
+from apiritif.local import thread_indexes
 
 storage = threading.local()
 
@@ -100,9 +101,9 @@ class CSVFeeder(object):
     #     super(CSVFeeder, self).__init__()
 
     def read_vars(self):
-        if self.csv:
+        if not self.csv:    # first element
             self.csv = next(islice(self.reader, self.first, self.first + 1))
-        else:
+        else:               # next one
             self.csv = next(islice(self.reader, self.step - 1, self.step))
 
     def get_vars(self):
@@ -121,5 +122,5 @@ class CSVFeeder(object):
             instance = CSVFeeder(filename)
             instance.step, instance.first = thread_indexes()  # TODO: maybe use constructor fields
             storage.instance = instance
-            print("Created feeder #%s: %s/%s" % (id(instance), instance.step, instance.first))
+            print("Created feeder #%s: %s/%s: pid: %s" % (id(instance), instance.step, instance.first, os.getpid()))
         return instance
