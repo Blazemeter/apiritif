@@ -120,7 +120,7 @@ class CSVFeeder(object):
         instance = getattr(storage, 'instance', None)
         if instance is None:
             instance = CSVFeeder(filename)
-            instance.step, instance.first = thread_indexes()  # TODO: maybe use constructor fields
+            instance.step, instance.first = thread_indexes()    # TODO: maybe use constructor fields
             storage.instance = instance
             print("Created feeder #%s: %s/%s: pid: %s" % (id(instance), instance.step, instance.first, os.getpid()))
         return instance

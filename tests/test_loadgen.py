@@ -1,11 +1,9 @@
-import csv
 import copy
 import logging
 import os
 import tempfile
 import time
 from unittest import TestCase
-from itertools import islice, cycle
 
 from apiritif.loadgen import Worker, Params, Supervisor
 
@@ -19,14 +17,14 @@ class TestLoadGen(TestCase):
         log = "/tmp/apiritif.log"
         if os.path.exists(log):
             os.remove(log)
-        script = os.path.dirname(os.path.realpath(__file__)) + "/resources/test_requests.py"
+        script = os.path.dirname(os.path.realpath(__file__)) + "/resources/test_threads_and_processes.py"
         outfile = tempfile.NamedTemporaryFile()
         report = outfile.name + "%s.csv"
         outfile.close()
         print(report)
         params = Params()
         params.concurrency = 3
-        params.iterations = 4
+        params.iterations = 2
         params.report = report
         params.tests = [script]
         params.worker_count = 2
