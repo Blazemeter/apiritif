@@ -15,21 +15,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 class TestLoadGen(TestCase):
-    def test_csv(self):
-        csv_file = os.path.join(os.path.dirname(__file__), "resources/data/source.csv")
-        d = None
-        first = 0
-        step = 2
-        with open(csv_file) as _file:
-            reader = cycle(csv.DictReader(_file))
-            for i in range(20):
-                if not d:
-                    d = next(islice(reader, first, first+1))
-                else:
-                    d = next(islice(reader, step-1, step))
-                print("%s" % d)
-
-    def test_thread_proc(self):
+    def test_threads_and_processes(self):
         log = "/tmp/apiritif.log"
         if os.path.exists(log):
             os.remove(log)
@@ -39,11 +25,11 @@ class TestLoadGen(TestCase):
         outfile.close()
         print(report)
         params = Params()
-        params.concurrency = 1
-        params.iterations = 1
+        params.concurrency = 3
+        params.iterations = 4
         params.report = report
         params.tests = [script]
-        params.worker_count = 1
+        params.worker_count = 2
 
         sup = Supervisor(params)
         sup.start()

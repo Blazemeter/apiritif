@@ -574,8 +574,8 @@ def setup_logging(params):
 
 
 if __name__ == '__main__':
-    params = cmdline_to_params()
-    setup_logging(params)
-    supervisor = Supervisor(params)
+    cmd_params = cmdline_to_params()
+    setup_logging(cmd_params)
+    supervisor = Supervisor(cmd_params)
     supervisor.start()
     supervisor.join()
