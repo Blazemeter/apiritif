@@ -19,7 +19,7 @@ class TestLoadGen(TestCase):
             os.remove(log)
         script = os.path.dirname(os.path.realpath(__file__)) + "/resources/test_threads_and_processes.py"
         outfile = tempfile.NamedTemporaryFile()
-        report = outfile.name + "%s.csv"
+        report = outfile.name + "-%s.csv"
         outfile.close()
         print(report)
         params = Params()
