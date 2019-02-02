@@ -50,10 +50,6 @@ class CSVFeeder(object):
     def __init__(self, filename):
         self.filename = filename
 
-    def close(self):
-        if getattr(storage, "reader", None) is not None:
-            storage.reader.close()
-
     def read_vars(self):
         if getattr(storage, "reader", None) is None:   # the first call in the thread
             storage.reader = CSVReader(self.filename)

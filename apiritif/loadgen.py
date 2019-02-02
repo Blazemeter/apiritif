@@ -35,6 +35,7 @@ from nose.plugins.manager import DefaultPluginManager
 
 import apiritif
 from apiritif.local import thread_indexes
+from apiritif.feeders import storage
 from apiritif.samples import ApiritifSampleExtractor, Sample, PathComponent
 
 log = logging.getLogger("loadgen")
@@ -198,6 +199,10 @@ class Worker(ThreadPool):
                     break
         finally:
             self._writer.concurrency -= 1
+
+            if getattr(storage, "reader", None) is not None:
+                storage.reader.close()
+
             if params.verbose:
                 config.stream.close()
 
