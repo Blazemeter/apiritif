@@ -14,16 +14,13 @@ logging.basicConfig(level=logging.DEBUG)
 
 class TestLoadGen(TestCase):
     def test_threads_and_processes(self):
-        log = "/tmp/apiritif.log"
-        if os.path.exists(log):
-            os.remove(log)
         script = os.path.dirname(os.path.realpath(__file__)) + "/resources/test_threads_and_processes.py"
         outfile = tempfile.NamedTemporaryFile()
         report = outfile.name + "-%s.csv"
         outfile.close()
         print(report)
         params = Params()
-        params.concurrency = 3
+        params.concurrency = 4
         params.iterations = 2
         params.report = report
         params.tests = [script]
@@ -32,10 +29,24 @@ class TestLoadGen(TestCase):
         sup = Supervisor(params)
         sup.start()
         sup.join()
-        with open(log) as f:
-            content = f.readlines()
-        a = 1 + 1
 
+        content = []
+        for i in range(params.worker_count):
+            with open(report % i) as f:
+                content.extend(f.readlines()[1::2])
+
+        threads = {"0": [], "1": [], "2": [], "3": []}
+        content = [item[item.index('"')+1:].strip() for item in content]
+        for item in content:
+            threads[item[0]].append(item[2:])
+
+        target = {
+            '0': ['00. user0:0', '10. user0:0', '11. user0:0', '00. user4:4', '10. user4:4', '11. user4:4'],
+            '1': ['00. user1:1', '10. user1:1', '11. user1:1', '00. user5:5', '10. user5:5', '11. user5:5'],
+            '2': ['00. user2:2', '10. user2:2', '11. user2:2', '00. user0:0', '10. user0:0', '11. user0:0'],
+            '3': ['00. user3:3', '10. user3:3', '11. user3:3', '00. user1:1', '10. user1:1', '11. user1:1']}
+
+        self.assertEqual(threads, target)
 
     def test_thread(self):
         outfile = tempfile.NamedTemporaryFile()

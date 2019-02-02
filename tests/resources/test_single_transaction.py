@@ -8,7 +8,6 @@ import unittest
 import apiritif
 
 
-
 class TestAPIRequests(unittest.TestCase):
 
     def test_requests(self):
