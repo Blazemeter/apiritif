@@ -11,12 +11,12 @@ feeder = CSVFeeder(os.path.join(os.path.dirname(__file__), "data/source.csv"))
 
 def log_it(name, data):
     log_line = "%s-%s. %s:%s\n" % (thread_indexes()[1], name, data["name"], data["pass"])
-    with apiritif.transaction(log_line):
+    with apiritif.transaction(log_line):    # write log_line into report file for checking purposes
         pass
 
 
 def setup():    # setup_module
-    feeder.read_vars()  # todo: close reader in nose_run
+    feeder.read_vars()  #
 
 
 class Test0(unittest.TestCase):

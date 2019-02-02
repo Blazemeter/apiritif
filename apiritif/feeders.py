@@ -15,70 +15,53 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import abc
 import threading
-import os
-
 import unicodecsv as csv
 from itertools import cycle, islice
-
-from apiritif.utils import NormalShutdown
 from apiritif.local import thread_indexes
+
 
 storage = threading.local()
 
 
-class Feeder(object):
-    instances = []
+class CSVReader(object):
+    def __init__(self, filename):
+        self.step, self.first = thread_indexes()
+        self.csv = None
+        self.fds = open(filename, 'rb')
+        self.reader = cycle(csv.DictReader(self.fds, encoding='utf-8'))
 
-    def __init__(self, vars_dict, register=True):
-        self.vars_dict = vars_dict
-        if register:
-            Feeder.instances.append(self)
+    def close(self):
+        if self.fds is not None:
+            self.fds.close()
+        self.reader = None
 
-    @abc.abstractmethod
-    def open(self):
-        pass
+    def read_vars(self):
+        if not getattr(self, "reader", None):
+            return      # todo: exception?
 
-    @abc.abstractmethod
-    def step(self):
-        pass
-
-    @classmethod
-    def step_all_feeders(cls):
-        for instance in cls.instances:
-            instance.step()
+        if not self.csv:    # first element
+            self.csv = next(islice(self.reader, self.first, self.first + 1))
+        else:               # next one
+            self.csv = next(islice(self.reader, self.step - 1, self.step))
 
 
 class CSVFeeder(object):
-    def __init__(self, filename, loop=True):
-        self.storage = threading.local()
+    def __init__(self, filename):
         self.filename = filename
-        self.loop = loop
-
-    def open(self):
-        self.storage.fds = open(self.filename, 'rb')
-        self.storage.reader = cycle(csv.DictReader(self.storage.fds, encoding='utf-8'))
-        self.storage.csv = None
-        self.storage.step, self.storage.first = thread_indexes()  # TODO: maybe use constructor fields
 
     def close(self):
-        if self.storage.fds is not None:
-            self.storage.fds.close()
-        self.storage.reader = None
+        if getattr(storage, "reader", None) is not None:
+            storage.reader.close()
 
     def read_vars(self):
-        if not getattr(self.storage, "reader", None):
-            self.open()
+        if getattr(storage, "reader", None) is None:   # the first call in the thread
+            storage.reader = CSVReader(self.filename)
 
-        if not getattr(self.storage, "reader", None):
-            return      # todo: exception?
+        storage.reader.read_vars()
 
-        if not self.storage.csv:    # first element
-            self.storage.csv = next(islice(self.storage.reader, self.storage.first, self.storage.first + 1))
-        else:               # next one
-            self.storage.csv = next(islice(self.storage.reader, self.storage.step - 1, self.storage.step))
-
-    def get_vars(self):
-        return self.storage.csv
+    @staticmethod
+    def get_vars():
+        if getattr(storage, "reader", None) is not None:
+            return storage.reader.csv
 
