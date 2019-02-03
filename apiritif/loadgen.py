@@ -34,8 +34,7 @@ from nose.plugins import Plugin
 from nose.plugins.manager import DefaultPluginManager
 
 import apiritif
-from apiritif.local import thread_indexes
-from apiritif.feeders import storage
+from .thread import set_total, set_index, get_readers
 from apiritif.samples import ApiritifSampleExtractor, Sample, PathComponent
 
 log = logging.getLogger("loadgen")
@@ -70,7 +69,6 @@ class Params(object):
         self.delay = 0
 
         self.concurrency = 1
-        self.total_concurrency = self.concurrency
         self.iterations = 1
         self.ramp_up = 0
         self.steps = 0
@@ -114,7 +112,6 @@ class Supervisor(Thread):
             params.worker_index = idx
             params.thread_index = total_concurrency  # for subprocess it's index of its first thread
             params.concurrency = conc
-            params.total_concurrency = self.params.concurrency
             params.report = self.params.report % idx
             params.worker_count = self.params.worker_count
 
@@ -127,6 +124,7 @@ class Supervisor(Thread):
     def _start_workers(self):
         log.info("Total workers: %s", self.params.worker_count)
 
+        set_total(self.params.concurrency)
         workers = multiprocessing.Pool(processes=self.params.worker_count)
         args = list(self._concurrency_slicer())
 
@@ -162,7 +160,7 @@ class Worker(ThreadPool):
         """
         :type params: Params
         """
-        thread_indexes(total=params.total_concurrency, index=params.thread_index)
+        set_index(params.thread_index)
         log.debug("[%s] Starting nose iterations: %s", params.worker_index, params)
         assert isinstance(params.tests, list)
         # argv.extend(['--with-apiritif', '--nocapture', '--exe', '--nologcapture'])
@@ -200,8 +198,8 @@ class Worker(ThreadPool):
         finally:
             self._writer.concurrency -= 1
 
-            if getattr(storage, "reader", None) is not None:
-                storage.reader.close()
+            for reader in get_readers():
+                reader.close()
 
             if params.verbose:
                 config.stream.close()

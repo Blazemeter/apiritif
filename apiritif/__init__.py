@@ -29,7 +29,8 @@ from lxml import etree
 from apiritif.utilities import *
 from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp
 import apiritif.feeders as feeders
-from .local import thread_indexes
+from .thread import get_total, set_total, get_index, set_index, get_readers, add_reader
+
 
 log = logging.getLogger('apiritif')
 

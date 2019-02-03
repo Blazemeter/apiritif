@@ -3,14 +3,13 @@ import unittest
 
 
 import apiritif
-from apiritif import thread_indexes
 from apiritif.feeders import CSVFeeder
 
 feeder = CSVFeeder(os.path.join(os.path.dirname(__file__), "data/source.csv"))
 
 
 def log_it(name, data):
-    log_line = "%s-%s. %s:%s\n" % (thread_indexes()[1], name, data["name"], data["pass"])
+    log_line = "%s-%s. %s:%s\n" % (apiritif.get_index(), name, data["name"], data["pass"])
     with apiritif.transaction(log_line):    # write log_line into report file for checking purposes
         pass
 
