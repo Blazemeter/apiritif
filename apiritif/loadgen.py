@@ -34,7 +34,7 @@ from nose.plugins import Plugin
 from nose.plugins.manager import DefaultPluginManager
 
 import apiritif
-from .thread import set_total, set_index, get_readers
+import apiritif.thread as thread
 from apiritif.samples import ApiritifSampleExtractor, Sample, PathComponent
 
 log = logging.getLogger("loadgen")
@@ -103,9 +103,10 @@ class Supervisor(Thread):
         assert inc >= 1
         for idx in range(0, self.params.worker_count):
             progress = (idx + 1) * inc
+
             conc = int(round(progress - total_concurrency))
             assert conc > 0
-            assert total_concurrency >= 0
+
             log.debug("Idx: %s, concurrency: %s", idx, conc)
 
             params = copy.deepcopy(self.params)
@@ -124,7 +125,7 @@ class Supervisor(Thread):
     def _start_workers(self):
         log.info("Total workers: %s", self.params.worker_count)
 
-        set_total(self.params.concurrency)
+        thread.set_total(self.params.concurrency)
         workers = multiprocessing.Pool(processes=self.params.worker_count)
         args = list(self._concurrency_slicer())
 
@@ -160,7 +161,7 @@ class Worker(ThreadPool):
         """
         :type params: Params
         """
-        set_index(params.thread_index)
+        thread.set_index(params.thread_index)
         log.debug("[%s] Starting nose iterations: %s", params.worker_index, params)
         assert isinstance(params.tests, list)
         # argv.extend(['--with-apiritif', '--nocapture', '--exe', '--nologcapture'])
@@ -186,6 +187,7 @@ class Worker(ThreadPool):
                 ApiritifTestProgram(config=config)
                 log.debug("Finishing iteration:: index=%d,end_time=%.3f", iteration, time.time())
 
+                thread.set_iteration(iteration)
                 iteration += 1
 
                 if iteration >= params.iterations:
@@ -197,9 +199,6 @@ class Worker(ThreadPool):
                     break
         finally:
             self._writer.concurrency -= 1
-
-            for reader in get_readers():
-                reader.close()
 
             if params.verbose:
                 config.stream.close()

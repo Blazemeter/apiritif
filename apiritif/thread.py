@@ -21,14 +21,6 @@ _total = 1
 _thread_local = local()
 
 
-def set_index(index):
-    _thread_local.index = index
-
-
-def get_index():
-    return _thread_local.index
-
-
 def set_total(total):
     global _total
     _total = total
@@ -39,31 +31,19 @@ def get_total():
     return _total
 
 
-def add_reader(feeder_id, reader):
-    readers = getattr(_thread_local, "readers", None)
-    if not readers:
-        _thread_local.readers = {}
-
-    feeders = _thread_local.readers.keys()
-    if feeder_id not in feeders:
-        _thread_local.readers[feeder_id] = []
-
-    _thread_local.readers[feeder_id].append(reader)
+def set_index(index):
+    _thread_local.index = index
 
 
-def get_readers(feeder_id=None):
-    result = []
+def get_index():
+    index = getattr(_thread_local, "index", 0)
+    return index
 
-    readers = getattr(_thread_local, "readers", {})
-    if not readers:
-        return result
 
-    if feeder_id is None:
-        ids = readers.keys()
-    else:
-        ids = [feeder_id]
+def set_iteration(iteration):
+    _thread_local.iteration = iteration
 
-    for feeder in ids:
-        result.extend(_thread_local.readers.get(feeder, []))
 
-    return result
+def get_iteration():
+    iteration = getattr(_thread_local, "iteration", 0)
+    return iteration

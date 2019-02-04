@@ -15,15 +15,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import threading
+
 import unicodecsv as csv
 from itertools import cycle, islice
-from .thread import get_total, get_index, get_readers, add_reader
+
+import apiritif.thread as thread
+
+
+thread_data = threading.local()
 
 
 class CSVReader(object):
     def __init__(self, filename):
-        self.step = get_total()
-        self.first = get_index()
+        self.step = thread.get_total()
+        self.first = thread.get_index()
         self.csv = {}
         self.fds = open(filename, 'rb')
         self._reader = cycle(csv.DictReader(self.fds, encoding='utf-8'))
@@ -43,34 +49,34 @@ class CSVReader(object):
             self.csv = next(islice(self._reader, self.step - 1, self.step))
 
 
-class CSVFeeder(object):
-    def __init__(self, config):
-        if not isinstance(config, dict):
-            config = [config]
+class ThreadCSVReader(object):
+    def __init__(self, filename):
+        self.filename = filename
 
-        self.config = config
+    def get_csv_reader(self, create=True):
+        csv_readers = getattr(thread_data, "csv_readers", None)
+        if not csv_readers:
+            thread_data.csv_readers = {}
 
-    def _set_readers(self):
-        for reader_cfg in self.config:
-            add_reader(id(self), CSVReader(reader_cfg))
+        csv_reader = thread_data.csv_readers.get(id(self))
+        if not csv_reader and create:
+            csv_reader = CSVReader(self.filename)
+            thread_data.csv_readers[id(self)] = csv_reader
+
+        return csv_reader
 
     def read_vars(self):
-        readers = get_readers(id(self))
-        if not readers:
-            self._set_readers()
-
-        for reader in get_readers(id(self)):    # revise readers
-            reader.read_vars()
+        self.get_csv_reader().read_vars()
 
     def close(self):
-        readers = get_readers(id(self))
-        while readers:
-            readers.pop().close()
+        csv_reader = self.get_csv_reader(create=False)
+        if csv_reader:
+            del thread_data.csv_readers[id(self)]
+            csv_reader.close()
 
     def get_vars(self):
-        result = {}
-        readers = get_readers(id(self))
-        for reader in readers:
-            result.update(reader.csv)
-
-        return result
+        csv_reader = self.get_csv_reader(create=False)
+        if csv_reader:
+            return csv_reader.csv
+        else:
+            return {}
