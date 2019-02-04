@@ -184,10 +184,10 @@ class Worker(ThreadPool):
         try:
             while True:
                 log.debug("Starting iteration:: index=%d,start_time=%.3f", iteration, time.time())
+                thread.set_iteration(iteration)
                 ApiritifTestProgram(config=config)
                 log.debug("Finishing iteration:: index=%d,end_time=%.3f", iteration, time.time())
 
-                thread.set_iteration(iteration)
                 iteration += 1
 
                 if iteration >= params.iterations:

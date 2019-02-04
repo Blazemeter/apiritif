@@ -41,7 +41,7 @@ class CSVReaderPerThread(Reader):    # processes multi-thread specific
     def __init__(self, filename):
         self.filename = filename
 
-    def _get_csv_reader(self, create=True):
+    def _get_csv_reader(self, create=False):
         csv_readers = getattr(thread_data, "csv_readers", None)
         if not csv_readers:
             thread_data.csv_readers = {}
@@ -54,16 +54,16 @@ class CSVReaderPerThread(Reader):    # processes multi-thread specific
         return csv_reader
 
     def read_vars(self):
-        self._get_csv_reader().read_vars()
+        self._get_csv_reader(create=True).read_vars()
 
     def close(self):
-        csv_reader = self._get_csv_reader(create=False)
+        csv_reader = self._get_csv_reader()
         if csv_reader:
             del thread_data.csv_readers[id(self)]
             csv_reader.close()
 
     def get_vars(self):
-        csv_reader = self._get_csv_reader(create=False)
+        csv_reader = self._get_csv_reader()
         if csv_reader:
             return csv_reader.get_vars()
         else:
