@@ -4,9 +4,9 @@ import unittest
 
 import apiritif
 from apiritif.thread import get_index
-from apiritif.feeders import CSVReader
+from apiritif.csv import CSVReaderPerThread
 
-feeder = CSVReader(os.path.join(os.path.dirname(__file__), "data/source.csv"))
+reader = CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "data/source.csv"))
 
 
 def log_it(name, data):
@@ -16,17 +16,17 @@ def log_it(name, data):
 
 
 def setup():    # setup_module
-    feeder.read_vars()  #
+    reader.read_vars()  #
 
 
 class Test0(unittest.TestCase):
     def test_00(self):
-        log_it("00", feeder.get_vars())
+        log_it("00", reader.get_vars())
 
 
 class Test1(unittest.TestCase):
     def setUp(self):
-        self.vars = feeder.get_vars()
+        self.vars = reader.get_vars()
 
     def test_10(self):
         log_it("10", self.vars)

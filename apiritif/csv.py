@@ -37,7 +37,7 @@ class Reader(object):
         pass
 
 
-class CSVReader(Reader):    # processes multi-thread specific
+class CSVReaderPerThread(Reader):    # processes multi-thread specific
     def __init__(self, filename):
         self.filename = filename
 
@@ -48,7 +48,7 @@ class CSVReader(Reader):    # processes multi-thread specific
 
         csv_reader = thread_data.csv_readers.get(id(self))
         if not csv_reader and create:
-            csv_reader = ThreadCSVReader(self.filename, step=thread.get_total(), first=thread.get_index())
+            csv_reader = CSVReader(self.filename, step=thread.get_total(), first=thread.get_index())
             thread_data.csv_readers[id(self)] = csv_reader
 
         return csv_reader
@@ -70,7 +70,7 @@ class CSVReader(Reader):    # processes multi-thread specific
             return {}
 
 
-class ThreadCSVReader(Reader):
+class CSVReader(Reader):
     def __init__(self, filename, step=1, first=0):
         self.step = step
         self.first = first
