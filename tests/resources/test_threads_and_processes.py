@@ -4,9 +4,9 @@ import unittest
 
 import apiritif
 from apiritif.thread import get_index
-from apiritif.feeders import ThreadCSVReader
+from apiritif.feeders import CSVReader
 
-feeder = ThreadCSVReader(os.path.join(os.path.dirname(__file__), "data/source.csv"))
+feeder = CSVReader(os.path.join(os.path.dirname(__file__), "data/source.csv"))
 
 
 def log_it(name, data):

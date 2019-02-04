@@ -26,10 +26,54 @@ import apiritif.thread as thread
 thread_data = threading.local()
 
 
-class CSVReader(object):
+class Reader(object):
+    def read_vars(self):
+        pass
+
+    def get_vars(self):
+        pass
+
+    def close(self):
+        pass
+
+
+class CSVReader(Reader):    # processes multi-thread specific
     def __init__(self, filename):
-        self.step = thread.get_total()
-        self.first = thread.get_index()
+        self.filename = filename
+
+    def _get_csv_reader(self, create=True):
+        csv_readers = getattr(thread_data, "csv_readers", None)
+        if not csv_readers:
+            thread_data.csv_readers = {}
+
+        csv_reader = thread_data.csv_readers.get(id(self))
+        if not csv_reader and create:
+            csv_reader = ThreadCSVReader(self.filename, step=thread.get_total(), first=thread.get_index())
+            thread_data.csv_readers[id(self)] = csv_reader
+
+        return csv_reader
+
+    def read_vars(self):
+        self._get_csv_reader().read_vars()
+
+    def close(self):
+        csv_reader = self._get_csv_reader(create=False)
+        if csv_reader:
+            del thread_data.csv_readers[id(self)]
+            csv_reader.close()
+
+    def get_vars(self):
+        csv_reader = self._get_csv_reader(create=False)
+        if csv_reader:
+            return csv_reader.get_vars()
+        else:
+            return {}
+
+
+class ThreadCSVReader(Reader):
+    def __init__(self, filename, step=1, first=0):
+        self.step = step
+        self.first = first
         self.csv = {}
         self.fds = open(filename, 'rb')
         self._reader = cycle(csv.DictReader(self.fds, encoding='utf-8'))
@@ -48,35 +92,6 @@ class CSVReader(object):
         else:               # next one
             self.csv = next(islice(self._reader, self.step - 1, self.step))
 
-
-class ThreadCSVReader(object):
-    def __init__(self, filename):
-        self.filename = filename
-
-    def get_csv_reader(self, create=True):
-        csv_readers = getattr(thread_data, "csv_readers", None)
-        if not csv_readers:
-            thread_data.csv_readers = {}
-
-        csv_reader = thread_data.csv_readers.get(id(self))
-        if not csv_reader and create:
-            csv_reader = CSVReader(self.filename)
-            thread_data.csv_readers[id(self)] = csv_reader
-
-        return csv_reader
-
-    def read_vars(self):
-        self.get_csv_reader().read_vars()
-
-    def close(self):
-        csv_reader = self.get_csv_reader(create=False)
-        if csv_reader:
-            del thread_data.csv_readers[id(self)]
-            csv_reader.close()
-
     def get_vars(self):
-        csv_reader = self.get_csv_reader(create=False)
-        if csv_reader:
-            return csv_reader.csv
-        else:
-            return {}
+        return self.csv
+
