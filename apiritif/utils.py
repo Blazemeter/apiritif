@@ -17,6 +17,10 @@ import platform
 import re
 
 
+class NormalShutdown(BaseException):
+    pass
+
+
 def headers_as_text(headers_dict):
     return "\n".join("%s: %s" % (key, value) for key, value in headers_dict.items())
 

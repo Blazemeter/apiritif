@@ -29,6 +29,7 @@ from lxml import etree
 from apiritif.utilities import *
 from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp
 
+
 log = logging.getLogger('apiritif')
 
 
@@ -38,7 +39,6 @@ class TimeoutError(Exception):
 
 class ConnectionError(Exception):
     pass
-
 
 
 class http(object):

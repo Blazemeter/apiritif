@@ -34,6 +34,7 @@ from nose.plugins import Plugin
 from nose.plugins.manager import DefaultPluginManager
 
 import apiritif
+import apiritif.thread as thread
 from apiritif.samples import ApiritifSampleExtractor, Sample, PathComponent
 
 log = logging.getLogger("loadgen")
@@ -52,7 +53,6 @@ def spawn_worker(params):
     setup_logging(params)
     log.info("Adding worker: idx=%s\tconcurrency=%s\tresults=%s", params.worker_index, params.concurrency,
              params.report)
-
     worker = Worker(params)
     worker.start()
     worker.join()
@@ -63,6 +63,7 @@ class Params(object):
         super(Params, self).__init__()
         self.worker_index = 0
         self.worker_count = 1
+        self.thread_index = 0
         self.report = None
 
         self.delay = 0
@@ -102,17 +103,20 @@ class Supervisor(Thread):
         assert inc >= 1
         for idx in range(0, self.params.worker_count):
             progress = (idx + 1) * inc
+
             conc = int(round(progress - total_concurrency))
-            total_concurrency += conc
             assert conc > 0
-            assert total_concurrency >= 0
+
             log.debug("Idx: %s, concurrency: %s", idx, conc)
 
             params = copy.deepcopy(self.params)
             params.worker_index = idx
+            params.thread_index = total_concurrency  # for subprocess it's index of its first thread
             params.concurrency = conc
             params.report = self.params.report % idx
             params.worker_count = self.params.worker_count
+
+            total_concurrency += conc
 
             yield params
 
@@ -121,6 +125,7 @@ class Supervisor(Thread):
     def _start_workers(self):
         log.info("Total workers: %s", self.params.worker_count)
 
+        thread.set_total(self.params.concurrency)
         workers = multiprocessing.Pool(processes=self.params.worker_count)
         args = list(self._concurrency_slicer())
 
@@ -156,6 +161,7 @@ class Worker(ThreadPool):
         """
         :type params: Params
         """
+        thread.set_index(params.thread_index)
         log.debug("[%s] Starting nose iterations: %s", params.worker_index, params)
         assert isinstance(params.tests, list)
         # argv.extend(['--with-apiritif', '--nocapture', '--exe', '--nologcapture'])
@@ -164,7 +170,6 @@ class Worker(ThreadPool):
         end_time += time.time() if end_time else 0
         time.sleep(params.delay)
 
-        iteration = 0
         plugin = ApiritifPlugin(self._writer)
         self._writer.concurrency += 1
 
@@ -174,13 +179,16 @@ class Worker(ThreadPool):
         config.verbosity = 3 if params.verbose else 0
         if params.verbose:
             config.stream = open(os.devnull, "w")  # FIXME: use "with", allow writing to file/log
+
+        iteration = 0
         try:
             while True:
-                iteration += 1
-
                 log.debug("Starting iteration:: index=%d,start_time=%.3f", iteration, time.time())
+                thread.set_iteration(iteration)
                 ApiritifTestProgram(config=config)
                 log.debug("Finishing iteration:: index=%d,end_time=%.3f", iteration, time.time())
+
+                iteration += 1
 
                 if iteration >= params.iterations:
                     log.debug("[%s] iteration limit reached: %s", params.worker_index, params.iterations)
@@ -191,6 +199,7 @@ class Worker(ThreadPool):
                     break
         finally:
             self._writer.concurrency -= 1
+
             if params.verbose:
                 config.stream.close()
 
@@ -208,6 +217,7 @@ class Worker(ThreadPool):
             delay = offset + thr_idx * float(self.params.ramp_up) / self.params.concurrency
             delay -= delay % step_granularity if step_granularity else 0
             params = copy.deepcopy(self.params)
+            params.thread_index = self.params.thread_index + thr_idx
             params.delay = delay
             yield params
 
@@ -293,7 +303,8 @@ class JTLSampleWriter(LDJSONSampleWriter):
         fieldnames = ["timeStamp", "elapsed", "Latency", "label", "responseCode", "responseMessage", "success",
                       "allThreads", "bytes"]
         endline = '\n'  # \r will be preprended automatically because out_stream is opened in text mode
-        self.writer = csv.DictWriter(self.out_stream, fieldnames=fieldnames, dialect=csv.excel, lineterminator=endline, encoding='utf-8')
+        self.writer = csv.DictWriter(self.out_stream, fieldnames=fieldnames, dialect=csv.excel, lineterminator=endline,
+                                     encoding='utf-8')
         self.writer.writeheader()
         self.out_stream.flush()
 
@@ -565,8 +576,8 @@ def setup_logging(params):
 
 
 if __name__ == '__main__':
-    params = cmdline_to_params()
-    setup_logging(params)
-    supervisor = Supervisor(params)
+    cmd_params = cmdline_to_params()
+    setup_logging(cmd_params)
+    supervisor = Supervisor(cmd_params)
     supervisor.start()
     supervisor.join()
