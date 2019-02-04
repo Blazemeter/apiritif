@@ -1,0 +1,15 @@
+execution:
+- executor: apiritif
+  iterations: 1
+  concurrency: 2
+  scenario: simple
+
+scenarios:
+  simple:
+    data-sources:
+    - data1.csv
+    - path: dir/data2.csv
+      variable-names: addon,plugin
+    requests:
+    - http://blazedemo.com/${name}/${pass}
+    - http://blazedemo.com/${addon}/${plugin}
