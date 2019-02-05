@@ -38,9 +38,10 @@ class Reader(object):
 
 
 class CSVReaderPerThread(Reader):    # processes multi-thread specific
-    def __init__(self, filename, fieldnames=None):
+    def __init__(self, filename, fieldnames=None, delimiter=None):
         self.filename = filename
         self.fieldnames = fieldnames
+        self.delimiter = delimiter
 
     def _get_csv_reader(self, create=False):
         csv_readers = getattr(thread_data, "csv_readers", None)
@@ -53,7 +54,8 @@ class CSVReaderPerThread(Reader):    # processes multi-thread specific
                 filename=self.filename,
                 fieldnames=self.fieldnames,
                 step=thread.get_total(),
-                first=thread.get_index())
+                first=thread.get_index(),
+                delimiter=self.delimiter)
 
             thread_data.csv_readers[id(self)] = csv_reader
 
@@ -77,12 +79,17 @@ class CSVReaderPerThread(Reader):    # processes multi-thread specific
 
 
 class CSVReader(Reader):
-    def __init__(self, filename, step=1, first=0, fieldnames=None):
+    def __init__(self, filename, step=1, first=0, fieldnames=None, delimiter=None):
         self.step = step
         self.first = first
         self.csv = {}
         self.fds = open(filename, 'rb')
-        self._reader = cycle(csv.DictReader(self.fds, encoding='utf-8', fieldnames=fieldnames))
+
+        format_params = {}
+        if delimiter:
+            format_params["delimiter"] = delimiter
+
+        self._reader = cycle(csv.DictReader(self.fds, encoding='utf-8', fieldnames=fieldnames, **format_params))
 
     def close(self):
         if self.fds is not None:

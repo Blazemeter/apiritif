@@ -14,7 +14,7 @@ logging.basicConfig(level=logging.DEBUG)
 
 class TestLoadGen(TestCase):
     def test_threads_and_processes(self):
-        """ different reading speed """
+        """ check if threads and processes can divide csv fairly """
         script = os.path.dirname(os.path.realpath(__file__)) + "/resources/test_threads_and_processes.py"
         outfile = tempfile.NamedTemporaryFile()
         report = outfile.name + "-%s.csv"
@@ -50,6 +50,7 @@ class TestLoadGen(TestCase):
         self.assertEqual(threads, target)
 
     def test_two_readers(self):
+        """ check different reading speed, fieldnames and separators """
         script = os.path.dirname(os.path.realpath(__file__)) + "/resources/test_two_readers.py"
         outfile = tempfile.NamedTemporaryFile()
         report = outfile.name + "-%s.csv"
@@ -76,7 +77,7 @@ class TestLoadGen(TestCase):
         for item in content:
             threads[item[0]].append(item[2:])
 
-        target = {
+        target = {      # second csv file (two letters values) must be read two times faster (one line per test)
             "0": ["0. user0:0:ze:00", "1. user0:0:tu:22", "0. user2:2:fo:44",
                   "1. user2:2:si:66", "0. user4:4:ze:00", "1. user4:4:tu:22"],
             "1": ["0. user1:1:on:11", "1. user1:1:th:33", "0. user3:3:fi:55",

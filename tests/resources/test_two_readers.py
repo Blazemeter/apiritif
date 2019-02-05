@@ -7,11 +7,14 @@ from apiritif.thread import get_index
 from apiritif.csv import CSVReaderPerThread
 
 reader0 = CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "data/source0.csv"))
-reader1 = CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "data/source1.csv"), fieldnames=["name1", "pass1"])
+reader1 = CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "data/source1.csv"),
+                             fieldnames=["name+", "pass+"],
+                             delimiter="-")
 
 
 def log_it(name, data):
-    log_line = "%s-%s. %s\n" % (get_index(), name, ":".join((data["name"], data["pass"], data["name1"], data["pass1"])))
+    variables = ":".join((data["name"], data["pass"], data["name+"], data["pass+"]))
+    log_line = "%s-%s. %s\n" % (get_index(), name, variables)
     with apiritif.transaction(log_line):    # write log_line into report file for checking purposes
         pass
 
