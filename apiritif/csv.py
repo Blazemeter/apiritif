@@ -38,8 +38,9 @@ class Reader(object):
 
 
 class CSVReaderPerThread(Reader):    # processes multi-thread specific
-    def __init__(self, filename):
+    def __init__(self, filename, fieldnames=None):
         self.filename = filename
+        self.fieldnames = fieldnames
 
     def _get_csv_reader(self, create=False):
         csv_readers = getattr(thread_data, "csv_readers", None)
@@ -48,7 +49,12 @@ class CSVReaderPerThread(Reader):    # processes multi-thread specific
 
         csv_reader = thread_data.csv_readers.get(id(self))
         if not csv_reader and create:
-            csv_reader = CSVReader(self.filename, step=thread.get_total(), first=thread.get_index())
+            csv_reader = CSVReader(
+                filename=self.filename,
+                fieldnames=self.fieldnames,
+                step=thread.get_total(),
+                first=thread.get_index())
+
             thread_data.csv_readers[id(self)] = csv_reader
 
         return csv_reader
@@ -71,12 +77,12 @@ class CSVReaderPerThread(Reader):    # processes multi-thread specific
 
 
 class CSVReader(Reader):
-    def __init__(self, filename, step=1, first=0):
+    def __init__(self, filename, step=1, first=0, fieldnames=None):
         self.step = step
         self.first = first
         self.csv = {}
         self.fds = open(filename, 'rb')
-        self._reader = cycle(csv.DictReader(self.fds, encoding='utf-8'))
+        self._reader = cycle(csv.DictReader(self.fds, encoding='utf-8', fieldnames=fieldnames))
 
     def close(self):
         if self.fds is not None:
