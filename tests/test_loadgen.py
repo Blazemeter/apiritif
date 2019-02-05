@@ -48,6 +48,41 @@ class TestLoadGen(TestCase):
 
         self.assertEqual(threads, target)
 
+    def test_two_readers(self):
+        script = os.path.dirname(os.path.realpath(__file__)) + "/resources/test_two_readers.py"
+        outfile = tempfile.NamedTemporaryFile()
+        report = outfile.name + "-%s.csv"
+        outfile.close()
+        print(report)
+        params = Params()
+        params.concurrency = 2
+        params.iterations = 3
+        params.report = report
+        params.tests = [script]
+        params.worker_count = 1
+
+        sup = Supervisor(params)
+        sup.start()
+        sup.join()
+
+        content = []
+        for i in range(params.worker_count):
+            with open(report % i) as f:
+                content.extend(f.readlines()[1::2])
+
+        threads = {"0": [], "1": []}
+        content = [item[item.index('"')+1:].strip() for item in content]
+        for item in content:
+            threads[item[0]].append(item[2:])
+
+        target = {
+            '0': ['00. user0:0', '10. user0:0', '11. user0:0', '00. user4:4', '10. user4:4', '11. user4:4'],
+            '1': ['00. user1:1', '10. user1:1', '11. user1:1', '00. user5:5', '10. user5:5', '11. user5:5'],
+            '2': ['00. user2:2', '10. user2:2', '11. user2:2', '00. user0:0', '10. user0:0', '11. user0:0'],
+            '3': ['00. user3:3', '10. user3:3', '11. user3:3', '00. user1:1', '10. user1:1', '11. user1:1']}
+
+        self.assertEqual(threads, target)
+
     def test_thread(self):
         outfile = tempfile.NamedTemporaryFile()
         print(outfile.name)
