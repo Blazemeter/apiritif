@@ -111,7 +111,12 @@ class CSVReader(Reader):
             else:               # next one
                 self.csv = next(islice(self._reader, self.step - 1, self.step))
         except StopIteration:
-            raise NormalShutdown("Data source is exhausted: %s" % self.fds.name)
+            stop_cause = thread.get_stop_cause()
+            if stop_cause:
+                stop_cause += "\n"
+            stop_cause += "Data source is exhausted: %s" % self.fds.name
+            thread.set_stop_cause(stop_cause)   # remember it for run_nose() cycle
+            raise NormalShutdown(stop_cause)    # avoid plugin step
 
     def get_vars(self):
         return self.csv

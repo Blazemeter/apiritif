@@ -186,6 +186,10 @@ class Worker(ThreadPool):
                 log.debug("Starting iteration:: index=%d,start_time=%.3f", iteration, time.time())
                 thread.set_iteration(iteration)
                 ApiritifTestProgram(config=config)
+                stop_cause = thread.get_stop_cause()
+                if stop_cause:
+                    log.debug("[%s] finished prematurely: %s", params.worker_index, stop_cause)
+                    break
                 log.debug("Finishing iteration:: index=%d,end_time=%.3f", iteration, time.time())
 
                 iteration += 1
