@@ -36,6 +36,7 @@ from nose.plugins.manager import DefaultPluginManager
 import apiritif
 import apiritif.thread as thread
 from apiritif.samples import ApiritifSampleExtractor, Sample, PathComponent
+from apiritif.utils import isNormalShutdown
 
 log = logging.getLogger("loadgen")
 
@@ -496,6 +497,13 @@ class ApiritifPlugin(Plugin):
             error_trace = self._get_trace(error)
             self.current_sample.add_assertion(assertion_name)
             self.current_sample.set_assertion_failed(assertion_name, error_msg, error_trace)
+
+    def handleError(self, test, error):
+        if isNormalShutdown(error[0]):
+            thread.add_stop_cause(error[1].args[0])  # remember it for run_nose() cycle
+            return True
+        else:
+            return False
 
     @staticmethod
     def _get_trace(error):

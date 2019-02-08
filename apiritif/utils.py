@@ -20,6 +20,12 @@ class NormalShutdown(BaseException):
     pass
 
 
+def isNormalShutdown(cls):
+    cls_full_name = ".".join((cls.__module__, cls.__name__))
+    ns_full_name = ".".join((NormalShutdown.__module__, NormalShutdown.__name__))
+    return cls_full_name == ns_full_name
+
+
 def headers_as_text(headers_dict):
     return "\n".join("%s: %s" % (key, value) for key, value in headers_dict.items())
 

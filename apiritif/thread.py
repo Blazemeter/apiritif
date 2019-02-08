@@ -25,8 +25,12 @@ def get_stop_cause():
     return getattr(_thread_local, "stop_cause", "")
 
 
-def set_stop_cause(stop_cause):
-    _thread_local.stop_cause = stop_cause
+def add_stop_cause(new_cause):
+    stop_cause = get_stop_cause()
+    if stop_cause:
+        stop_cause += "\n"
+
+    _thread_local.stop_cause = stop_cause + new_cause
 
 
 def set_total(total):

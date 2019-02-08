@@ -2,7 +2,7 @@ import os
 import tempfile
 
 from unittest import TestCase
-from apiritif.loadgen import Params, Supervisor
+from apiritif.loadgen import Params, Supervisor, ApiritifPlugin
 from apiritif.csv import CSVReaderPerThread
 from apiritif.utils import NormalShutdown
 
@@ -94,7 +94,7 @@ class TestCSV(TestCase):
 
         self.fail()
 
-    def test_reader_without_loop2(self):
+    def test_apiritif_without_loop(self):
         """ check different reading speed, fieldnames and separators """
         script = os.path.dirname(os.path.realpath(__file__)) + "/resources/test_reader_no_loop.py"
         outfile = tempfile.NamedTemporaryFile()
@@ -102,8 +102,8 @@ class TestCSV(TestCase):
         outfile.close()
         print(report)
         params = Params()
-        params.concurrency = 2
-        params.iterations = 30
+        params.concurrency = 1
+        params.iterations = 10
         params.report = report
         params.tests = [script]
         params.worker_count = 1
@@ -117,16 +117,47 @@ class TestCSV(TestCase):
             with open(report % i) as f:
                 content.extend(f.readlines()[1::2])
 
-        threads = {"0": [], "1": []}
+        threads = {"0": []}
         content = [item[item.index('"')+1:].strip() for item in content]
         for item in content:
             threads[item[0]].append(item[2:])
 
-        target = {      # second csv file (two letters values) must be read two times faster (one line per test)
-            "0": ["0. user0:0:ze:00", "1. user0:0:tu:22", "0. user2:2:fo:44",
-                  "1. user2:2:si:66", "0. user4:4:ze:00", "1. user4:4:tu:22"],
-            "1": ["0. user1:1:on:11", "1. user1:1:th:33", "0. user3:3:fi:55",
-                  "1. user3:3:se:77", "0. user5:5:on:11", "1. user5:5:th:33"]}
+        self.assertEqual(18, len(threads["0"]))
 
-        #self.assertEqual(threads, target)
+    def test_reader_without_loop_non_stop(self):
+        """ check different reading speed, fieldnames and separators """
+        script = os.path.dirname(os.path.realpath(__file__)) + "/resources/test_reader_no_loop.py"
+        outfile = tempfile.NamedTemporaryFile()
+        report = outfile.name + "-%s.csv"
+        outfile.close()
+        print(report)
+        params = Params()
+        params.concurrency = 1
+        params.iterations = 10
+        params.report = report
+        params.tests = [script]
+        params.worker_count = 1
+
+        handler = ApiritifPlugin.handleError
+        try:
+            # wrong handler: doesn't stop iterations
+            ApiritifPlugin.handleError = lambda a, b, c: False
+
+            sup = Supervisor(params)
+            sup.start()
+            sup.join()
+        finally:
+            ApiritifPlugin.handleError = handler
+
+        content = []
+        for i in range(params.worker_count):
+            with open(report % i) as f:
+                content.extend(f.readlines()[1::2])
+
+        threads = {"0": []}
+        content = [item[item.index('"')+1:].strip() for item in content]
+        for item in content:
+            threads[item[0]].append(item[2:])
+
+        self.assertTrue(len(threads["0"]) > 18)
 
