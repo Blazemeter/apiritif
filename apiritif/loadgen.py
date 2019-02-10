@@ -36,6 +36,7 @@ from nose.plugins.manager import DefaultPluginManager
 import apiritif
 import apiritif.thread as thread
 from apiritif.samples import ApiritifSampleExtractor, Sample, PathComponent
+from apiritif.utils import NormalShutdown
 
 log = logging.getLogger("loadgen")
 
@@ -190,13 +191,17 @@ class Worker(ThreadPool):
 
                 iteration += 1
 
-                if iteration >= params.iterations:
+                # reasons to stop
+                if plugin.stop_reason:
+                    log.debug("[%s] finished prematurely: %s", params.worker_index, plugin.stop_reason)
+                elif iteration >= params.iterations:
                     log.debug("[%s] iteration limit reached: %s", params.worker_index, params.iterations)
-                    break
-
-                if 0 < end_time <= time.time():
+                elif 0 < end_time <= time.time():
                     log.debug("[%s] duration limit reached: %s", params.worker_index, params.hold_for)
-                    break
+                else:
+                    continue  # continue if no one is faced
+
+                break
         finally:
             self._writer.concurrency -= 1
 
@@ -223,6 +228,10 @@ class Worker(ThreadPool):
 
 
 class ApiritifTestProgram(TestProgram):
+    def __init__(self, *args, **kwargs):
+        super(ApiritifTestProgram, self).__init__(*args, **kwargs)
+        self.testNames = None
+
     def parseArgs(self, argv):
         self.exit = False
         self.testNames = self.config.testNames
@@ -386,6 +395,7 @@ class ApiritifPlugin(Plugin):
         self.apiritif_extractor = ApiritifSampleExtractor()
         self.start_time = None
         self.end_time = None
+        self.stop_reason = ""
 
     def finalize(self, result):
         """
@@ -492,6 +502,25 @@ class ApiritifPlugin(Plugin):
             error_trace = self._get_trace(error)
             self.current_sample.add_assertion(assertion_name)
             self.current_sample.set_assertion_failed(assertion_name, error_msg, error_trace)
+
+    @staticmethod
+    def isNormalShutdown(cls):
+        cls_full_name = ".".join((cls.__module__, cls.__name__))
+        ns_full_name = ".".join((NormalShutdown.__module__, NormalShutdown.__name__))
+        return cls_full_name == ns_full_name
+
+    def handleError(self, test, error):
+        if self.isNormalShutdown(error[0]):
+            self.add_stop_reason(error[1].args[0])  # remember it for run_nose() cycle
+            return True
+        else:
+            return False
+
+    def add_stop_reason(self, msg):
+        if self.stop_reason:
+            self.stop_reason += "\n"
+
+        self.stop_reason += msg
 
     @staticmethod
     def _get_trace(error):

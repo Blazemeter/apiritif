@@ -21,7 +21,7 @@ import unicodecsv as csv
 from itertools import cycle, islice
 
 import apiritif.thread as thread
-
+from apiritif.utils import NormalShutdown
 
 thread_data = threading.local()
 
@@ -37,9 +37,12 @@ class Reader(object):
         pass
 
 
-class CSVReaderPerThread(Reader):    # processes multi-thread specific
-    def __init__(self, filename):
+class CSVReaderPerThread(Reader):  # processes multi-thread specific
+    def __init__(self, filename, fieldnames=None, delimiter=None, loop=True):
         self.filename = filename
+        self.fieldnames = fieldnames
+        self.delimiter = delimiter
+        self.loop = loop
 
     def _get_csv_reader(self, create=False):
         csv_readers = getattr(thread_data, "csv_readers", None)
@@ -48,7 +51,14 @@ class CSVReaderPerThread(Reader):    # processes multi-thread specific
 
         csv_reader = thread_data.csv_readers.get(id(self))
         if not csv_reader and create:
-            csv_reader = CSVReader(self.filename, step=thread.get_total(), first=thread.get_index())
+            csv_reader = CSVReader(
+                filename=self.filename,
+                fieldnames=self.fieldnames,
+                step=thread.get_total(),
+                first=thread.get_index(),
+                delimiter=self.delimiter,
+                loop=self.loop)
+
             thread_data.csv_readers[id(self)] = csv_reader
 
         return csv_reader
@@ -71,12 +81,19 @@ class CSVReaderPerThread(Reader):    # processes multi-thread specific
 
 
 class CSVReader(Reader):
-    def __init__(self, filename, step=1, first=0):
+    def __init__(self, filename, step=1, first=0, fieldnames=None, delimiter=None, loop=True):
         self.step = step
         self.first = first
         self.csv = {}
         self.fds = open(filename, 'rb')
-        self._reader = cycle(csv.DictReader(self.fds, encoding='utf-8'))
+
+        format_params = {}
+        if delimiter:
+            format_params["delimiter"] = delimiter
+
+        self._reader = csv.DictReader(self.fds, encoding='utf-8', fieldnames=fieldnames, **format_params)
+        if loop:
+            self._reader = cycle(self._reader)
 
     def close(self):
         if self.fds is not None:
@@ -85,13 +102,16 @@ class CSVReader(Reader):
 
     def read_vars(self):
         if not self._reader:
-            return      # todo: exception?
+            return  # todo: exception?
 
-        if not self.csv:    # first element
-            self.csv = next(islice(self._reader, self.first, self.first + 1))
-        else:               # next one
-            self.csv = next(islice(self._reader, self.step - 1, self.step))
+        try:
+            if not self.csv:  # first element
+                self.csv = next(islice(self._reader, self.first, self.first + 1))
+            else:  # next one
+                self.csv = next(islice(self._reader, self.step - 1, self.step))
+        except StopIteration:
+            stop_reason = "Data source is exhausted: %s" % self.fds.name
+            raise NormalShutdown(stop_reason)  # Just send it up
 
     def get_vars(self):
         return self.csv
-
