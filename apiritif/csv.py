@@ -111,8 +111,8 @@ class CSVReader(Reader):
             else:               # next one
                 self.csv = next(islice(self._reader, self.step - 1, self.step))
         except StopIteration:
-            stop_cause = "Data source is exhausted: %s" % self.fds.name
-            raise NormalShutdown(stop_cause)    # Just send it up
+            stop_reason = "Data source is exhausted: %s" % self.fds.name
+            raise NormalShutdown(stop_reason)    # Just send it up
 
     def get_vars(self):
         return self.csv

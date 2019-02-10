@@ -187,13 +187,13 @@ class Worker(ThreadPool):
                 log.debug("Starting iteration:: index=%d,start_time=%.3f", iteration, time.time())
                 thread.set_iteration(iteration)
                 ApiritifTestProgram(config=config)
-                stop_cause = thread.get_stop_cause()
-                if stop_cause:
-                    log.debug("[%s] finished prematurely: %s", params.worker_index, stop_cause)
-                    break
                 log.debug("Finishing iteration:: index=%d,end_time=%.3f", iteration, time.time())
 
                 iteration += 1
+
+                if plugin.stop_reason:
+                    log.debug("[%s] finished prematurely: %s", params.worker_index, plugin.stop_reason)
+                    break
 
                 if iteration >= params.iterations:
                     log.debug("[%s] iteration limit reached: %s", params.worker_index, params.iterations)
@@ -391,6 +391,7 @@ class ApiritifPlugin(Plugin):
         self.apiritif_extractor = ApiritifSampleExtractor()
         self.start_time = None
         self.end_time = None
+        self.stop_reason = ""
 
     def finalize(self, result):
         """
@@ -500,10 +501,16 @@ class ApiritifPlugin(Plugin):
 
     def handleError(self, test, error):
         if isNormalShutdown(error[0]):
-            thread.add_stop_cause(error[1].args[0])  # remember it for run_nose() cycle
+            self.add_stop_reason(error[1].args[0])  # remember it for run_nose() cycle
             return True
         else:
             return False
+
+    def add_stop_reason(self, msg):
+        if self.stop_reason:
+            self.stop_reason += "\n"
+
+        self.stop_reason += msg
 
     @staticmethod
     def _get_trace(error):

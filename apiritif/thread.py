@@ -21,18 +21,6 @@ _total = 1
 _thread_local = local()
 
 
-def get_stop_cause():
-    return getattr(_thread_local, "stop_cause", "")
-
-
-def add_stop_cause(new_cause):
-    stop_cause = get_stop_cause()
-    if stop_cause:
-        stop_cause += "\n"
-
-    _thread_local.stop_cause = stop_cause + new_cause
-
-
 def set_total(total):
     global _total
     _total = total
