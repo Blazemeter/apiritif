@@ -191,17 +191,17 @@ class Worker(ThreadPool):
 
                 iteration += 1
 
+                # reasons to stop
                 if plugin.stop_reason:
                     log.debug("[%s] finished prematurely: %s", params.worker_index, plugin.stop_reason)
-                    break
-
-                if iteration >= params.iterations:
+                elif iteration >= params.iterations:
                     log.debug("[%s] iteration limit reached: %s", params.worker_index, params.iterations)
-                    break
-
-                if 0 < end_time <= time.time():
+                elif 0 < end_time <= time.time():
                     log.debug("[%s] duration limit reached: %s", params.worker_index, params.hold_for)
-                    break
+                else:
+                    continue  # continue if no one is faced
+
+                break
         finally:
             self._writer.concurrency -= 1
 
@@ -228,6 +228,10 @@ class Worker(ThreadPool):
 
 
 class ApiritifTestProgram(TestProgram):
+    def __init__(self, *args, **kwargs):
+        super(ApiritifTestProgram, self).__init__(*args, **kwargs)
+        self.testNames = None
+
     def parseArgs(self, argv):
         self.exit = False
         self.testNames = self.config.testNames

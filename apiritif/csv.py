@@ -23,7 +23,6 @@ from itertools import cycle, islice
 import apiritif.thread as thread
 from apiritif.utils import NormalShutdown
 
-
 thread_data = threading.local()
 
 
@@ -38,7 +37,7 @@ class Reader(object):
         pass
 
 
-class CSVReaderPerThread(Reader):    # processes multi-thread specific
+class CSVReaderPerThread(Reader):  # processes multi-thread specific
     def __init__(self, filename, fieldnames=None, delimiter=None, loop=True):
         self.filename = filename
         self.fieldnames = fieldnames
@@ -103,17 +102,16 @@ class CSVReader(Reader):
 
     def read_vars(self):
         if not self._reader:
-            return      # todo: exception?
+            return  # todo: exception?
 
         try:
-            if not self.csv:    # first element
+            if not self.csv:  # first element
                 self.csv = next(islice(self._reader, self.first, self.first + 1))
-            else:               # next one
+            else:  # next one
                 self.csv = next(islice(self._reader, self.step - 1, self.step))
         except StopIteration:
             stop_reason = "Data source is exhausted: %s" % self.fds.name
-            raise NormalShutdown(stop_reason)    # Just send it up
+            raise NormalShutdown(stop_reason)  # Just send it up
 
     def get_vars(self):
         return self.csv
-
