@@ -6,7 +6,7 @@ import apiritif
 from apiritif.thread import get_index
 from apiritif.csv import CSVReaderPerThread
 
-reader0 = CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "data/source0.csv"))
+reader0 = CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "data/source0.csv"), quoted=True)
 reader1 = CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "data/source1.csv"),
                              fieldnames=["name+", "pass+"],
                              delimiter="-")
