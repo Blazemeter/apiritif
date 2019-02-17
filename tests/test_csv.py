@@ -37,11 +37,12 @@ class TestCSV(TestCase):
             threads[item[0]].append(item[2:])
 
         # ignore quoting
+        res = [' ""u:ser0""', ' ""user1"":1', ' user2:""2""', ' user3:3', ' user4:4', ' user5:5']
         target = {
-            '0': ['00. ""u:ser0""', '10. ""u:ser0""', '11. ""u:ser0""', '00. user4:4', '10. user4:4', '11. user4:4'],
-            '1': ['00. user1:1', '10. user1:1', '11. user1:1', '00. user5:5', '10. user5:5', '11. user5:5'],
-            '2': ['00. user2:2', '10. user2:2', '11. user2:2', '00. ""u:ser0""', '10. ""u:ser0""', '11. ""u:ser0""'],
-            '3': ['00. user3:3', '10. user3:3', '11. user3:3', '00. user1:1', '10. user1:1', '11. user1:1']}
+            '0': ['00.' + res[0], '10.' + res[0], '11.' + res[0], '00.' + res[4], '10.' + res[4], '11.' + res[4]],
+            '1': ['00.' + res[1], '10.' + res[1], '11.' + res[1], '00.' + res[5], '10.' + res[5], '11.' + res[5]],
+            '2': ['00.' + res[2], '10.' + res[2], '11.' + res[2], '00.' + res[0], '10.' + res[0], '11.' + res[0]],
+            '3': ['00.' + res[3], '10.' + res[3], '11.' + res[3], '00.' + res[1], '10.' + res[1], '11.' + res[1]]}
 
         self.assertEqual(threads, target)
 
