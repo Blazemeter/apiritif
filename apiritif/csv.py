@@ -38,11 +38,12 @@ class Reader(object):
 
 
 class CSVReaderPerThread(Reader):  # processes multi-thread specific
-    def __init__(self, filename, fieldnames=None, delimiter=None, loop=True):
+    def __init__(self, filename, fieldnames=None, delimiter=None, loop=True, quoted=False):
         self.filename = filename
         self.fieldnames = fieldnames
         self.delimiter = delimiter
         self.loop = loop
+        self.quoted = quoted
 
     def _get_csv_reader(self, create=False):
         csv_readers = getattr(thread_data, "csv_readers", None)
@@ -57,7 +58,8 @@ class CSVReaderPerThread(Reader):  # processes multi-thread specific
                 step=thread.get_total(),
                 first=thread.get_index(),
                 delimiter=self.delimiter,
-                loop=self.loop)
+                loop=self.loop,
+                quoted=self.quoted)
 
             thread_data.csv_readers[id(self)] = csv_reader
 
@@ -81,7 +83,7 @@ class CSVReaderPerThread(Reader):  # processes multi-thread specific
 
 
 class CSVReader(Reader):
-    def __init__(self, filename, step=1, first=0, fieldnames=None, delimiter=None, loop=True):
+    def __init__(self, filename, step=1, first=0, fieldnames=None, delimiter=None, loop=True, quoted=False):
         self.step = step
         self.first = first
         self.csv = {}
@@ -90,6 +92,8 @@ class CSVReader(Reader):
         format_params = {}
         if delimiter:
             format_params["delimiter"] = delimiter
+
+        format_params["quoting"] = csv.QUOTE_MINIMAL if quoted else csv.QUOTE_NONE
 
         self._reader = csv.DictReader(self.fds, encoding='utf-8', fieldnames=fieldnames, **format_params)
         if loop:
