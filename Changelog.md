@@ -1,6 +1,9 @@
 # Changelog
 
-## 0.7.0 <sup>dec 20 2018</sup>
+## 0.8.0 <sup>19 feb 2018</sup>
+- add CSV readers (by @greyfenrir)
+
+## 0.7.0 <sup>20 Dec 2018</sup>
 - extend transaction API to provide a way to set start/end time
 - introduce `python -m apiritif` launcher
 
