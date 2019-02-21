@@ -36,7 +36,7 @@ from nose.plugins.manager import DefaultPluginManager
 import apiritif
 import apiritif.thread as thread
 from apiritif.samples import ApiritifSampleExtractor, Sample, PathComponent
-from apiritif.utils import NormalShutdown
+from apiritif.utils import NormalShutdown, log
 
 log = logging.getLogger("loadgen")
 
@@ -601,7 +601,7 @@ def setup_logging(params):
         logging.basicConfig(level=logging.DEBUG, stream=sys.stdout, format=logformat)
     else:
         logging.basicConfig(level=logging.INFO, stream=sys.stdout, format=logformat)
-    apiritif.log.setLevel(logging.INFO)  # TODO: do we need to include apiritif debug logs in verbose mode?
+    log.setLevel(logging.INFO)  # TODO: do we need to include apiritif debug logs in verbose mode?
 
 
 def main():
