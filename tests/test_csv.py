@@ -34,15 +34,20 @@ class TestCSV(TestCase):
         threads = {"0": [], "1": [], "2": [], "3": []}
         content = [item[item.index('"')+1:].strip() for item in content]
         for item in content:
-            threads[item[0]].append(item[2:])
+            self.assertEqual(item[0], item[2])  # thread equals target
+            self.assertEqual("a", item[-1])     # age is the same
+            if item[6] == "0":
+                self.assertEqual(-1, item.find('+'))
+            else:
+                self.assertNotEqual(-1, item.find('+'))     # name value is modified
+            threads[item[0]].append(item[9:-2])
 
-        # ignore quoting
-        res = [' ""u:ser0""', ' ""user1"":1', ' user2:""2""', ' user3:3', ' user4:4', ' user5:5']
+        # format: <user>:<pass>, quoting ignored
         target = {
-            '0': ['00.' + res[0], '10.' + res[0], '11.' + res[0], '00.' + res[4], '10.' + res[4], '11.' + res[4]],
-            '1': ['00.' + res[1], '10.' + res[1], '11.' + res[1], '00.' + res[5], '10.' + res[5], '11.' + res[5]],
-            '2': ['00.' + res[2], '10.' + res[2], '11.' + res[2], '00.' + res[0], '10.' + res[0], '11.' + res[0]],
-            '3': ['00.' + res[3], '10.' + res[3], '11.' + res[3], '00.' + res[1], '10.' + res[1], '11.' + res[1]]}
+            '0': ['""u:ser0""', '""u+:ser0""', 'user4:4', 'user4+:4'],
+            '1': ['""user1"":1', '""user1""+:1', 'user5:5', 'user5+:5'],
+            '2': ['user2:""2""', 'user2+:""2""', '""u:ser0""', '""u+:ser0""'],
+            '3': ['user3:3', 'user3+:3', '""user1"":1', '""user1""+:1']}
 
         self.assertEqual(threads, target)
 
