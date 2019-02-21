@@ -610,3 +610,7 @@ def main():
     supervisor = Supervisor(cmd_params)
     supervisor.start()
     supervisor.join()
+
+
+if __name__ == '__main__':
+    main()

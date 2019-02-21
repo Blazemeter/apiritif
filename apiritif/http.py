@@ -16,7 +16,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import copy
-import logging
 import threading
 import time
 from functools import wraps
@@ -27,11 +26,7 @@ import requests
 from lxml import etree
 
 from apiritif.utilities import *
-from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp
-
-
-
-log = logging.getLogger('apiritif')
+from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp, log
 
 
 class TimeoutError(Exception):
