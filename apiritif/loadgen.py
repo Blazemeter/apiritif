@@ -604,7 +604,7 @@ def setup_logging(params):
     apiritif.log.setLevel(logging.INFO)  # TODO: do we need to include apiritif debug logs in verbose mode?
 
 
-if __name__ == '__main__':
+def main():
     cmd_params = cmdline_to_params()
     setup_logging(cmd_params)
     supervisor = Supervisor(cmd_params)
