@@ -47,3 +47,15 @@ def set_iteration(iteration):
 def get_iteration():
     iteration = getattr(_thread_local, "iteration", 0)
     return iteration
+
+
+def put_into_thread_store(*args, **kwargs):
+    _thread_local.args = args
+    _thread_local.kwargs = kwargs
+
+
+def get_from_thread_store(names=None):
+    if names and getattr(_thread_local, "kwargs"):
+        return [_thread_local.kwargs[key] for key in names]
+    elif getattr(_thread_local, "args"):
+        return _thread_local.args

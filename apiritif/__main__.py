@@ -1,4 +1,4 @@
-from apiritif.loadgen import main
+from .loadgen import main
 
 
 if __name__ == '__main__':
