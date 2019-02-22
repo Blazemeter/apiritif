@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.8.1 (tbd)
+- fix threading flow, provide api for using thread-specific storage
+
 ## 0.8.0 <sup>19 feb 2018</sup>
 - add CSV readers (by @greyfenrir)
 
