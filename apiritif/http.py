@@ -334,7 +334,7 @@ recorder = _EventRecorder()
 
 class HTTPTarget(object):
     def __init__(self,
-                 address,
+                 address=None,
                  base_path=None,
                  use_cookies=True,
                  additional_headers=None,
@@ -342,7 +342,7 @@ class HTTPTarget(object):
                  auto_assert_ok=True,
                  timeout=30,
                  allow_redirects=True):
-        self.address = address
+        self.address = address or ""
         # config flags
         self._base_path = base_path
         self._use_cookies = use_cookies
