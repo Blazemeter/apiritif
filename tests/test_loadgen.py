@@ -1,4 +1,6 @@
 import copy
+import sys
+import io
 import logging
 import os
 import tempfile
@@ -7,7 +9,7 @@ from unittest import TestCase
 
 from apiritif.loadgen import Worker, Params, Supervisor
 
-dummy_tests = [os.path.join(os.path.dirname(__file__), "test_dummy.py")]
+dummy_tests = [os.path.join(os.path.dirname(__file__), "resources", "test_dummy.py")]
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -24,6 +26,26 @@ class TestLoadGen(TestCase):
 
         worker = Worker(params)
         worker.run_nose(params)
+
+    def test_setup_errors(self):
+        error_tests = [os.path.join(os.path.dirname(__file__), "resources", "test_setup_errors.py")]
+
+        outfile = tempfile.NamedTemporaryFile()
+        print(outfile.name)
+        params = Params()
+        params.concurrency = 1
+        params.iterations = 1
+        params.report = outfile.name
+        params.tests = error_tests
+        params.verbose = True
+
+        worker = Worker(params)
+        self.assertRaises(RuntimeError, worker.run_nose, params)
+
+        with open(outfile.name, 'rt') as _file:
+            content = _file.read()
+
+        a = 1 + 1
 
     def test_worker(self):
         outfile = tempfile.NamedTemporaryFile()

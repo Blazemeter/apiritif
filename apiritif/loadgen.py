@@ -401,7 +401,7 @@ class ApiritifPlugin(Plugin):
         """
         After all tests
         """
-        if not self.test_count:
+        if not self.test_count:# and not result.errors:
             raise RuntimeError("Nothing to test.")
 
     def beforeTest(self, test):
@@ -496,12 +496,14 @@ class ApiritifPlugin(Plugin):
         """
         # test_dict will be None if startTest wasn't called (i.e. exception in setUp/setUpClass)
         # status=BROKEN
+        assertion_name = error[0].__name__
+        error_msg = str(error[1]).split('\n')[0]
+        error_trace = self._get_trace(error)
         if self.current_sample is not None:
-            assertion_name = error[0].__name__
-            error_msg = str(error[1]).split('\n')[0]
-            error_trace = self._get_trace(error)
             self.current_sample.add_assertion(assertion_name)
             self.current_sample.set_assertion_failed(assertion_name, error_msg, error_trace)
+        else:
+            log.error("\n".join((assertion_name, error_msg, error_trace)))
 
     @staticmethod
     def isNormalShutdown(cls):
