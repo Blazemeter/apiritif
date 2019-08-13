@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.8.2 <sup>13 Aug 2019</sup>
+- fix setup errors logging
+
 ## 0.8.1 <sup>22 feb 2018</sup>
 - fix threading flow, provide api for using thread-specific storage
 
