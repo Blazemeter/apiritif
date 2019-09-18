@@ -197,6 +197,36 @@ class transaction_logged(transaction):
     pass
 
 
+class smart_transaction(transaction_logged):
+    def __init__(self, name, **kwargs):
+        super(smart_transaction, self).__init__(name=name)
+        self.driver = kwargs.get("driver")
+        self.flow = kwargs.get("flow")
+        self.func_mode = kwargs.get("func_mode") or False
+
+    def __enter__(self):
+        super(smart_transaction, self).__enter__()
+        self.send_marker('start', {'testCaseName': self.flow["test_case"], 'testSuiteName': self.flow["test_suite"]})
+
+    def send_marker(self, stage, params):
+        if self.flow:
+            self.driver.execute_script('/* FLOW_MARKER test-case-%s */' % stage, params)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        super(smart_transaction, self).__exit__(exc_type, exc_val, exc_tb)
+        message = ''
+        status = 'success'
+        if exc_type:
+            message = str(exc_val)
+            if isinstance(exc_val, AssertionError):
+                status = 'failed'
+            else:
+                status = 'broken'
+
+        self.send_marker('stop', {'status': status, 'message': message})
+        return not self.func_mode  # don't reraise in load mode
+
+
 class Event(object):
     def __init__(self):
         self.timestamp = time.time()
