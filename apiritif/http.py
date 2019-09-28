@@ -201,16 +201,20 @@ class smart_transaction(transaction_logged):
     def __init__(self, name, **kwargs):
         super(smart_transaction, self).__init__(name=name)
         self.driver = kwargs.get("driver")
-        self.flow = kwargs.get("flow")
         self.func_mode = kwargs.get("func_mode") or False
+
+        self.enter_hooks = []
+        self.exit_hooks = []
+
+        self.flow_markers = kwargs.get("flow")
+        if self.flow_markers:
+            self.add_enter_hook(self._send_start_flow_marker)
+            self.add_exit_hook(self._send_exit_flow_marker)
 
     def __enter__(self):
         super(smart_transaction, self).__enter__()
-        self.send_marker('start', {'testCaseName': self.flow["test_case"], 'testSuiteName': self.flow["test_suite"]})
-
-    def send_marker(self, stage, params):
-        if self.flow:
-            self.driver.execute_script('/* FLOW_MARKER test-case-%s */' % stage, params)
+        for func in self.enter_hooks:
+            func()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         super(smart_transaction, self).__exit__(exc_type, exc_val, exc_tb)
@@ -223,8 +227,26 @@ class smart_transaction(transaction_logged):
             else:
                 status = 'broken'
 
-        self.send_marker('stop', {'status': status, 'message': message})
+        for func in self.exit_hooks:
+            func(status=status, message=message)
         return not self.func_mode  # don't reraise in load mode
+
+    def _send_marker(self, stage, params):
+        self.driver.execute_script('/* FLOW_MARKER test-case-%s */' % stage, params)
+
+    def _send_start_flow_marker(self):
+        self._send_marker('start', {
+            'testCaseName': self.flow_markers["test_case"],
+            'testSuiteName': self.flow_markers["test_suite"]})
+
+    def _send_exit_flow_marker(self, status, message):
+        self._send_marker('stop', {'status': status, 'message': message})
+
+    def add_enter_hook(self, func):
+        self.enter_hooks.append(func)
+
+    def add_exit_hook(self, func):
+        self.exit_hooks.append(func)
 
 
 class Event(object):
