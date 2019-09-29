@@ -38,6 +38,8 @@ import apiritif.thread as thread
 from apiritif.samples import ApiritifSampleExtractor, Sample, PathComponent
 from apiritif.utils import NormalShutdown, log
 
+import apiritif.store as store
+
 log = logging.getLogger("loadgen")
 
 
@@ -144,16 +146,16 @@ class Worker(ThreadPool):
         super(Worker, self).__init__(params.concurrency)
         self.params = params
         if self.params.report.lower().endswith(".ldjson"):
-            self._writer = LDJSONSampleWriter(self.params.report)
+            store.writer = LDJSONSampleWriter(self.params.report)
         else:
-            self._writer = JTLSampleWriter(self.params.report)
+            store.writer = JTLSampleWriter(self.params.report)
 
     def start(self):
         params = list(self._get_thread_params())
-        with self._writer:
+        with store.writer:
             self.map(self.run_nose, params)
             log.info("Workers finished, awaiting result writer")
-            while not self._writer.is_queue_empty() and self._writer.is_alive():
+            while not store.writer.is_queue_empty() and store.writer.is_alive():
                 time.sleep(0.1)
             log.info("Results written, shutting down")
             self.close()
@@ -171,8 +173,8 @@ class Worker(ThreadPool):
         end_time += time.time() if end_time else 0
         time.sleep(params.delay)
 
-        plugin = ApiritifPlugin(self._writer)
-        self._writer.concurrency += 1
+        plugin = ApiritifPlugin()
+        store.writer.concurrency += 1
 
         config = Config(env=os.environ, files=all_config_files(), plugins=DefaultPluginManager())
         config.plugins.addPlugins(extraplugins=[plugin])
@@ -203,7 +205,7 @@ class Worker(ThreadPool):
 
                 break
         finally:
-            self._writer.concurrency -= 1
+            store.writer.concurrency -= 1
 
             if params.verbose:
                 config.stream.close()
@@ -386,9 +388,8 @@ class ApiritifPlugin(Plugin):
     name = 'apiritif'
     enabled = False
 
-    def __init__(self, sample_writer):
+    def __init__(self):
         super(ApiritifPlugin, self).__init__()
-        self.sample_writer = sample_writer
         self.test_count = 0
         self.success_count = 0
         self.current_sample = None
@@ -485,7 +486,7 @@ class ApiritifPlugin(Plugin):
         return samples_processed
 
     def _process_sample(self, sample):
-        self.sample_writer.add(sample, self.test_count, self.success_count)
+        store.writer.add(sample, self.test_count, self.success_count)
 
     def addError(self, test, error):
         """
