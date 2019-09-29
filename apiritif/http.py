@@ -206,7 +206,9 @@ class smart_transaction(transaction_logged):
         self.enter_hooks = []
         self.exit_hooks = []
 
-        self.flow_markers = kwargs.get("flow")
+        self.extra = kwargs.get("extra")
+
+        self.flow_markers = kwargs.get("flow_markers")
         if self.flow_markers:
             self.add_enter_hook(self._send_start_flow_marker)
             self.add_exit_hook(self._send_exit_flow_marker)
@@ -236,8 +238,8 @@ class smart_transaction(transaction_logged):
 
     def _send_start_flow_marker(self):
         self._send_marker('start', {
-            'testCaseName': self.flow_markers["test_case"],
-            'testSuiteName': self.flow_markers["test_suite"]})
+            'testCaseName': self.extra["test_case"],
+            'testSuiteName': self.extra["test_suite"]})
 
     def _send_exit_flow_marker(self, status, message):
         self._send_marker('stop', {'status': status, 'message': message})
