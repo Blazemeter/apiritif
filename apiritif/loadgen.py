@@ -35,17 +35,14 @@ from nose.plugins.manager import DefaultPluginManager
 
 import apiritif
 import apiritif.thread as thread
-from apiritif.samples import Sample, PathComponent
-from apiritif.utils import NormalShutdown, log, get_trace
-
 import apiritif.store as store
-
-log = logging.getLogger("loadgen")
+from apiritif.utils import NormalShutdown, log, get_trace
 
 
 # TODO how to implement hits/s control/shape?
 # TODO: VU ID for script
 # TODO: disable assertions for load mode
+
 
 def spawn_worker(params):
     """
@@ -440,7 +437,7 @@ class ApiritifPlugin(Plugin):
         error_trace = get_trace(error)
         if self.controller.current_sample is not None:
             self.controller.addError(assertion_name, error_msg, error_trace)
-        else:   # error in test infrastructure (e.g. module setup())
+        else:  # error in test infrastructure (e.g. module setup())
             log.error("\n".join((assertion_name, error_msg, error_trace)))
 
     @staticmethod
@@ -503,7 +500,7 @@ def cmdline_to_params():
 
     params.report = opts.result_file_template
     params.tests = args
-    params.worker_count = 1#min(params.concurrency, multiprocessing.cpu_count())
+    params.worker_count = 1  # min(params.concurrency, multiprocessing.cpu_count())
     params.verbose = opts.verbose
 
     return params
