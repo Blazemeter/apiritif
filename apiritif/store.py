@@ -24,7 +24,7 @@ class SampleController(object):
 
     def beforeTest(self):
         self.current_sample = Sample(
-            test_case=self.test_info["case_name"],
+            test_case=self.test_info["test_case"],
             test_suite=self.test_info["suite_name"],
             start_time=time.time(),
             status="SKIPPED")
@@ -111,3 +111,4 @@ class SampleController(object):
 
     def _process_sample(self, sample):
         writer.add(sample, self.test_count, self.success_count)
+

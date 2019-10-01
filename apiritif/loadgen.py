@@ -413,8 +413,14 @@ class ApiritifPlugin(Plugin):
             class_method = case_name
 
         description = test.shortDescription()
-        self.controller.test_info = {var.__name__: var for var in(
-            case_name, suite_name, test_file, test_fqn, description, module_fqn, class_method)}
+        self.controller.test_info = {
+            "test_case": case_name,
+            "suite_name": suite_name,
+            "test_file": test_file,
+            "test_fqn": test_fqn,
+            "description": description,
+            "module_fqn": module_fqn,
+            "class_method": class_method}
         self.controller.beforeTest()    # create template of current_sample
 
     def startTest(self, test):

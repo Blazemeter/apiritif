@@ -51,13 +51,22 @@ def get_iteration():
 
 def put_into_thread_store(*args, **kwargs):
     _thread_local.args = args
-    _thread_local.kwargs = kwargs
+    current_kwargs = getattr(_thread_local, "kwargs", {})
+    current_kwargs.update(kwargs)
+    _thread_local.kwargs = current_kwargs
 
 
 def get_from_thread_store(names=None):
     if names and getattr(_thread_local, "kwargs"):
+        only_one = False
         if isinstance(names, str):
             names = [names]
-        return [_thread_local.kwargs[key] for key in names]
+            only_one = True
+        kwargs = [_thread_local.kwargs[key] for key in names]
+        if only_one:
+            return kwargs[0]
+        else:
+            return kwargs
+
     elif getattr(_thread_local, "args"):
         return _thread_local.args

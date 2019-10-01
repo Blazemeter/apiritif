@@ -203,9 +203,9 @@ class smart_transaction(transaction_logged):
         super(smart_transaction, self).__init__(name=name)
         self.driver = kwargs.get("driver")
         self.func_mode = kwargs.get("func_mode") or False
-        self.test_case = kwargs.get("test_case")
-        self.test_suite = self.controller.current_sample.test_suite
         self.controller = get_from_thread_store("controller")
+        self.test_case = kwargs.get("test_case")
+
         if self.controller.tran_mode:
             self.controller.test_info["test_case"] = self.test_case
             self.controller.beforeTest()
@@ -213,6 +213,8 @@ class smart_transaction(transaction_logged):
             # it's first smart_transaction in test method, we shouldn't recreate current sample, just fix it
             self.controller.tran_mode = True
             self.controller.current_sample.test_case = self.test_case
+
+        self.test_suite = self.controller.current_sample.test_suite
 
         self.enter_hooks = []
         self.exit_hooks = []
@@ -224,14 +226,10 @@ class smart_transaction(transaction_logged):
 
     def __enter__(self):
         super(smart_transaction, self).__enter__()
-        self.controller.current_sample = copy.deepcopy(self.controller.default_sample)
-        self.controller.current_sample.start_time = time.time()
-        self.controller.current_sample.test_case = self.test_case
         for func in self.enter_hooks:
             func()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        super(smart_transaction, self).__exit__(exc_type, exc_val, exc_tb)
         message = ''
 
         if exc_type:
@@ -241,14 +239,19 @@ class smart_transaction(transaction_logged):
                 self.controller.addError(exc_type.__name__, message, exc_tb, is_transaction=True)
             else:
                 status = 'broken'
-                self.controller.addFailure(exc_val, is_transaction=True)
+                self.controller.addFailure((exc_type, exc_val, exc_tb), is_transaction=True)
+
+            #self.controller.handleError()
         else:
             status = 'success'
             self.controller.addSuccess(is_transaction=True)
 
-        self.controller.afterTest(is_transaction=True)
         for func in self.exit_hooks:
             func(status=status, message=message)
+
+        super(smart_transaction, self).__exit__(exc_type, exc_val, exc_tb)
+        self.controller.afterTest(is_transaction=True)
+
         return not self.func_mode  # don't reraise in load mode
 
     def _send_marker(self, stage, params):
