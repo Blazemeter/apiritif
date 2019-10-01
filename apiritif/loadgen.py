@@ -35,8 +35,8 @@ from nose.plugins.manager import DefaultPluginManager
 
 import apiritif
 import apiritif.thread as thread
-from apiritif.samples import ApiritifSampleExtractor, Sample, PathComponent
-from apiritif.utils import NormalShutdown, log
+from apiritif.samples import Sample, PathComponent
+from apiritif.utils import NormalShutdown, log, get_trace
 
 import apiritif.store as store
 
@@ -390,19 +390,14 @@ class ApiritifPlugin(Plugin):
 
     def __init__(self):
         super(ApiritifPlugin, self).__init__()
-        self.test_count = 0
-        self.success_count = 0
-        self.current_sample = None
-        self.apiritif_extractor = ApiritifSampleExtractor()
-        self.start_time = None
-        self.end_time = None
+        self.controller = store.SampleController(log)
         self.stop_reason = ""
 
     def finalize(self, result):
         """
         After all tests
         """
-        if not self.test_count:# and not result.errors:
+        if not self.controller.test_count:
             raise RuntimeError("Nothing to test.")
 
     def beforeTest(self, test):
@@ -419,74 +414,17 @@ class ApiritifPlugin(Plugin):
         if class_method is None:
             class_method = case_name
 
-        self.current_sample = Sample(test_case=case_name,
-                                     test_suite=suite_name,
-                                     start_time=time.time(),
-                                     status="SKIPPED")
-        self.current_sample.extras.update({
-            "file": test_file,
-            "full_name": test_fqn,
-            "description": test.shortDescription()
-        })
-        module_fqn_parts = module_fqn.split('.')
-        for item in module_fqn_parts[:-1]:
-            self.current_sample.path.append(PathComponent("package", item))
-        self.current_sample.path.append(PathComponent("module", module_fqn_parts[-1]))
-
-        if "." in class_method:  # TestClass.test_method
-            class_name, method_name = class_method.split('.')[:2]
-            self.current_sample.path.extend([PathComponent("class", class_name),
-                                             PathComponent("method", method_name)])
-        else:  # test_func
-            self.current_sample.path.append(PathComponent("func", class_method))
-
-        log.debug("Test method path: %r", self.current_sample.path)
-        self.test_count += 1
+        description = test.shortDescription()
+        self.controller.beforeTest(case_name, suite_name, test_file, test_fqn, description, module_fqn, class_method)
 
     def startTest(self, test):
-        self.start_time = time.time()
+        self.controller.startTest()
 
     def stopTest(self, test):
-        self.end_time = time.time()
+        self.controller.stopTest()
 
     def afterTest(self, test):
-        """
-        after the test has been run
-        :param test:
-        :return:
-        """
-        if self.end_time is None:
-            self.end_time = time.time()
-        self.current_sample.duration = self.end_time - self.current_sample.start_time
-
-        samples_processed = self._process_apiritif_samples(self.current_sample)
-        if not samples_processed:
-            self._process_sample(self.current_sample)
-
-        self.current_sample = None
-
-    def _process_apiritif_samples(self, sample):
-        samples = []
-
-        recording = apiritif.recorder.pop_events(from_ts=self.start_time, to_ts=self.end_time)
-        with open('/tmp/o.txt', 'a') as f:
-            f.write("plugin: %s, extractor: %s, recorder: %s [%s]\n" %
-                    (id(self), id(self.apiritif_extractor), id(apiritif.recorder), len(recording)))
-
-        try:
-            if recording:
-                samples = self.apiritif_extractor.parse_recording(recording, sample)
-        except BaseException as exc:
-            log.debug("Couldn't parse recording: %s", traceback.format_exc())
-            log.warning("Couldn't parse recording: %s", exc)
-
-        for sample in samples:
-            self._process_sample(sample)
-
-        return len(samples)
-
-    def _process_sample(self, sample):
-        store.writer.add(sample, self.test_count, self.success_count)
+        self.controller.afterTest()
 
     def addError(self, test, error):
         """
@@ -499,11 +437,10 @@ class ApiritifPlugin(Plugin):
         # status=BROKEN
         assertion_name = error[0].__name__
         error_msg = str(error[1]).split('\n')[0]
-        error_trace = self._get_trace(error)
-        if self.current_sample is not None:
-            self.current_sample.add_assertion(assertion_name)
-            self.current_sample.set_assertion_failed(assertion_name, error_msg, error_trace)
-        else:
+        error_trace = get_trace(error)
+        if self.controller.current_sample is not None:
+            self.controller.addError(assertion_name, error_msg, error_trace)
+        else:   # error in test infrastructure (e.g. module setup())
             log.error("\n".join((assertion_name, error_msg, error_trace)))
 
     @staticmethod
@@ -525,18 +462,6 @@ class ApiritifPlugin(Plugin):
 
         self.stop_reason += msg
 
-    @staticmethod
-    def _get_trace(error):
-        if sys.version > '3':
-            # noinspection PyArgumentList
-            exct, excv, trace = error
-            if isinstance(excv, str):
-                excv = exct(excv)
-            lines = traceback.format_exception(exct, excv, trace, chain=True)
-        else:
-            lines = traceback.format_exception(*error)
-        return ''.join(lines).rstrip()
-
     def addFailure(self, test, error):
         """
         when a test fails
@@ -546,19 +471,7 @@ class ApiritifPlugin(Plugin):
         :return:
         """
         # status=FAILED
-        assertion_name = error[0].__name__
-        error_msg = str(error[1]).split('\n')[0]
-        error_trace = self._get_trace(error)
-        self.current_sample.add_assertion(assertion_name)
-        self.current_sample.set_assertion_failed(assertion_name, error_msg, error_trace)
-
-    def addSkip(self, test):
-        """
-        when a test is skipped
-        :param test:
-        :return:
-        """
-        self.current_sample.status = "SKIPPED"
+        self.controller.addFailure(error)
 
     def addSuccess(self, test):
         """
@@ -566,8 +479,7 @@ class ApiritifPlugin(Plugin):
         :param test:
         :return:
         """
-        self.current_sample.status = "PASSED"
-        self.success_count += 1
+        self.controller.addSuccess()
 
 
 def cmdline_to_params():
