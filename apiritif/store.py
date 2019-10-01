@@ -1,4 +1,4 @@
-# temporary exchanger for ApiritifPlugin data
+# temporary exchanger for ApiritifPlugin stuff
 import time
 import apiritif
 import traceback
@@ -17,35 +17,34 @@ class SampleController(object):
         self.test_count = 0
         self.success_count = 0
         self.apiritif_extractor = ApiritifSampleExtractor()
-        self.test_mode = None
+        self.tran_mode = False  # it's regular test (without smart transaction) by default
         self.start_time = None
         self.end_time = None
+        self.test_info = {}
 
-    def beforeTest(self, case_name, suite_name, test_file, test_fqn, description, module_fqn, class_method):
-        self.test_mode = True   # isn't under smart_transaction control by default
-        # todo: save fields for recreation purpose (in transaction)
+    def beforeTest(self):
         self.current_sample = Sample(
-            test_case=case_name,
-            test_suite=suite_name,
+            test_case=self.test_info["case_name"],
+            test_suite=self.test_info["suite_name"],
             start_time=time.time(),
             status="SKIPPED")
         self.current_sample.extras.update({
-            "file": test_file,
-            "full_name": test_fqn,
-            "description": description
+            "file": self.test_info["test_file"],
+            "full_name": self.test_info["test_fqn"],
+            "description": self.test_info["description"]
         })
-        module_fqn_parts = module_fqn.split('.')
+        module_fqn_parts = self.test_info["module_fqn"].split('.')
         for item in module_fqn_parts[:-1]:
             self.current_sample.path.append(PathComponent("package", item))
         self.current_sample.path.append(PathComponent("module", module_fqn_parts[-1]))
 
-        if "." in class_method:  # TestClass.test_method
-            class_name, method_name = class_method.split('.')[:2]
+        if "." in self.test_info["class_method"]:  # TestClass.test_method
+            class_name, method_name = self.test_info["class_method"].split('.')[:2]
             self.current_sample.path.extend([
                 PathComponent("class", class_name),
                 PathComponent("method", method_name)])
         else:  # test_func
-            self.current_sample.path.append(PathComponent("func", class_method))
+            self.current_sample.path.append(PathComponent("func", self.test_info["class_method"]))
 
         self.log.debug("Test method path: %r", self.current_sample.path)
 
@@ -54,49 +53,39 @@ class SampleController(object):
     def startTest(self):
         self.start_time = time.time()
 
-    def stopTest(self):
-        if not self.test_mode:
-            return
-
-        self.end_time = time.time()
-
-    def addError(self, assertion_name, error_msg, error_trace):
-        if not self.test_mode:
-            return
-
-        self.current_sample.add_assertion(assertion_name)
-        self.current_sample.set_assertion_failed(assertion_name, error_msg, error_trace)
-
-    def addFailure(self, error):
-        if not self.test_mode:
-            return
-
-        assertion_name = error[0].__name__
-        error_msg = str(error[1]).split('\n')[0]
-        error_trace = get_trace(error)
-        self.current_sample.add_assertion(assertion_name)
-        self.current_sample.set_assertion_failed(assertion_name, error_msg, error_trace)
-
-    def addSuccess(self):
-        if not self.test_mode:
-            return
-
-        self.current_sample.status = "PASSED"
-        self.success_count += 1
-
-    def afterTest(self):
-        if not self.test_mode:
-            return
-
-        if self.end_time is None:
+    def stopTest(self, is_transaction=False):
+        if self.tran_mode == is_transaction:
             self.end_time = time.time()
-        self.current_sample.duration = self.end_time - self.current_sample.start_time
 
-        samples_processed = self._process_apiritif_samples(self.current_sample)
-        if not samples_processed:
-            self._process_sample(self.current_sample)
+    def addError(self, assertion_name, error_msg, error_trace, is_transaction=False):
+        if self.tran_mode == is_transaction:
+            self.current_sample.add_assertion(assertion_name)
+            self.current_sample.set_assertion_failed(assertion_name, error_msg, error_trace)
 
-        self.current_sample = None
+    def addFailure(self, error, is_transaction=False):
+        if self.tran_mode == is_transaction:
+            assertion_name = error[0].__name__
+            error_msg = str(error[1]).split('\n')[0]
+            error_trace = get_trace(error)
+            self.current_sample.add_assertion(assertion_name)
+            self.current_sample.set_assertion_failed(assertion_name, error_msg, error_trace)
+
+    def addSuccess(self, is_transaction=False):
+        if self.tran_mode == is_transaction:
+            self.current_sample.status = "PASSED"
+            self.success_count += 1
+
+    def afterTest(self, is_transaction=False):
+        if self.tran_mode == is_transaction:
+            if self.end_time is None:
+                self.end_time = time.time()
+            self.current_sample.duration = self.end_time - self.current_sample.start_time
+
+            samples_processed = self._process_apiritif_samples(self.current_sample)
+            if not samples_processed:
+                self._process_sample(self.current_sample)
+
+            self.current_sample = None
 
     def _process_apiritif_samples(self, sample):
         samples = []

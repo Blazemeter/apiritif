@@ -56,6 +56,8 @@ def put_into_thread_store(*args, **kwargs):
 
 def get_from_thread_store(names=None):
     if names and getattr(_thread_local, "kwargs"):
+        if isinstance(names, str):
+            names = [names]
         return [_thread_local.kwargs[key] for key in names]
     elif getattr(_thread_local, "args"):
         return _thread_local.args

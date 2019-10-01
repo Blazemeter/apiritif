@@ -26,6 +26,7 @@ import requests
 from lxml import etree
 
 from apiritif.utilities import *
+from apiritif.thread import get_from_thread_store
 from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp, log
 
 
@@ -202,11 +203,19 @@ class smart_transaction(transaction_logged):
         super(smart_transaction, self).__init__(name=name)
         self.driver = kwargs.get("driver")
         self.func_mode = kwargs.get("func_mode") or False
+        self.test_case = kwargs.get("test_case")
+        self.test_suite = self.controller.current_sample.test_suite
+        self.controller = get_from_thread_store("controller")
+        if self.controller.tran_mode:
+            self.controller.test_info["test_case"] = self.test_case
+            self.controller.beforeTest()
+        else:
+            # it's first smart_transaction in test method, we shouldn't recreate current sample, just fix it
+            self.controller.tran_mode = True
+            self.controller.current_sample.test_case = self.test_case
 
         self.enter_hooks = []
         self.exit_hooks = []
-
-        self.extra = kwargs.get("extra")
 
         self.flow_markers = kwargs.get("flow_markers")
         if self.flow_markers:
@@ -215,20 +224,29 @@ class smart_transaction(transaction_logged):
 
     def __enter__(self):
         super(smart_transaction, self).__enter__()
+        self.controller.current_sample = copy.deepcopy(self.controller.default_sample)
+        self.controller.current_sample.start_time = time.time()
+        self.controller.current_sample.test_case = self.test_case
         for func in self.enter_hooks:
             func()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         super(smart_transaction, self).__exit__(exc_type, exc_val, exc_tb)
         message = ''
-        status = 'success'
+
         if exc_type:
             message = str(exc_val)
             if isinstance(exc_val, AssertionError):
                 status = 'failed'
+                self.controller.addError(exc_type.__name__, message, exc_tb, is_transaction=True)
             else:
                 status = 'broken'
+                self.controller.addFailure(exc_val, is_transaction=True)
+        else:
+            status = 'success'
+            self.controller.addSuccess(is_transaction=True)
 
+        self.controller.afterTest(is_transaction=True)
         for func in self.exit_hooks:
             func(status=status, message=message)
         return not self.func_mode  # don't reraise in load mode
@@ -238,8 +256,8 @@ class smart_transaction(transaction_logged):
 
     def _send_start_flow_marker(self):
         self._send_marker('start', {
-            'testCaseName': self.extra["test_case"],
-            'testSuiteName': self.extra["test_suite"]})
+            'testCaseName': self.test_case,
+            'testSuiteName': self.test_suite})
 
     def _send_exit_flow_marker(self, status, message):
         self._send_marker('stop', {'status': status, 'message': message})
