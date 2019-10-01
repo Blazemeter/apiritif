@@ -466,24 +466,24 @@ class ApiritifPlugin(Plugin):
         self.current_sample = None
 
     def _process_apiritif_samples(self, sample):
-        samples_processed = 0
+        samples = []
 
         recording = apiritif.recorder.pop_events(from_ts=self.start_time, to_ts=self.end_time)
-        if not recording:
-            return samples_processed
+        with open('/tmp/o.txt', 'a') as f:
+            f.write("plugin: %s, extractor: %s, recorder: %s [%s]\n" %
+                    (id(self), id(self.apiritif_extractor), id(apiritif.recorder), len(recording)))
 
         try:
-            samples = self.apiritif_extractor.parse_recording(recording, sample)
+            if recording:
+                samples = self.apiritif_extractor.parse_recording(recording, sample)
         except BaseException as exc:
             log.debug("Couldn't parse recording: %s", traceback.format_exc())
             log.warning("Couldn't parse recording: %s", exc)
-            samples = []
 
         for sample in samples:
-            samples_processed += 1
             self._process_sample(sample)
 
-        return samples_processed
+        return len(samples)
 
     def _process_sample(self, sample):
         store.writer.add(sample, self.test_count, self.success_count)
@@ -591,7 +591,7 @@ def cmdline_to_params():
 
     params.report = opts.result_file_template
     params.tests = args
-    params.worker_count = min(params.concurrency, multiprocessing.cpu_count())
+    params.worker_count = 1#min(params.concurrency, multiprocessing.cpu_count())
     params.verbose = opts.verbose
 
     return params
