@@ -27,7 +27,7 @@ from lxml import etree
 
 from apiritif.utilities import *
 from apiritif.thread import get_from_thread_store
-from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp, log
+from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp, log, get_trace
 
 
 class TimeoutError(Exception):
@@ -204,15 +204,14 @@ class smart_transaction(transaction_logged):
         self.driver = kwargs.get("driver")
         self.func_mode = kwargs.get("func_mode") or False
         self.controller = get_from_thread_store("controller")
-        self.test_case = kwargs.get("test_case")
 
         if self.controller.tran_mode:
-            self.controller.test_info["test_case"] = self.test_case
+            self.controller.test_info["test_case"] = self.name
             self.controller.beforeTest()
         else:
             # it's first smart_transaction in test method, we shouldn't recreate current sample, just fix it
             self.controller.tran_mode = True
-            self.controller.current_sample.test_case = self.test_case
+            self.controller.current_sample.test_case = self.name
 
         self.test_suite = self.controller.current_sample.test_suite
 
@@ -228,18 +227,23 @@ class smart_transaction(transaction_logged):
         super(smart_transaction, self).__enter__()
         for func in self.enter_hooks:
             func()
+        self.controller.startTest()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        super(smart_transaction, self).__exit__(exc_type, exc_val, exc_tb)
+        self.controller.stopTest(is_transaction=True)
         message = ''
 
         if exc_type:
             message = str(exc_val)
+            exc = exc_type, exc_val, exc_tb
             if isinstance(exc_val, AssertionError):
                 status = 'failed'
-                self.controller.addError(exc_type.__name__, message, exc_tb, is_transaction=True)
+                self.controller.addFailure(exc, is_transaction=True)
             else:
                 status = 'broken'
-                self.controller.addFailure((exc_type, exc_val, exc_tb), is_transaction=True)
+                tb = get_trace(exc)
+                self.controller.addError(exc_type.__name__, message, tb, is_transaction=True)
 
             #self.controller.handleError()
         else:
@@ -249,7 +253,6 @@ class smart_transaction(transaction_logged):
         for func in self.exit_hooks:
             func(status=status, message=message)
 
-        super(smart_transaction, self).__exit__(exc_type, exc_val, exc_tb)
         self.controller.afterTest(is_transaction=True)
 
         return not self.func_mode  # don't reraise in load mode
@@ -259,7 +262,7 @@ class smart_transaction(transaction_logged):
 
     def _send_start_flow_marker(self):
         self._send_marker('start', {
-            'testCaseName': self.test_case,
+            'testCaseName': self.name,
             'testSuiteName': self.test_suite})
 
     def _send_exit_flow_marker(self, status, message):
@@ -373,7 +376,7 @@ class _EventRecorder(object):
     def record_transaction_start(self, tran):
         self.record_event(TransactionStarted(tran))
         if isinstance(tran, transaction_logged):
-            self.log.info(u"Transaction started:: start_time=%.3f,name=%s", tran.start_time(),tran.name)
+            self.log.info(u"Transaction started:: start_time=%.3f,name=%s", tran.start_time(), tran.name)
 
     def record_transaction_end(self, tran):
         self.record_event(TransactionEnded(tran))
