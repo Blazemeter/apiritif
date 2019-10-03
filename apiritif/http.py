@@ -199,11 +199,9 @@ class transaction_logged(transaction):
 
 
 class smart_transaction(transaction_logged):
-    def __init__(self, name, **kwargs):
+    def __init__(self, name):
         super(smart_transaction, self).__init__(name=name)
-        self.driver = kwargs.get("driver")
-        self.func_mode = kwargs.get("func_mode") or False
-        self.controller = get_from_thread_store("controller")
+        self.driver, self.func_mode, self.controller = get_from_thread_store(("driver", "func_mode", "controller"))
 
         if self.controller.tran_mode:
             self.controller.test_info["test_case"] = self.name
@@ -218,7 +216,7 @@ class smart_transaction(transaction_logged):
         self.enter_hooks = []
         self.exit_hooks = []
 
-        self.flow_markers = kwargs.get("flow_markers")
+        self.flow_markers = get_from_thread_store("flow_markers")
         if self.flow_markers:
             self.add_enter_hook(self._send_start_flow_marker)
             self.add_exit_hook(self._send_exit_flow_marker)

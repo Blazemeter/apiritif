@@ -50,10 +50,12 @@ def get_iteration():
 
 
 def put_into_thread_store(*args, **kwargs):
-    _thread_local.args = args
-    current_kwargs = getattr(_thread_local, "kwargs", {})
-    current_kwargs.update(kwargs)
-    _thread_local.kwargs = current_kwargs
+    if args:
+        _thread_local.args = args
+    if kwargs:
+        current_kwargs = getattr(_thread_local, "kwargs", {})
+        current_kwargs.update(kwargs)
+        _thread_local.kwargs = current_kwargs
 
 
 def get_from_thread_store(names=None):
