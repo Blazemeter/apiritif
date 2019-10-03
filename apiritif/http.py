@@ -245,7 +245,7 @@ class smart_transaction(transaction_logged):
                 tb = get_trace(exc)
                 self.controller.addError(exc_type.__name__, message, tb, is_transaction=True)
 
-            #self.controller.handleError()
+            # self.controller.handleError()
         else:
             status = 'success'
             self.controller.addSuccess(is_transaction=True)

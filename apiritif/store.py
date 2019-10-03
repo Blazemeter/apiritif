@@ -1,10 +1,10 @@
 # temporary exchanger for ApiritifPlugin stuff
 import time
-import apiritif
 import traceback
 
-from apiritif.utils import get_trace
+import apiritif
 from apiritif.samples import ApiritifSampleExtractor, Sample, PathComponent
+from apiritif.utils import get_trace
 
 writer = None
 
@@ -105,10 +105,9 @@ class SampleController(object):
             self.log.warning("Couldn't parse recording: %s", exc)
 
         for sample in samples:
-            self._process_sample(sample)    # just write to disk
+            self._process_sample(sample)  # just write to disk
 
         return len(samples)
 
     def _process_sample(self, sample):
         writer.add(sample, self.test_count, self.success_count)
-

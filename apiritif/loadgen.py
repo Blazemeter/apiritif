@@ -388,7 +388,7 @@ class ApiritifPlugin(Plugin):
     def __init__(self):
         super(ApiritifPlugin, self).__init__()
         self.controller = store.SampleController(log)
-        apiritif.put_into_thread_store(controller=self.controller)     # parcel for smart_transactions
+        apiritif.put_into_thread_store(controller=self.controller)  # parcel for smart_transactions
         self.stop_reason = ""
 
     def finalize(self, result):
@@ -421,7 +421,7 @@ class ApiritifPlugin(Plugin):
             "description": description,
             "module_fqn": module_fqn,
             "class_method": class_method}
-        self.controller.beforeTest()    # create template of current_sample
+        self.controller.beforeTest()  # create template of current_sample
 
     def startTest(self, test):
         self.controller.startTest()

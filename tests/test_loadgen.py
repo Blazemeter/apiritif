@@ -1,6 +1,4 @@
 import copy
-import sys
-import io
 import logging
 import os
 import tempfile
@@ -43,9 +41,7 @@ class TestLoadGen(TestCase):
         self.assertRaises(RuntimeError, worker.run_nose, params)
 
         with open(outfile.name, 'rt') as _file:
-            content = _file.read()
-
-        a = 1 + 1
+            _file.read()
 
     def test_worker(self):
         outfile = tempfile.NamedTemporaryFile()
