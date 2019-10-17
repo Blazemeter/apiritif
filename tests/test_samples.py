@@ -3,6 +3,7 @@ from unittest import TestCase
 
 import nose
 
+from apiritif import store
 from apiritif.loadgen import ApiritifPlugin
 
 RESOURCES_DIR = os.path.dirname(os.path.realpath(__file__)) + "/resources"
@@ -27,9 +28,9 @@ class TestSamples(TestCase):
     def test_transactions(self):
         test_file = RESOURCES_DIR + "/test_transactions.py"
         self.assertTrue(os.path.exists(test_file))
-        writer = CachingWriter()
-        nose.run(argv=[__file__, test_file, '-v'], addplugins=[Recorder(writer)])
-        samples = writer.samples
+        store.writer = CachingWriter()
+        nose.run(argv=[__file__, test_file, '-v'], addplugins=[Recorder()])
+        samples = store.writer.samples
         self.assertEqual(len(samples), 6)
 
         single = samples[0]
@@ -89,9 +90,9 @@ class TestSamples(TestCase):
     def test_label_single_transaction(self):
         test_file = RESOURCES_DIR + "/test_single_transaction.py"
         self.assertTrue(os.path.exists(test_file))
-        writer = CachingWriter()
-        nose.run(argv=[__file__, test_file, '-v'], addplugins=[Recorder(writer)])
-        samples = writer.samples
+        store.writer = CachingWriter()
+        nose.run(argv=[__file__, test_file, '-v'], addplugins=[Recorder()])
+        samples = store.writer.samples
         self.assertEqual(len(samples), 1)
 
         toplevel = samples[0]
