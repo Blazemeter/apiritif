@@ -11,7 +11,7 @@ matrix:
 
 
 install:
-- pip install codecov nose jsonpath-rw lxml unicodecsv
-script: coverage run -m nose
+- pip install codecov nose nose-timer jsonpath-rw lxml unicodecsv
+script: coverage run -m nose --exclude-dirs=tests/resources --with-timer
 after_success:
   - codecov
