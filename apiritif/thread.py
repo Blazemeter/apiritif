@@ -59,7 +59,7 @@ def put_into_thread_store(*args, **kwargs):
 
 
 def get_from_thread_store(names=None):
-    if names and getattr(_thread_local, "kwargs"):
+    if names and hasattr(_thread_local, "kwargs"):
         only_one = False
         if isinstance(names, str):
             names = [names]
@@ -70,5 +70,5 @@ def get_from_thread_store(names=None):
         else:
             return kwargs
 
-    elif getattr(_thread_local, "args"):
+    elif hasattr(_thread_local, "args"):
         return _thread_local.args
