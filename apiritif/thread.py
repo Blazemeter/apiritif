@@ -64,7 +64,7 @@ def get_from_thread_store(names=None):
         if isinstance(names, str):
             names = [names]
             only_one = True
-        kwargs = [_thread_local.kwargs[key] for key in names]
+        kwargs = [_thread_local.kwargs.get(key) for key in names]
         if only_one:
             return kwargs[0]
         else:

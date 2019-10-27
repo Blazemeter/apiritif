@@ -26,8 +26,20 @@ import requests
 from lxml import etree
 
 from apiritif.utilities import *
-from apiritif.thread import get_from_thread_store
+from apiritif.thread import get_from_thread_store, put_into_thread_store
 from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp, log, get_trace
+
+
+def get_transaction_handlers():
+    transaction_handlers = get_from_thread_store('transaction_handlers')
+    if not transaction_handlers:
+        transaction_handlers = {'enter': [], 'exit': []}
+
+    return transaction_handlers
+
+
+def set_transaction_handlers(transaction_handlers):
+    put_into_thread_store(transaction_handlers=transaction_handlers)
 
 
 class TimeoutError(Exception):
@@ -213,18 +225,10 @@ class smart_transaction(transaction_logged):
 
         self.test_suite = self.controller.current_sample.test_suite
 
-        self.enter_hooks = []
-        self.exit_hooks = []
-
-        self.flow_markers = get_from_thread_store("flow_markers")
-        if self.flow_markers:
-            self.add_enter_hook(self._send_start_flow_marker)
-            self.add_exit_hook(self._send_exit_flow_marker)
-
     def __enter__(self):
         super(smart_transaction, self).__enter__()
-        for func in self.enter_hooks:
-            func()
+        for func in get_transaction_handlers()["enter"]:
+            func(self.name, self.test_suite)    # todo: should the interface be generalized?
         self.controller.startTest()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -243,34 +247,16 @@ class smart_transaction(transaction_logged):
                 tb = get_trace(exc)
                 self.controller.addError(exc_type.__name__, message, tb, is_transaction=True)
 
-            # self.controller.handleError()
         else:
             status = 'success'
             self.controller.addSuccess(is_transaction=True)
 
-        for func in self.exit_hooks:
-            func(status=status, message=message)
+        for func in get_transaction_handlers()["exit"]:
+            func(status=status, message=message)    # todo: see __enter__ todo
 
         self.controller.afterTest(is_transaction=True)
 
         return not self.func_mode  # don't reraise in load mode
-
-    def _send_marker(self, stage, params):
-        self.driver.execute_script('/* FLOW_MARKER test-case-%s */' % stage, params)
-
-    def _send_start_flow_marker(self):
-        self._send_marker('start', {
-            'testCaseName': self.name,
-            'testSuiteName': self.test_suite})
-
-    def _send_exit_flow_marker(self, status, message):
-        self._send_marker('stop', {'status': status, 'message': message})
-
-    def add_enter_hook(self, func):
-        self.enter_hooks.append(func)
-
-    def add_exit_hook(self, func):
-        self.exit_hooks.append(func)
 
 
 class Event(object):
