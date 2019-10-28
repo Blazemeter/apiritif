@@ -31,12 +31,10 @@ class TestSmartTransactions(unittest.TestCase):
     def setUp(self):
         self.driver = None
         self.driver = Driver()
-
+        add_dummy_handlers()
         self.vars = {
 
         }
-
-        add_dummy_handlers()
 
         apiritif.put_into_thread_store(
             driver=self.driver,
@@ -57,7 +55,7 @@ class TestSmartTransactions(unittest.TestCase):
     def test_smartTransactions(self):
         self._1_t1()
         self._2_t2()
-        self._3_t3()
+        #self._3_t3()
 
     def tearDown(self):
         if self.driver:

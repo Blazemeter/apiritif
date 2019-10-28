@@ -72,3 +72,17 @@ def get_from_thread_store(names=None):
 
     elif hasattr(_thread_local, "args"):
         return _thread_local.args
+
+
+def get_transaction_handlers():
+    transaction_handlers = get_from_thread_store('transaction_handlers')
+    return transaction_handlers
+
+
+def clean_transaction_handlers():
+    handlers = {'enter': [], 'exit': []}
+    _thread_local.kwargs["transaction_handlers"] = handlers
+
+
+def set_transaction_handlers(handlers):
+    put_into_thread_store(transaction_handlers=handlers)

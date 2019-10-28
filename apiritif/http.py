@@ -25,21 +25,10 @@ import jsonpath_rw
 import requests
 from lxml import etree
 
+import apiritif
 from apiritif.utilities import *
-from apiritif.thread import get_from_thread_store, put_into_thread_store
+from apiritif.thread import get_from_thread_store
 from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp, log, get_trace
-
-
-def get_transaction_handlers():
-    transaction_handlers = get_from_thread_store('transaction_handlers')
-    if not transaction_handlers:
-        transaction_handlers = {'enter': [], 'exit': []}
-
-    return transaction_handlers
-
-
-def set_transaction_handlers(handlers):
-    put_into_thread_store(transaction_handlers=handlers)
 
 
 class TimeoutError(Exception):
@@ -228,7 +217,7 @@ class smart_transaction(transaction_logged):
 
     def __enter__(self):
         super(smart_transaction, self).__enter__()
-        for func in get_transaction_handlers()["enter"]:
+        for func in apiritif.get_transaction_handlers()["enter"]:
             func(self.name, self.test_suite)    # todo: should the interface be generalized?
         self.controller.startTest()
 
@@ -252,7 +241,7 @@ class smart_transaction(transaction_logged):
             status = 'success'
             self.controller.addSuccess(is_transaction=True)
 
-        for func in get_transaction_handlers()["exit"]:
+        for func in apiritif.get_transaction_handlers()["exit"]:
             func(status=status, message=message)    # todo: see __enter__ todo
 
         self.controller.afterTest(is_transaction=True)

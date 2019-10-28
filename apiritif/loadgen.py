@@ -402,6 +402,7 @@ class ApiritifPlugin(Plugin):
         """
         before test run
         """
+        thread.clean_transaction_handlers()
         addr = test.address()  # file path, package.subpackage.module, class.method
         test_file, module_fqn, class_method = addr
         test_fqn = test.id()  # [package].module.class.method
