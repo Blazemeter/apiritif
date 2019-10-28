@@ -69,6 +69,47 @@ class TestLoadGen(TestCase):
             time.sleep(1)
         pass
 
+    def test_x3(self):
+        outfile = tempfile.NamedTemporaryFile()
+        outfile.close()
+
+        params = Params()
+        params.worker_count = 2
+        params.tests = [os.path.join(os.path.dirname(__file__), "resources", "test_smart_transactions.py")]
+        params.report = outfile.name + "%s"
+        params.concurrency = 3
+        params.iterations = 2
+        try:
+            sup = Supervisor(params)
+            sup.start()
+            while sup.isAlive():
+                time.sleep(1)
+        finally:
+            for i in range(params.worker_count):
+                os.remove(params.report % i)
+
+
+    def test_x3_back(self):
+        outfile = tempfile.NamedTemporaryFile()
+        params = Params()
+        #{'worker_index': 0, 'worker_count': 1, 'thread_index': 0,
+        #'report': '/tmp/bzt/2019-10-28_11-25-06.727606/apiritif.%s.csv', 'delay': 0, 'concurrency': 1, 'iterations': 1,
+        #'ramp_up': 0, 'steps': 9223372036854775807, 'hold_for': 0, 'verbose': False,
+        #'tests': ['/home/taras/Projects/taurus/tests/resources/selenium/test_new_flow.py']}
+        #params.tests = dummy_tests
+        #params.report = outfile.name + "%s"
+        #params.concurrency = 9
+        #params.iterations = 5
+        params.concurrency = 2
+        params.iterations = 2
+        params.tests = [os.path.join(os.path.dirname(__file__), "resources", "test_smart_transactions.py")]
+        params.report = '/tmp/bzt/2019-10-28_11-25-06.727606/apiritif.%s.csv'
+        sup = Supervisor(params)
+        sup.start()
+        while sup.isAlive():
+            time.sleep(1)
+        pass
+
     def test_ramp_up1(self):
         outfile = tempfile.NamedTemporaryFile()
         print(outfile.name)

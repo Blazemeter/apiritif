@@ -38,8 +38,8 @@ def get_transaction_handlers():
     return transaction_handlers
 
 
-def set_transaction_handlers(transaction_handlers):
-    put_into_thread_store(transaction_handlers=transaction_handlers)
+def set_transaction_handlers(handlers):
+    put_into_thread_store(transaction_handlers=handlers)
 
 
 class TimeoutError(Exception):
