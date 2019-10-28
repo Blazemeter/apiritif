@@ -67,7 +67,7 @@ class http(object):
             session = requests.Session()
         request = requests.Request(method, address,
                                    params=params, headers=headers, cookies=cookies, json=json, data=data)
-        prepared = request.prepare()
+        prepared = session.prepare_request(request)
         try:
             response = session.send(prepared, allow_redirects=allow_redirects, timeout=timeout)
         except requests.exceptions.Timeout:
@@ -341,7 +341,8 @@ class HTTPTarget(object):
                  keep_alive=True,
                  auto_assert_ok=True,
                  timeout=30,
-                 allow_redirects=True):
+                 allow_redirects=True,
+                 session=None):
         self.address = address
         # config flags
         self._base_path = base_path
@@ -352,7 +353,7 @@ class HTTPTarget(object):
         self._timeout = timeout
         self._allow_redirects = allow_redirects
         # internal vars
-        self.__session = None
+        self.__session = session
 
     def use_cookies(self, use=True):
         self._use_cookies = use
