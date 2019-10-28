@@ -92,9 +92,6 @@ class SampleController(object):
 
         # get list of events
         recording = apiritif.recorder.pop_events(from_ts=self.start_time, to_ts=self.end_time)
-        with open('/tmp/o.txt', 'a') as f:
-            f.write("plugin: %s, extractor: %s, recorder: %s [%s]\n" %
-                    (id(self), id(self.apiritif_extractor), id(apiritif.recorder), len(recording)))
 
         try:
             if recording:

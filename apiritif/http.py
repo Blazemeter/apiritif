@@ -216,6 +216,7 @@ class smart_transaction(transaction_logged):
         self.driver, self.func_mode, self.controller = get_from_thread_store(("driver", "func_mode", "controller"))
 
         if self.controller.tran_mode:
+            # as isn't first smart_transaction, we must recall init of current_sample
             self.controller.test_info["test_case"] = self.name
             self.controller.beforeTest()
         else:
