@@ -20,7 +20,7 @@ import threading
 import unicodecsv as csv
 from itertools import cycle, islice
 
-import apiritif.thread as thread
+import apiritif.store as store
 from apiritif.utils import NormalShutdown
 
 thread_data = threading.local()
@@ -55,8 +55,8 @@ class CSVReaderPerThread(Reader):  # processes multi-thread specific
             csv_reader = CSVReader(
                 filename=self.filename,
                 fieldnames=self.fieldnames,
-                step=thread.get_total(),
-                first=thread.get_index(),
+                step=store.get_total(),
+                first=store.get_index(),
                 delimiter=self.delimiter,
                 loop=self.loop,
                 quoted=self.quoted)

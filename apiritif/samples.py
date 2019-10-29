@@ -14,10 +14,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
 import copy
+import json
+import multiprocessing
+import sys
+import time
+import traceback
+from threading import Thread
+
+import unicodecsv as csv
 
 import apiritif
+from apiritif.utils import log
 
 
 class Assertion(object):
@@ -266,3 +274,140 @@ class ApiritifSampleExtractor(object):
             dict(resp.headers), resp.text, len(resp.content), resp.elapsed.total_seconds(),
             req.body or "", dict(request_event.session.cookies), dict(resp._request.headers)
         )
+
+
+class LDJSONSampleWriter(object):
+    """
+    :type out_stream: file
+    """
+
+    def __init__(self, output_file):
+        super(LDJSONSampleWriter, self).__init__()
+        self.concurrency = 0
+        self.output_file = output_file
+        self.out_stream = None
+        self._samples_queue = multiprocessing.Queue()
+
+        self._writing = False
+        self._writer_thread = Thread(target=self._writer)
+        self._writer_thread.setDaemon(True)
+        self._writer_thread.setName(self.__class__.__name__)
+
+    def __enter__(self):
+        self.out_stream = open(self.output_file, "wb")
+        self._writing = True
+        self._writer_thread.start()
+        return self
+
+    def is_alive(self):
+        return self._writer_thread.is_alive()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._writing = False
+        self._writer_thread.join()
+        self.out_stream.close()
+
+    def add(self, sample, test_count, success_count):
+        self._samples_queue.put_nowait((sample, test_count, success_count))
+
+    def is_queue_empty(self):
+        return self._samples_queue.empty()
+
+    def _writer(self):
+        while self._writing:
+            if self._samples_queue.empty():
+                time.sleep(0.1)
+
+            while not self._samples_queue.empty():
+                item = self._samples_queue.get(block=True)
+                try:
+                    sample, test_count, success_count = item
+                    self._write_sample(sample, test_count, success_count)
+                except BaseException as exc:
+                    log.debug("Processing sample failed: %s\n%s", str(exc), traceback.format_exc())
+                    log.warning("Couldn't process sample, skipping")
+                    continue
+
+    def _write_sample(self, sample, test_count, success_count):
+        line = json.dumps(sample.to_dict()) + "\n"
+        self.out_stream.write(line.encode('utf-8'))
+        self.out_stream.flush()
+
+        report_pattern = "%s,Total:%d Passed:%d Failed:%d\n"
+        failed_count = test_count - success_count
+        sys.stdout.write(report_pattern % (sample.test_case, test_count, success_count, failed_count))
+        sys.stdout.flush()
+
+
+class JTLSampleWriter(LDJSONSampleWriter):
+    def __init__(self, output_file):
+        super(JTLSampleWriter, self).__init__(output_file)
+
+    def __enter__(self):
+        obj = super(JTLSampleWriter, self).__enter__()
+
+        fieldnames = ["timeStamp", "elapsed", "Latency", "label", "responseCode", "responseMessage", "success",
+                      "allThreads", "bytes"]
+        endline = '\n'  # \r will be preprended automatically because out_stream is opened in text mode
+        self.writer = csv.DictWriter(self.out_stream, fieldnames=fieldnames, dialect=csv.excel, lineterminator=endline,
+                                     encoding='utf-8')
+        self.writer.writeheader()
+        self.out_stream.flush()
+
+        return obj
+
+    def _write_sample(self, sample, test_count, success_count):
+        """
+        :type sample: Sample
+        :type test_count: int
+        :type success_count: int
+        """
+        self._write_request_subsamples(sample)
+
+    def _get_sample_type(self, sample):
+        if sample.path:
+            last = sample.path[-1]
+            return last.type
+        else:
+            return None
+
+    def _write_request_subsamples(self, sample):
+        if self._get_sample_type(sample) == "request":
+            self._write_single_sample(sample)
+        elif sample.subsamples:
+            for sub in sample.subsamples:
+                self._write_request_subsamples(sub)
+        else:
+            self._write_single_sample(sample)
+
+    def _write_single_sample(self, sample):
+        """
+        :type sample: Sample
+        """
+        bytes = sample.extras.get("responseHeadersSize", 0) + 2 + sample.extras.get("responseBodySize", 0)
+
+        message = sample.error_msg
+        if not message:
+            message = sample.extras.get("responseMessage")
+        if not message:
+            for sample in sample.subsamples:
+                if sample.error_msg:
+                    message = sample.error_msg
+                    break
+                elif sample.extras.get("responseMessage"):
+                    message = sample.extras.get("responseMessage")
+                    break
+        self.writer.writerow({
+            "timeStamp": int(1000 * sample.start_time),
+            "elapsed": int(1000 * sample.duration),
+            "Latency": 0,  # TODO
+            "label": sample.test_case,
+
+            "bytes": bytes,
+
+            "responseCode": sample.extras.get("responseCode"),
+            "responseMessage": message,
+            "allThreads": self.concurrency,  # TODO: there will be a problem aggregating concurrency for rare samples
+            "success": "true" if sample.status == "PASSED" else "false",
+        })
+        self.out_stream.flush()
