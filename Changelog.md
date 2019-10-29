@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.3 <sup>29 Oct 2019</sup>
++ add smart_transaction block
++ add transaction handlers ability
+
 ## 0.8.2 <sup>13 Aug 2019</sup>
 - fix setup errors logging
 

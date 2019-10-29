@@ -153,6 +153,8 @@ with apiritif.transaction('My Test Name'):
   response.assert_2xx()
 ```
 
+`smart_transaction` is advanced variant for cute flow control (stop or continue after failed test method).
+Also adding of handlers for transaction stages (`enter` and `exit`) is possible there.
 ## Taurus Integration
 
 TODO: describe that Taurus can extract Apiritif's action log and handle it.
