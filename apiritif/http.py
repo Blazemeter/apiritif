@@ -27,7 +27,7 @@ from lxml import etree
 
 import apiritif
 from apiritif.utilities import *
-from apiritif.thread import get_from_thread_store
+from apiritif.store import get_from_thread_store
 from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp, log, get_trace
 
 

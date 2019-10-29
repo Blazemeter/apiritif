@@ -3,7 +3,7 @@ import unittest
 
 
 import apiritif
-from apiritif.thread import get_index
+from apiritif.store import get_index
 from apiritif.csv import CSVReaderPerThread
 
 reader0 = CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "data/source0.csv"), quoted=True)

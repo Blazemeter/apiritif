@@ -48,14 +48,9 @@ class TestSmartTransactions(unittest.TestCase):
         with apiritif.smart_transaction('t2'):
             self.driver.get('addr2')
 
-    def _3_t3(self):
-        with apiritif.smart_transaction('t3'):
-            self.driver.get('addr3')
-
     def test_smartTransactions(self):
         self._1_t1()
         self._2_t2()
-        #self._3_t3()
 
     def tearDown(self):
         if self.driver:
