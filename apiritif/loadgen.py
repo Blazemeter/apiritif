@@ -30,6 +30,7 @@ from nose.loader import defaultTestLoader
 from nose.plugins.manager import DefaultPluginManager
 
 import apiritif
+from apiritif.plugin import ApiritifPlugin
 import apiritif.store as store
 from apiritif.samples import JTLSampleWriter, LDJSONSampleWriter
 from apiritif.utils import log
