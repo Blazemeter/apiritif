@@ -27,13 +27,12 @@ from threading import Thread
 from nose.config import Config, all_config_files
 from nose.core import TestProgram
 from nose.loader import defaultTestLoader
-from nose.plugins import Plugin
 from nose.plugins.manager import DefaultPluginManager
 
 import apiritif
 import apiritif.store as store
-from apiritif.utils import NormalShutdown, log, get_trace
 from apiritif.samples import JTLSampleWriter, LDJSONSampleWriter
+from apiritif.utils import log
 
 
 # TODO how to implement hits/s control/shape?
@@ -233,120 +232,6 @@ class ApiritifTestProgram(TestProgram):
         self.testNames = self.config.testNames
         self.testLoader = defaultTestLoader(config=self.config)
         self.createTests()
-
-
-# noinspection PyPep8Naming
-class ApiritifPlugin(Plugin):
-    """
-    Saves test results in a format suitable for Taurus.
-    :type sample_writer: LDJSONSampleWriter
-    """
-
-    name = 'apiritif'
-    enabled = False
-
-    def __init__(self):
-        super(ApiritifPlugin, self).__init__()
-        self.controller = store.TransactionController(log)
-        apiritif.put_into_thread_store(controller=self.controller)  # parcel for smart_transactions
-        self.stop_reason = ""
-
-    def finalize(self, result):
-        """
-        After all tests
-        """
-        if not self.controller.test_count:
-            raise RuntimeError("Nothing to test.")
-
-    def beforeTest(self, test):
-        """
-        before test run
-        """
-        store.clean_transaction_handlers()
-        addr = test.address()  # file path, package.subpackage.module, class.method
-        test_file, module_fqn, class_method = addr
-        test_fqn = test.id()  # [package].module.class.method
-        suite_name, case_name = test_fqn.split('.')[-2:]
-        log.debug("Addr: %r", addr)
-        log.debug("id: %r", test_fqn)
-
-        if class_method is None:
-            class_method = case_name
-
-        description = test.shortDescription()
-        self.controller.test_info = {
-            "test_case": case_name,
-            "suite_name": suite_name,
-            "test_file": test_file,
-            "test_fqn": test_fqn,
-            "description": description,
-            "module_fqn": module_fqn,
-            "class_method": class_method}
-        self.controller.beforeTest()  # create template of current_sample
-
-    def startTest(self, test):
-        self.controller.startTest()
-
-    def stopTest(self, test):
-        self.controller.stopTest()
-
-    def afterTest(self, test):
-        self.controller.afterTest()
-
-    def addError(self, test, error):
-        """
-        when a test raises an uncaught exception
-        :param test:
-        :param error:
-        :return:
-        """
-        # test_dict will be None if startTest wasn't called (i.e. exception in setUp/setUpClass)
-        # status=BROKEN
-        assertion_name = error[0].__name__
-        error_msg = str(error[1]).split('\n')[0]
-        error_trace = get_trace(error)
-        if self.controller.current_sample is not None:
-            self.controller.addError(assertion_name, error_msg, error_trace)
-        else:  # error in test infrastructure (e.g. module setup())
-            log.error("\n".join((assertion_name, error_msg, error_trace)))
-
-    @staticmethod
-    def isNormalShutdown(cls):
-        cls_full_name = ".".join((cls.__module__, cls.__name__))
-        ns_full_name = ".".join((NormalShutdown.__module__, NormalShutdown.__name__))
-        return cls_full_name == ns_full_name
-
-    def handleError(self, test, error):
-        if self.isNormalShutdown(error[0]):
-            self.add_stop_reason(error[1].args[0])  # remember it for run_nose() cycle
-            return True
-        else:
-            return False
-
-    def add_stop_reason(self, msg):
-        if self.stop_reason:
-            self.stop_reason += "\n"
-
-        self.stop_reason += msg
-
-    def addFailure(self, test, error):
-        """
-        when a test fails
-        :param test:
-        :param error:
-
-        :return:
-        """
-        # status=FAILED
-        self.controller.addFailure(error)
-
-    def addSuccess(self, test):
-        """
-        when a test passes
-        :param test:
-        :return:
-        """
-        self.controller.addSuccess()
 
 
 def cmdline_to_params():
