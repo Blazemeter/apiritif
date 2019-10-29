@@ -15,16 +15,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import threading
 import unicodecsv as csv
 from itertools import cycle, islice
 
 import apiritif.store as store
 from apiritif.utils import NormalShutdown
 
-csv_readers = store.get_from_thread_store("csv_readers")
-if csv_readers is None:
-    csv_readers = {}
-    store.put_into_thread_store(csv_readers=csv_readers)
+thread_data = threading.local()
 
 
 class Reader(object):
@@ -47,7 +45,11 @@ class CSVReaderPerThread(Reader):  # processes multi-thread specific
         self.quoted = quoted
 
     def _get_csv_reader(self, create=False):
-        csv_reader = csv_readers.get(id(self))
+        csv_readers = getattr(thread_data, "csv_readers", None)
+        if not csv_readers:
+            thread_data.csv_readers = {}
+
+        csv_reader = thread_data.csv_readers.get(id(self))
         if not csv_reader and create:
             csv_reader = CSVReader(
                 filename=self.filename,
@@ -58,7 +60,7 @@ class CSVReaderPerThread(Reader):  # processes multi-thread specific
                 loop=self.loop,
                 quoted=self.quoted)
 
-            csv_readers[id(self)] = csv_reader
+            thread_data.csv_readers[id(self)] = csv_reader
 
         return csv_reader
 
@@ -68,7 +70,7 @@ class CSVReaderPerThread(Reader):  # processes multi-thread specific
     def close(self):
         csv_reader = self._get_csv_reader()
         if csv_reader:
-            del csv_readers[id(self)]
+            del thread_data.csv_readers[id(self)]
             csv_reader.close()
 
     def get_vars(self):
