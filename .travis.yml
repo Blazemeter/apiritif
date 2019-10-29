@@ -3,8 +3,6 @@ language: python
 matrix:
   include:
   - os: linux
-    python: 2.7
-  - os: linux
     python: 3.5
   - os: linux
     python: 3.6
@@ -13,7 +11,7 @@ matrix:
 
 
 install:
-- pip install codecov nose jsonpath-rw lxml unicodecsv
-script: coverage run -m nose
+- pip install codecov nose nose-exclude nose-timer jsonpath-rw lxml unicodecsv
+script: coverage run -m nose --exclude-dir=tests/resources --with-timer
 after_success:
   - codecov

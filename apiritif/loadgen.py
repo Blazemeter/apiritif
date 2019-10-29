@@ -35,15 +35,14 @@ from nose.plugins.manager import DefaultPluginManager
 
 import apiritif
 import apiritif.thread as thread
-from apiritif.samples import ApiritifSampleExtractor, Sample, PathComponent
-from apiritif.utils import NormalShutdown, log
-
-log = logging.getLogger("loadgen")
+import apiritif.store as store
+from apiritif.utils import NormalShutdown, log, get_trace
 
 
 # TODO how to implement hits/s control/shape?
 # TODO: VU ID for script
 # TODO: disable assertions for load mode
+
 
 def spawn_worker(params):
     """
@@ -144,16 +143,16 @@ class Worker(ThreadPool):
         super(Worker, self).__init__(params.concurrency)
         self.params = params
         if self.params.report.lower().endswith(".ldjson"):
-            self._writer = LDJSONSampleWriter(self.params.report)
+            store.writer = LDJSONSampleWriter(self.params.report)
         else:
-            self._writer = JTLSampleWriter(self.params.report)
+            store.writer = JTLSampleWriter(self.params.report)
 
     def start(self):
         params = list(self._get_thread_params())
-        with self._writer:
+        with store.writer:
             self.map(self.run_nose, params)
             log.info("Workers finished, awaiting result writer")
-            while not self._writer.is_queue_empty() and self._writer.is_alive():
+            while not store.writer.is_queue_empty() and store.writer.is_alive():
                 time.sleep(0.1)
             log.info("Results written, shutting down")
             self.close()
@@ -171,8 +170,8 @@ class Worker(ThreadPool):
         end_time += time.time() if end_time else 0
         time.sleep(params.delay)
 
-        plugin = ApiritifPlugin(self._writer)
-        self._writer.concurrency += 1
+        plugin = ApiritifPlugin()
+        store.writer.concurrency += 1
 
         config = Config(env=os.environ, files=all_config_files(), plugins=DefaultPluginManager())
         config.plugins.addPlugins(extraplugins=[plugin])
@@ -203,7 +202,7 @@ class Worker(ThreadPool):
 
                 break
         finally:
-            self._writer.concurrency -= 1
+            store.writer.concurrency -= 1
 
             if params.verbose:
                 config.stream.close()
@@ -386,28 +385,24 @@ class ApiritifPlugin(Plugin):
     name = 'apiritif'
     enabled = False
 
-    def __init__(self, sample_writer):
+    def __init__(self):
         super(ApiritifPlugin, self).__init__()
-        self.sample_writer = sample_writer
-        self.test_count = 0
-        self.success_count = 0
-        self.current_sample = None
-        self.apiritif_extractor = ApiritifSampleExtractor()
-        self.start_time = None
-        self.end_time = None
+        self.controller = store.SampleController(log)
+        apiritif.put_into_thread_store(controller=self.controller)  # parcel for smart_transactions
         self.stop_reason = ""
 
     def finalize(self, result):
         """
         After all tests
         """
-        if not self.test_count:# and not result.errors:
+        if not self.controller.test_count:
             raise RuntimeError("Nothing to test.")
 
     def beforeTest(self, test):
         """
         before test run
         """
+        thread.clean_transaction_handlers()
         addr = test.address()  # file path, package.subpackage.module, class.method
         test_file, module_fqn, class_method = addr
         test_fqn = test.id()  # [package].module.class.method
@@ -418,74 +413,25 @@ class ApiritifPlugin(Plugin):
         if class_method is None:
             class_method = case_name
 
-        self.current_sample = Sample(test_case=case_name,
-                                     test_suite=suite_name,
-                                     start_time=time.time(),
-                                     status="SKIPPED")
-        self.current_sample.extras.update({
-            "file": test_file,
-            "full_name": test_fqn,
-            "description": test.shortDescription()
-        })
-        module_fqn_parts = module_fqn.split('.')
-        for item in module_fqn_parts[:-1]:
-            self.current_sample.path.append(PathComponent("package", item))
-        self.current_sample.path.append(PathComponent("module", module_fqn_parts[-1]))
-
-        if "." in class_method:  # TestClass.test_method
-            class_name, method_name = class_method.split('.')[:2]
-            self.current_sample.path.extend([PathComponent("class", class_name),
-                                             PathComponent("method", method_name)])
-        else:  # test_func
-            self.current_sample.path.append(PathComponent("func", class_method))
-
-        log.debug("Test method path: %r", self.current_sample.path)
-        self.test_count += 1
+        description = test.shortDescription()
+        self.controller.test_info = {
+            "test_case": case_name,
+            "suite_name": suite_name,
+            "test_file": test_file,
+            "test_fqn": test_fqn,
+            "description": description,
+            "module_fqn": module_fqn,
+            "class_method": class_method}
+        self.controller.beforeTest()  # create template of current_sample
 
     def startTest(self, test):
-        self.start_time = time.time()
+        self.controller.startTest()
 
     def stopTest(self, test):
-        self.end_time = time.time()
+        self.controller.stopTest()
 
     def afterTest(self, test):
-        """
-        after the test has been run
-        :param test:
-        :return:
-        """
-        if self.end_time is None:
-            self.end_time = time.time()
-        self.current_sample.duration = self.end_time - self.current_sample.start_time
-
-        samples_processed = self._process_apiritif_samples(self.current_sample)
-        if not samples_processed:
-            self._process_sample(self.current_sample)
-
-        self.current_sample = None
-
-    def _process_apiritif_samples(self, sample):
-        samples_processed = 0
-
-        recording = apiritif.recorder.pop_events(from_ts=self.start_time, to_ts=self.end_time)
-        if not recording:
-            return samples_processed
-
-        try:
-            samples = self.apiritif_extractor.parse_recording(recording, sample)
-        except BaseException as exc:
-            log.debug("Couldn't parse recording: %s", traceback.format_exc())
-            log.warning("Couldn't parse recording: %s", exc)
-            samples = []
-
-        for sample in samples:
-            samples_processed += 1
-            self._process_sample(sample)
-
-        return samples_processed
-
-    def _process_sample(self, sample):
-        self.sample_writer.add(sample, self.test_count, self.success_count)
+        self.controller.afterTest()
 
     def addError(self, test, error):
         """
@@ -498,11 +444,10 @@ class ApiritifPlugin(Plugin):
         # status=BROKEN
         assertion_name = error[0].__name__
         error_msg = str(error[1]).split('\n')[0]
-        error_trace = self._get_trace(error)
-        if self.current_sample is not None:
-            self.current_sample.add_assertion(assertion_name)
-            self.current_sample.set_assertion_failed(assertion_name, error_msg, error_trace)
-        else:
+        error_trace = get_trace(error)
+        if self.controller.current_sample is not None:
+            self.controller.addError(assertion_name, error_msg, error_trace)
+        else:  # error in test infrastructure (e.g. module setup())
             log.error("\n".join((assertion_name, error_msg, error_trace)))
 
     @staticmethod
@@ -524,18 +469,6 @@ class ApiritifPlugin(Plugin):
 
         self.stop_reason += msg
 
-    @staticmethod
-    def _get_trace(error):
-        if sys.version > '3':
-            # noinspection PyArgumentList
-            exct, excv, trace = error
-            if isinstance(excv, str):
-                excv = exct(excv)
-            lines = traceback.format_exception(exct, excv, trace, chain=True)
-        else:
-            lines = traceback.format_exception(*error)
-        return ''.join(lines).rstrip()
-
     def addFailure(self, test, error):
         """
         when a test fails
@@ -545,19 +478,7 @@ class ApiritifPlugin(Plugin):
         :return:
         """
         # status=FAILED
-        assertion_name = error[0].__name__
-        error_msg = str(error[1]).split('\n')[0]
-        error_trace = self._get_trace(error)
-        self.current_sample.add_assertion(assertion_name)
-        self.current_sample.set_assertion_failed(assertion_name, error_msg, error_trace)
-
-    def addSkip(self, test):
-        """
-        when a test is skipped
-        :param test:
-        :return:
-        """
-        self.current_sample.status = "SKIPPED"
+        self.controller.addFailure(error)
 
     def addSuccess(self, test):
         """
@@ -565,8 +486,7 @@ class ApiritifPlugin(Plugin):
         :param test:
         :return:
         """
-        self.current_sample.status = "PASSED"
-        self.success_count += 1
+        self.controller.addSuccess()
 
 
 def cmdline_to_params():
@@ -590,7 +510,7 @@ def cmdline_to_params():
 
     params.report = opts.result_file_template
     params.tests = args
-    params.worker_count = min(params.concurrency, multiprocessing.cpu_count())
+    params.worker_count = 1  # min(params.concurrency, multiprocessing.cpu_count())
     params.verbose = opts.verbose
 
     return params

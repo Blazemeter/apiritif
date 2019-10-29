@@ -125,7 +125,6 @@ class Sample(object):
 
 class ApiritifSampleExtractor(object):
     def __init__(self):
-        self.transactions_present = False
         self.active_transactions = []
         self.response_map = {}  # response -> sample
 
@@ -176,7 +175,6 @@ class ApiritifSampleExtractor(object):
         self.active_transactions[-1].add_subsample(sample)
 
     def _parse_transaction_started(self, item):
-        self.transactions_present = True
         current_tran = self.active_transactions[-1]
         tran_sample = Sample(status="PASSED", test_case=item.transaction_name, test_suite=current_tran.test_case)
         tran_sample.path = current_tran.path + [PathComponent("transaction", item.transaction_name)]

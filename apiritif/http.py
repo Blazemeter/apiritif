@@ -25,8 +25,10 @@ import jsonpath_rw
 import requests
 from lxml import etree
 
+import apiritif
 from apiritif.utilities import *
-from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp, log
+from apiritif.thread import get_from_thread_store
+from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp, log, get_trace
 
 
 class TimeoutError(Exception):
@@ -197,6 +199,56 @@ class transaction_logged(transaction):
     pass
 
 
+class smart_transaction(transaction_logged):
+    def __init__(self, name):
+        super(smart_transaction, self).__init__(name=name)
+        self.driver, self.func_mode, self.controller = get_from_thread_store(("driver", "func_mode", "controller"))
+
+        if self.controller.tran_mode:
+            # as isn't first smart_transaction, we must recall init of current_sample
+            self.controller.test_info["test_case"] = self.name
+            self.controller.beforeTest()
+        else:
+            # it's first smart_transaction in test method, we shouldn't recreate current sample, just fix it
+            self.controller.tran_mode = True
+            self.controller.current_sample.test_case = self.name
+
+        self.test_suite = self.controller.current_sample.test_suite
+
+    def __enter__(self):
+        super(smart_transaction, self).__enter__()
+        for func in apiritif.get_transaction_handlers()["enter"]:
+            func(self.name, self.test_suite)    # todo: should the interface be generalized?
+        self.controller.startTest()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        super(smart_transaction, self).__exit__(exc_type, exc_val, exc_tb)
+        self.controller.stopTest(is_transaction=True)
+        message = ''
+
+        if exc_type:
+            message = str(exc_val)
+            exc = exc_type, exc_val, exc_tb
+            if isinstance(exc_val, AssertionError):
+                status = 'failed'
+                self.controller.addFailure(exc, is_transaction=True)
+            else:
+                status = 'broken'
+                tb = get_trace(exc)
+                self.controller.addError(exc_type.__name__, message, tb, is_transaction=True)
+
+        else:
+            status = 'success'
+            self.controller.addSuccess(is_transaction=True)
+
+        for func in apiritif.get_transaction_handlers()["exit"]:
+            func(status=status, message=message)    # todo: see __enter__ todo
+
+        self.controller.afterTest(is_transaction=True)
+
+        return not self.func_mode  # don't reraise in load mode
+
+
 class Event(object):
     def __init__(self):
         self.timestamp = time.time()
@@ -298,7 +350,7 @@ class _EventRecorder(object):
     def record_transaction_start(self, tran):
         self.record_event(TransactionStarted(tran))
         if isinstance(tran, transaction_logged):
-            self.log.info(u"Transaction started:: start_time=%.3f,name=%s", tran.start_time(),tran.name)
+            self.log.info(u"Transaction started:: start_time=%.3f,name=%s", tran.start_time(), tran.name)
 
     def record_transaction_end(self, tran):
         self.record_event(TransactionEnded(tran))

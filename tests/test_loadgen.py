@@ -1,17 +1,25 @@
 import copy
-import sys
-import io
 import logging
 import os
 import tempfile
 import time
+import json
 from unittest import TestCase
 
-from apiritif.loadgen import Worker, Params, Supervisor
+import apiritif
+from apiritif import store, thread
+from apiritif.loadgen import Worker, Params, Supervisor, JTLSampleWriter
 
 dummy_tests = [os.path.join(os.path.dirname(__file__), "resources", "test_dummy.py")]
 
 logging.basicConfig(level=logging.DEBUG)
+
+
+class DummyWriter(JTLSampleWriter):
+    def __init__(self, output_file, workers_log):
+        super(DummyWriter, self).__init__(output_file)
+        with open(workers_log, 'a') as log:
+            log.write("%s\n" % os.getpid())
 
 
 class TestLoadGen(TestCase):
@@ -43,9 +51,7 @@ class TestLoadGen(TestCase):
         self.assertRaises(RuntimeError, worker.run_nose, params)
 
         with open(outfile.name, 'rt') as _file:
-            content = _file.read()
-
-        a = 1 + 1
+            _file.read()
 
     def test_worker(self):
         outfile = tempfile.NamedTemporaryFile()
@@ -72,6 +78,120 @@ class TestLoadGen(TestCase):
         while sup.isAlive():
             time.sleep(1)
         pass
+
+    def test_writers_x3(self):
+        # writers must:
+        #   1. be the same for threads of one process
+        #   2. be set up only once
+        #   3. be different for different processes
+        def dummy_worker_init(self, params):
+            """
+            :type params: Params
+            """
+            super(Worker, self).__init__(params.concurrency)
+            self.params = params
+            store.writer = DummyWriter(self.params.report, self.params.workers_log)
+
+        outfile = tempfile.NamedTemporaryFile()
+        outfile.close()
+
+        params = Params()
+
+        # use this log to spy on writers
+        workers_log = outfile.name + '-workers.log'
+        params.workers_log = workers_log
+
+        params.tests = [os.path.join(os.path.dirname(__file__), "resources", "test_smart_transactions.py")]
+        params.report = outfile.name + "%s"
+
+        # it causes 2 processes and 3 threads (totally)
+        params.concurrency = 3
+        params.worker_count = 2
+
+        params.iterations = 2
+        saved_worker_init = Worker.__init__
+        Worker.__init__ = dummy_worker_init
+        try:
+            sup = Supervisor(params)
+            sup.start()
+            while sup.isAlive():
+                time.sleep(1)
+
+            with open(workers_log) as log:
+                writers = log.readlines()
+            self.assertEqual(2, len(writers))
+            self.assertNotEqual(writers[0], writers[1])
+        finally:
+            Worker.__init__ = saved_worker_init
+
+            os.remove(workers_log)
+            for i in range(params.worker_count):
+                os.remove(params.report % i)
+
+    def test_handlers(self):
+        # handlers must:
+        #   1. be unique for thread
+        #   2. be set up every launch of test suite
+        def log_line(line):
+            with open(thread.handlers_log, 'a') as log:
+                log.write("%s\n" % line)
+
+        def mock_get_handlers():
+            transaction_handlers = thread.get_from_thread_store('transaction_handlers')
+            if not transaction_handlers:
+                transaction_handlers = {'enter': [], 'exit': []}
+
+            length = "%s/%s" % (len(transaction_handlers['enter']), len(transaction_handlers['exit']))
+            log_line("get: {pid: %s, idx: %s, iteration: %s, len: %s}" %
+                     (os.getpid(), thread.get_index(), thread.get_iteration(), length))
+            return transaction_handlers
+
+        def mock_set_handlers(handlers):
+            log_line("set: {pid: %s, idx: %s, iteration: %s, handlers: %s}," %
+                     (os.getpid(), thread.get_index(), thread.get_iteration(), handlers))
+            thread.put_into_thread_store(transaction_handlers=handlers)
+
+        outfile = tempfile.NamedTemporaryFile()
+        outfile.close()
+
+        params = Params()
+
+        # use this log to spy on writers
+        handlers_log = outfile.name + '-handlers.log'
+        thread.handlers_log = handlers_log
+
+        params.tests = [os.path.join(os.path.dirname(__file__), "resources", "test_smart_transactions.py")]
+        params.report = outfile.name + "%s"
+
+        # it causes 2 processes and 3 threads (totally)
+        params.concurrency = 3
+        params.worker_count = 2
+
+        params.iterations = 2
+        saved_get_handlers = apiritif.get_transaction_handlers
+        saved_set_handlers = apiritif.set_transaction_handlers
+        apiritif.get_transaction_handlers = mock_get_handlers
+        apiritif.set_transaction_handlers = mock_set_handlers
+        try:
+            sup = Supervisor(params)
+            sup.start()
+            while sup.isAlive():
+                time.sleep(1)
+
+            with open(handlers_log) as log:
+                handlers = log.readlines()
+
+            self.assertEqual(36, len(handlers))
+            self.assertEqual(6, len([handler for handler in handlers if handler.startswith('set')]))
+            self.assertEqual(0, len([handler for handler in handlers if handler.endswith('2/2}')]))
+
+        finally:
+            apiritif.get_transaction_handlers = saved_get_handlers
+            apiritif.set_transaction_handlers = saved_set_handlers
+
+            os.remove(handlers_log)
+            for i in range(params.worker_count):
+                os.remove(params.report % i)
 
     def test_ramp_up1(self):
         outfile = tempfile.NamedTemporaryFile()

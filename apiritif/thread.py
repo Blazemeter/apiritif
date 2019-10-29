@@ -50,12 +50,39 @@ def get_iteration():
 
 
 def put_into_thread_store(*args, **kwargs):
-    _thread_local.args = args
-    _thread_local.kwargs = kwargs
+    if args:
+        _thread_local.args = args
+    if kwargs:
+        current_kwargs = getattr(_thread_local, "kwargs", {})
+        current_kwargs.update(kwargs)
+        _thread_local.kwargs = current_kwargs
 
 
 def get_from_thread_store(names=None):
-    if names and getattr(_thread_local, "kwargs"):
-        return [_thread_local.kwargs[key] for key in names]
-    elif getattr(_thread_local, "args"):
+    if names and hasattr(_thread_local, "kwargs"):
+        only_one = False
+        if isinstance(names, str):
+            names = [names]
+            only_one = True
+        kwargs = [_thread_local.kwargs.get(key) for key in names]
+        if only_one:
+            return kwargs[0]
+        else:
+            return kwargs
+
+    elif hasattr(_thread_local, "args"):
         return _thread_local.args
+
+
+def get_transaction_handlers():
+    transaction_handlers = get_from_thread_store('transaction_handlers')
+    return transaction_handlers
+
+
+def clean_transaction_handlers():
+    handlers = {'enter': [], 'exit': []}
+    _thread_local.kwargs["transaction_handlers"] = handlers
+
+
+def set_transaction_handlers(handlers):
+    put_into_thread_store(transaction_handlers=handlers)

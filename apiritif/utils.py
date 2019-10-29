@@ -13,10 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import sys
 import re
 import logging
+import traceback
 
 log = logging.getLogger('apiritif')
+
+
+def get_trace(error):
+    if sys.version > '3':
+        # noinspection PyArgumentList
+        exct, excv, trace = error
+        if isinstance(excv, str):
+            excv = exct(excv)
+        lines = traceback.format_exception(exct, excv, trace, chain=True)
+    else:
+        lines = traceback.format_exception(*error)
+    return ''.join(lines).rstrip()
 
 
 class NormalShutdown(BaseException):
