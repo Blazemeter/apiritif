@@ -68,8 +68,9 @@ class http(object):
         request = requests.Request(method, address,
                                    params=params, headers=headers, cookies=cookies, json=json, data=data)
         prepared = session.prepare_request(request)
+        settings = session.merge_environment_settings(prepared.url, {}, False, False, None)
         try:
-            response = session.send(prepared, allow_redirects=allow_redirects, timeout=timeout)
+            response = session.send(prepared, allow_redirects=allow_redirects, timeout=timeout, **settings)
         except requests.exceptions.Timeout:
             raise TimeoutError("Connection to %s timed out" % address)
         except requests.exceptions.ConnectionError:
@@ -298,7 +299,7 @@ class _EventRecorder(object):
     def record_transaction_start(self, tran):
         self.record_event(TransactionStarted(tran))
         if isinstance(tran, transaction_logged):
-            self.log.info(u"Transaction started:: start_time=%.3f,name=%s", tran.start_time(),tran.name)
+            self.log.info(u"Transaction started:: start_time=%.3f,name=%s", tran.start_time(), tran.name)
 
     def record_transaction_end(self, tran):
         self.record_event(TransactionEnded(tran))
