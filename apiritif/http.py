@@ -416,7 +416,7 @@ class HTTPTarget(object):
         req_headers.update(headers)
 
         response = http.request(method, address, session=self.__session,
-                                params=params, headers=headers, cookies=cookies, data=data, json=json,
+                                params=params, headers=req_headers, cookies=cookies, data=data, json=json,
                                 allow_redirects=allow_redirects, timeout=timeout)
         if self._auto_assert_ok:
             response.assert_ok()
