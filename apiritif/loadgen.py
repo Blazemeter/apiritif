@@ -193,7 +193,7 @@ class Worker(ThreadPool):
                 # reasons to stop
                 if plugin.stop_reason:
                     log.debug("[%s] finished prematurely: %s", params.worker_index, plugin.stop_reason)
-                elif iteration >= params.iterations:
+                elif 0 < params.iterations <= iteration:
                     log.debug("[%s] iteration limit reached: %s", params.worker_index, params.iterations)
                 elif 0 < end_time <= time.time():
                     log.debug("[%s] duration limit reached: %s", params.worker_index, params.hold_for)
