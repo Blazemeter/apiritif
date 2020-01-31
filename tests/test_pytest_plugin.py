@@ -8,7 +8,7 @@ from _pytest.config.argparsing import Parser
 from _pytest.nodes import Node
 
 import apiritif
-from apiritif.pytest_plugin import pytest_addoption, pytest_configure, pytest_unconfigure, ApiritifPlugin
+from apiritif.pytest_plugin import pytest_addoption, pytest_configure, pytest_unconfigure, ApiritifPytestPlugin
 
 ctype = namedtuple("config", ["option", "pluginmanager"])
 otype = namedtuple("option", ["apiritif_trace", "apiritif_trace_detail"])
@@ -33,7 +33,7 @@ class TestHTTPMethods(TestCase):
         tmp = tempfile.NamedTemporaryFile()
         tmp.close()
         config = ctype(otype(tmp.name, 1), PytestPluginManager())
-        plugin = ApiritifPlugin(config)
+        plugin = ApiritifPytestPlugin(config)
         for _ in plugin.pytest_runtest_setup(None):
             pass
 

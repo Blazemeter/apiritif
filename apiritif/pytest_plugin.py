@@ -16,18 +16,18 @@ def pytest_addoption(parser):
 def pytest_configure(config):
     if not config.option.apiritif_trace:
         return
-    plugin = ApiritifPlugin(config)
+    plugin = ApiritifPytestPlugin(config)
     config.pluginmanager.register(plugin, plugin.__class__.__name__)
 
 
 def pytest_unconfigure(config):
-    name = ApiritifPlugin.__name__
+    name = ApiritifPytestPlugin.__name__
     if config.pluginmanager.has_plugin(name):
         plugin = config.pluginmanager.get_plugin(name)
         config.pluginmanager.unregister(plugin)
 
 
-class ApiritifPlugin(object):
+class ApiritifPytestPlugin(object):
     def __init__(self, config=None) -> None:
         super().__init__()
         self._result_file = None
