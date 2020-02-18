@@ -81,7 +81,7 @@ class http(object):
             raise
         http.log.info("Response: %s %s", response.status_code, response.reason)
         http.log.debug("Response headers: %r", response.headers)
-        http.log.debug("Response cookies: %r", dict(response.cookies))
+        http.log.debug("Response cookies: %r", {x:response.cookies.get(x) for x in response.cookies})
         http.log.debug('Response content: \n%s', response.content)
         wrapped_response = HTTPResponse(response)
         recorder.record_http_request(method, address, prepared, wrapped_response, session)
