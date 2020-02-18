@@ -220,7 +220,7 @@ class smart_transaction(transaction_logged):
         super(smart_transaction, self).__enter__()
         put_into_thread_store(test_case=self.name, test_suite=self.test_suite)
         for func in apiritif.get_transaction_handlers()["enter"]:
-            func()
+            func(self.name, self.test_suite)    # params for compatibility, remove if bzt > 1.4.1 in cloud
         self.controller.startTest()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -245,7 +245,7 @@ class smart_transaction(transaction_logged):
 
         put_into_thread_store(status=status, message=message)
         for func in apiritif.get_transaction_handlers()["exit"]:
-            func()
+            func(status, message)  # params for compatibility, remove if bzt > 1.4.1 in cloud
 
         self.controller.afterTest(is_transaction=True)
 
