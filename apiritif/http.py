@@ -261,7 +261,7 @@ class Request(Event):
 
         :type method: str
         :type address: str
-        :type request: requests.Request
+        :type request: requests.PreparedRequest
         :type response: HTTPResponse
         :type session: requests.Session
         """
