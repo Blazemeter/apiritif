@@ -29,7 +29,7 @@ class TestHTTPMethods(TestCase):
         pytest_configure(config)
         pytest_unconfigure(config)
 
-    def test_flow(self):
+    def test_flow_mindetail(self):
         tmp = tempfile.NamedTemporaryFile()
         tmp.close()
         config = ctype(otype(tmp.name, 1), PytestPluginManager())
@@ -39,6 +39,28 @@ class TestHTTPMethods(TestCase):
 
         with apiritif.transaction("tran"):
             pass
+
+        node = Node("test", nodeid="tst", config=config, session="some")
+        for _ in plugin.pytest_runtest_teardown(node):
+            pass
+
+        plugin.pytest_sessionfinish(None)
+
+        with open(tmp.name) as fp:
+            data = json.load(fp)
+
+        self.assertNotEqual({}, data)
+
+    def test_flow_maxdetail(self):
+        tmp = tempfile.NamedTemporaryFile()
+        tmp.close()
+        config = ctype(otype(tmp.name, 3), PytestPluginManager())
+        plugin = ApiritifPytestPlugin(config)
+        for _ in plugin.pytest_runtest_setup(None):
+            pass
+
+        with apiritif.transaction("tran") as tran:
+            tran.set_request(bytes("test", 'utf8'))
 
         node = Node("test", nodeid="tst", config=config, session="some")
         for _ in plugin.pytest_runtest_teardown(node):

@@ -81,7 +81,7 @@ class http(object):
             raise
         http.log.info("Response: %s %s", response.status_code, response.reason)
         http.log.debug("Response headers: %r", response.headers)
-        http.log.debug("Response cookies: %r", dict(response.cookies))
+        http.log.debug("Response cookies: %r", {x: response.cookies.get(x) for x in response.cookies})
         http.log.debug('Response content: \n%s', response.content)
         wrapped_response = HTTPResponse(response)
         recorder.record_http_request(method, address, prepared, wrapped_response, session)
@@ -221,6 +221,7 @@ class smart_transaction(transaction_logged):
         put_into_thread_store(test_case=self.name, test_suite=self.test_suite)
         for func in apiritif.get_transaction_handlers()["enter"]:
             func(self.name, self.test_suite)    # params for compatibility, remove if bzt > 1.4.1 in cloud
+
         self.controller.startTest()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -263,7 +264,7 @@ class Request(Event):
 
         :type method: str
         :type address: str
-        :type request: requests.Request
+        :type request: requests.PreparedRequest
         :type response: HTTPResponse
         :type session: requests.Session
         """

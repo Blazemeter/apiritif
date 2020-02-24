@@ -44,14 +44,17 @@ class ApiritifPytestPlugin(object):
 
     @pytest.hookimpl(hookwrapper=True)
     def pytest_runtest_teardown(self, item):
+        self._trace_map[item.nodeid] = self._get_subsamples()
+        yield
+
+    def _get_subsamples(self):
         recording = self._pop_events()
         sample = Sample()
         extr = ApiritifSampleExtractor()
         trace = extr.parse_recording(recording, sample)
         subsamples = trace[0].to_dict()['subsamples']
         self._filter(subsamples)
-        self._trace_map[item.nodeid] = subsamples
-        yield
+        return subsamples
 
     @pytest.hookimpl(tryfirst=True)
     def pytest_sessionfinish(self, session):
@@ -64,6 +67,9 @@ class ApiritifPytestPlugin(object):
     def _filter(self, items):
         for item in items:
             self._filter(item['subsamples'])
+            if self._detail_level >= 3:
+                if isinstance(item['extras']['requestBody'], bytes):
+                    item['extras']['requestBody'] = item['extras']['requestBody'].decode('utf-8')
 
             if self._detail_level <= 2:
                 item['extras'].pop('requestCookiesRaw', None)
