@@ -228,7 +228,7 @@ class ApiritifSampleExtractor(object):
 
     @staticmethod
     def _cookies_from_dict(cookies):
-        return "; ".join(key + "=" + value for key, value in cookies.items())
+        return "; ".join("%s=%s" % (key, cookies.get(key).value) for key in cookies)
 
     def _extras_dict(self, url, method, status_code, reason, response_headers, response_body, response_size,
                      response_time, request_body, request_cookies, request_headers):
