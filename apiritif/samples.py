@@ -260,9 +260,10 @@ class ApiritifSampleExtractor(object):
     def _extract_extras(self, request_event):
         resp = request_event.response
         req = request_event.request
+        cookies = request_event.session.cookies
 
         return self._extras_dict(
             req.url, req.method, resp.status_code, resp.reason,
             dict(resp.headers), resp.text, len(resp.content), resp.elapsed.total_seconds(),
-            req.body or "", dict(request_event.session.cookies), dict(resp._request.headers)
+            req.body or "", {x: cookies.get(x) for x in cookies}, dict(resp._request.headers)
         )
