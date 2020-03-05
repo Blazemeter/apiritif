@@ -265,5 +265,5 @@ class ApiritifSampleExtractor(object):
         return self._extras_dict(
             req.url, req.method, resp.status_code, resp.reason,
             dict(resp.headers), resp.text, len(resp.content), resp.elapsed.total_seconds(),
-            req.body or "", {x: cookies.get(x) for x in cookies}, dict(resp._request.headers)
+            req.body or "", cookies.get_dict(), dict(resp._request.headers)
         )
