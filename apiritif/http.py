@@ -516,7 +516,7 @@ class HTTPResponse(object):
         self.reason = py_response.reason
 
         self.headers = dict(py_response.headers)
-        self.cookies = dict(py_response.cookies)
+        self.cookies = dict({x: py_response.cookies.get(x) for x in py_response.cookies})
 
         self.text = py_response.text
         self.content = py_response.content
