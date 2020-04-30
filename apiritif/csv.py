@@ -95,7 +95,7 @@ class CSVReader(Reader):
 
         format_params["quoting"] = csv.QUOTE_MINIMAL if quoted else csv.QUOTE_NONE
 
-        self._reader = csv.DictReader(self.fds, encoding='utf-8', fieldnames=fieldnames, **format_params)
+        self._reader = csv.DictReader(self.fds, encoding='utf-8-sig', fieldnames=fieldnames, **format_params)
         if loop:
             self._reader = cycle(self._reader)
 
