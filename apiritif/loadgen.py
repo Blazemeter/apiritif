@@ -129,11 +129,9 @@ class Supervisor(Thread):
         workers = multiprocessing.Pool(processes=self.params.worker_count)
         args = list(self._concurrency_slicer())
 
-        try:
-            workers.map(spawn_worker, args)
-        finally:
-            workers.close()
-            workers.join()
+        workers.map(spawn_worker, args)
+        workers.close()
+        workers.join()
         # TODO: watch the total test duration, if set, 'cause iteration might last very long
 
 
