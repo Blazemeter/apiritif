@@ -1,8 +1,11 @@
 # Changelog
 
-## 0.8.3 <sup>29 Oct 2019</sup>
-+ add smart_transaction block
-+ add transaction handlers ability
+## 0.9.1 <sup>17 Jan 2020</sup>
+- use zero iterations as infinite
+ 
+## 0.9.0 <sup>29 Oct 2019</sup>
+- add smart_transaction block
+- add transaction handlers ability
 
 ## 0.8.2 <sup>13 Aug 2019</sup>
 - fix setup errors logging

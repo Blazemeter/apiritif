@@ -19,7 +19,7 @@ from setuptools import setup
 setup(
     name="apiritif",
     packages=['apiritif'],
-    version="0.9.0",
+    version="0.9.1",
     description='Python framework for API testing',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
@@ -31,5 +31,11 @@ setup(
     download_url='https://github.com/Blazemeter/apiritif',
     docs_url='https://github.com/Blazemeter/apiritif',
 
-    install_requires=['nose', 'requests>=2.11.1', 'jsonpath-rw', 'lxml', 'unicodecsv'],
+    install_requires=['nose', 'pytest', 'requests>=2.11.1', 'jsonpath-rw', 'lxml', 'unicodecsv'],
+
+    entry_points={
+        'pytest11': [
+            'pytest_apiritif = apiritif.pytest_plugin',
+        ]
+    },
 )

@@ -27,7 +27,7 @@ from lxml import etree
 
 import apiritif
 from apiritif.utilities import *
-from apiritif.thread import get_from_thread_store
+from apiritif.thread import get_from_thread_store, put_into_thread_store
 from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp, log, get_trace
 
 
@@ -81,7 +81,7 @@ class http(object):
             raise
         http.log.info("Response: %s %s", response.status_code, response.reason)
         http.log.debug("Response headers: %r", response.headers)
-        http.log.debug("Response cookies: %r", dict(response.cookies))
+        http.log.debug("Response cookies: %r", {x: response.cookies.get(x) for x in response.cookies})
         http.log.debug('Response content: \n%s', response.content)
         wrapped_response = HTTPResponse(response)
         recorder.record_http_request(method, address, prepared, wrapped_response, session)
@@ -218,8 +218,10 @@ class smart_transaction(transaction_logged):
 
     def __enter__(self):
         super(smart_transaction, self).__enter__()
+        put_into_thread_store(test_case=self.name, test_suite=self.test_suite)
         for func in apiritif.get_transaction_handlers()["enter"]:
-            func(self.name, self.test_suite)    # todo: should the interface be generalized?
+            func(self.name, self.test_suite)    # params for compatibility, remove if bzt > 1.4.1 in cloud
+
         self.controller.startTest()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -242,8 +244,9 @@ class smart_transaction(transaction_logged):
             status = 'success'
             self.controller.addSuccess(is_transaction=True)
 
+        put_into_thread_store(status=status, message=message)
         for func in apiritif.get_transaction_handlers()["exit"]:
-            func(status=status, message=message)    # todo: see __enter__ todo
+            func(status, message)  # params for compatibility, remove if bzt > 1.4.1 in cloud
 
         self.controller.afterTest(is_transaction=True)
 
@@ -261,7 +264,7 @@ class Request(Event):
 
         :type method: str
         :type address: str
-        :type request: requests.Request
+        :type request: requests.PreparedRequest
         :type response: HTTPResponse
         :type session: requests.Session
         """
