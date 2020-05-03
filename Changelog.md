@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.3 <sup>03 May 2020</sup>
+- fix cookies processing
+- fix threads closing
+
 ## 0.9.2 <sup>24 Feb 2020</sup>
 - generalize handler interface
 
