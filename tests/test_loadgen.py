@@ -23,6 +23,15 @@ class DummyWriter(JTLSampleWriter):
 
 
 class TestLoadGen(TestCase):
+    def setUp(self):
+        self.required_method_called = False
+
+    def get_required_method(self, method):
+        def required_method(*args, **kwargs):
+            self.required_method_called = True
+            method(*args, **kwargs)
+        return required_method
+
     def test_thread(self):
         outfile = tempfile.NamedTemporaryFile()
         print(outfile.name)
@@ -65,6 +74,23 @@ class TestLoadGen(TestCase):
         worker = Worker(params)
         worker.start()
         worker.join()
+
+    def test_empty_worker(self):
+        outfile = tempfile.NamedTemporaryFile()
+        print(outfile.name)
+        params = Params()
+        params.concurrency = 2
+        params.iterations = 10
+        params.report = outfile.name
+        params.tests = []
+
+        try:
+            worker = Worker(params)
+            worker.close = self.get_required_method(worker.close)
+            worker.start()
+            worker.join()
+        finally:
+            self.assertTrue(self.required_method_called)
 
     def test_supervisor(self):
         outfile = tempfile.NamedTemporaryFile()
