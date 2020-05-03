@@ -3,8 +3,8 @@ import logging
 import os
 import tempfile
 import time
-import json
 from unittest import TestCase
+from multiprocessing.pool import CLOSE
 
 import apiritif
 from apiritif import store, thread
@@ -103,7 +103,20 @@ class TestLoadGen(TestCase):
         sup.start()
         while sup.isAlive():
             time.sleep(1)
-        pass
+
+    def test_empty_supervisor(self):
+        outfile = tempfile.NamedTemporaryFile()
+        params = Params()
+        params.tests = []
+        params.report = outfile.name + "%s"
+        params.concurrency = 9
+        params.iterations = 5
+        sup = Supervisor(params)
+        sup.start()
+        while sup.isAlive():
+            time.sleep(1)
+
+        self.assertEqual(CLOSE, sup.workers._state)
 
     def test_writers_x3(self):
         # writers must:
