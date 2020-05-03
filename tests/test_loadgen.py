@@ -3,8 +3,8 @@ import logging
 import os
 import tempfile
 import time
-import json
 from unittest import TestCase
+from multiprocessing.pool import CLOSE
 
 import apiritif
 from apiritif import store, thread
@@ -23,6 +23,15 @@ class DummyWriter(JTLSampleWriter):
 
 
 class TestLoadGen(TestCase):
+    def setUp(self):
+        self.required_method_called = False
+
+    def get_required_method(self, method):
+        def required_method(*args, **kwargs):
+            self.required_method_called = True
+            method(*args, **kwargs)
+        return required_method
+
     def test_thread(self):
         outfile = tempfile.NamedTemporaryFile()
         print(outfile.name)
@@ -66,6 +75,23 @@ class TestLoadGen(TestCase):
         worker.start()
         worker.join()
 
+    def test_empty_worker(self):
+        outfile = tempfile.NamedTemporaryFile()
+        print(outfile.name)
+        params = Params()
+        params.concurrency = 2
+        params.iterations = 10
+        params.report = outfile.name
+        params.tests = []
+
+        worker = Worker(params)
+        worker.close = self.get_required_method(worker.close)   # check whether close has been called
+        try:
+            worker.start()
+        except:     # assertRaises doesn't catch it
+            pass
+        self.assertTrue(self.required_method_called)
+
     def test_supervisor(self):
         outfile = tempfile.NamedTemporaryFile()
         params = Params()
@@ -77,7 +103,20 @@ class TestLoadGen(TestCase):
         sup.start()
         while sup.isAlive():
             time.sleep(1)
-        pass
+
+    def test_empty_supervisor(self):
+        outfile = tempfile.NamedTemporaryFile()
+        params = Params()
+        params.tests = []
+        params.report = outfile.name + "%s"
+        params.concurrency = 9
+        params.iterations = 5
+        sup = Supervisor(params)
+        sup.start()
+        while sup.isAlive():
+            time.sleep(1)
+
+        self.assertEqual(CLOSE, sup.workers._state)
 
     def test_writers_x3(self):
         # writers must:

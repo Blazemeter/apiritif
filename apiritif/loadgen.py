@@ -96,6 +96,7 @@ class Supervisor(Thread):
         self.setName(self.__class__.__name__)
 
         self.params = params
+        self.workers = None
 
     def _concurrency_slicer(self, ):
         total_concurrency = 0
@@ -126,12 +127,14 @@ class Supervisor(Thread):
         log.info("Total workers: %s", self.params.worker_count)
 
         thread.set_total(self.params.concurrency)
-        workers = multiprocessing.Pool(processes=self.params.worker_count)
+        self.workers = multiprocessing.Pool(processes=self.params.worker_count)
         args = list(self._concurrency_slicer())
 
-        workers.map(spawn_worker, args)
-        workers.close()
-        workers.join()
+        try:
+            self.workers.map(spawn_worker, args)
+        finally:
+            self.workers.close()
+            self.workers.join()
         # TODO: watch the total test duration, if set, 'cause iteration might last very long
 
 
@@ -149,13 +152,18 @@ class Worker(ThreadPool):
 
     def start(self):
         params = list(self._get_thread_params())
-        with store.writer:
-            self.map(self.run_nose, params)
-            log.info("Workers finished, awaiting result writer")
-            while not store.writer.is_queue_empty() and store.writer.is_alive():
-                time.sleep(0.1)
-            log.info("Results written, shutting down")
-            self.close()
+        with store.writer:  # writer must be closed finally
+            try:
+                self.map(self.run_nose, params)
+            finally:
+                self.close()
+
+    def close(self):
+        log.info("Workers finished, awaiting result writer")
+        while not store.writer.is_queue_empty() and store.writer.is_alive():
+            time.sleep(0.1)
+        log.info("Results written, shutting down")
+        super(Worker, self).close()
 
     def run_nose(self, params):
         """
