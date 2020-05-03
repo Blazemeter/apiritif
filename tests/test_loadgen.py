@@ -84,13 +84,13 @@ class TestLoadGen(TestCase):
         params.report = outfile.name
         params.tests = []
 
+        worker = Worker(params)
+        worker.close = self.get_required_method(worker.close)   # check whether close has been called
         try:
-            worker = Worker(params)
-            worker.close = self.get_required_method(worker.close)
             worker.start()
-            worker.join()
-        finally:
-            self.assertTrue(self.required_method_called)
+        except:     # assertRaises doesn't catch it
+            pass
+        self.assertTrue(self.required_method_called)
 
     def test_supervisor(self):
         outfile = tempfile.NamedTemporaryFile()

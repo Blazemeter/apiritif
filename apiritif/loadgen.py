@@ -149,13 +149,18 @@ class Worker(ThreadPool):
 
     def start(self):
         params = list(self._get_thread_params())
-        with store.writer:
-            self.map(self.run_nose, params)
-            log.info("Workers finished, awaiting result writer")
-            while not store.writer.is_queue_empty() and store.writer.is_alive():
-                time.sleep(0.1)
-            log.info("Results written, shutting down")
-            self.close()
+        with store.writer:  # writer must be closed finally
+            try:
+                self.map(self.run_nose, params)
+            finally:
+                self.close()
+
+    def close(self):
+        log.info("Workers finished, awaiting result writer")
+        while not store.writer.is_queue_empty() and store.writer.is_alive():
+            time.sleep(0.1)
+        log.info("Results written, shutting down")
+        super(Worker, self).close()
 
     def run_nose(self, params):
         """
