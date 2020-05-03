@@ -1,8 +1,5 @@
 # Changelog
 
-## 0.9.2 <sup>24 Feb 2020</sup>
-- generalize handler interface
-
 ## 0.9.1 <sup>17 Jan 2020</sup>
 - use zero iterations as infinite
  
