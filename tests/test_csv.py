@@ -168,3 +168,11 @@ class TestCSV(TestCase):
 
         self.assertTrue(len(threads["0"]) > 18)
 
+    def test_reader_bom_first(self):
+        """ check if BOM is first symbol """
+        reader = CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "resources/data/source_BOM.csv"), loop=False)
+        data = []
+        reader.read_vars()
+        data.append(reader.get_vars())
+
+        self.assertIn("ac1", data[0])
