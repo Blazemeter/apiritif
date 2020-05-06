@@ -168,3 +168,16 @@ class TestCSV(TestCase):
 
         self.assertTrue(len(threads["0"]) > 18)
 
+    def test_reader_bom_first(self):
+        """ check if BOM is ignored """
+        reader_bom = CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "resources/data/source_BOM.csv"), loop=False)
+        reader_no_bom = CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "resources/data/source_no_BOM.csv"), loop=False)
+        data_bom, data_no_bom = [], []
+
+        reader_bom.read_vars()
+        data_bom.append(reader_bom.get_vars())
+
+        reader_no_bom.read_vars()
+        data_no_bom.append(reader_no_bom.get_vars())
+
+        self.assertEqual(data_bom, data_no_bom)
