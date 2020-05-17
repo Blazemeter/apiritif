@@ -48,7 +48,8 @@ class http(object):
 
     @staticmethod
     def request(method, address, session=None,
-                params=None, headers=None, cookies=None, data=None, json=None, allow_redirects=True, timeout=30):
+                params=None, headers=None, cookies=None, data=None, json=None, files=None,
+                allow_redirects=True, timeout=30):
         """
 
         :param method: str
@@ -57,8 +58,8 @@ class http(object):
         :rtype: HTTPResponse
         """
         http.log.info("Request: %s %s", method, address)
-        msg = "Request: params=%r, headers=%r, cookies=%r, data=%r, json=%r, allow_redirects=%r, timeout=%r"
-        http.log.debug(msg, params, headers, cookies, data, json, allow_redirects, timeout)
+        msg = "Request: params=%r, headers=%r, cookies=%r, data=%r, json=%r, files=%r, allow_redirects=%r, timeout=%r"
+        http.log.debug(msg, params, headers, cookies, data, json, files, allow_redirects, timeout)
 
         if headers is None:
             headers = {}
@@ -68,7 +69,7 @@ class http(object):
         if session is None:
             session = requests.Session()
         request = requests.Request(method, address,
-                                   params=params, headers=headers, cookies=cookies, json=json, data=data)
+                                   params=params, headers=headers, cookies=cookies, json=json, data=data, files=files)
         prepared = session.prepare_request(request)
         settings = session.merge_environment_settings(prepared.url, {}, False, False, None)
         try:
@@ -447,7 +448,8 @@ class HTTPTarget(object):
         return addr
 
     def request(self, method, path,
-                params=None, headers=None, cookies=None, data=None, json=None, allow_redirects=None, timeout=None):
+                params=None, headers=None, cookies=None, data=None, json=None, files=None,
+                allow_redirects=None, timeout=None):
         """
         Prepares and sends an HTTP request. Returns the HTTPResponse object.
 
@@ -471,7 +473,7 @@ class HTTPTarget(object):
         req_headers.update(headers)
 
         response = http.request(method, address, session=self.__session,
-                                params=params, headers=req_headers, cookies=cookies, data=data, json=json,
+                                params=params, headers=req_headers, cookies=cookies, data=data, json=json, files=files,
                                 allow_redirects=allow_redirects, timeout=timeout)
         if self._auto_assert_ok:
             response.assert_ok()
