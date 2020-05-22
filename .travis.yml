@@ -12,7 +12,7 @@ matrix:
 
 install:
 - pip install codecov nose nose-exclude nose-timer jsonpath-rw lxml unicodecsv
-script: coverage run -m nose --source=. --exclude-dir=tests/resources --with-timer --timer-top-n 5
+script: coverage run -m nose tests --source=. --exclude-dir=tests/resources --with-timer --timer-top-n 5
 #- coverage run --source=. -m nose tests -v $GENERAL_EXCLUDE $OSX_EXCLUDE --with-timer --timer-top-n 30
 after_success:
   - codecov
