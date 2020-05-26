@@ -14,7 +14,7 @@ class CachingWriter(object):
         self.samples = []
 
     def add(self, sample, test_count, success_count):
-        print(sample, test_count, success_count )
+        print(sample, test_count, success_count)
         self.samples.append(sample)
 
 
@@ -31,7 +31,7 @@ class TestSamples(TestCase):
         store.writer = CachingWriter()
         nose.run(argv=[__file__, test_file, '-v'], addplugins=[Recorder()])
         samples = store.writer.samples
-        self.assertEqual(len(samples), 6)
+        self.assertEqual(len(samples), 7)
 
         single = samples[0]
         self.assertEqual(single.test_suite, 'TestTransactions')
@@ -85,7 +85,14 @@ class TestSamples(TestCase):
         assertion = request.assertions[0]
         self.assertEqual(assertion.name, "assert_failed")
         self.assertEqual(assertion.failed, True)
-        self.assertEqual(assertion.error_message, "Request to http://blazedemo.com/ didn't fail (200)")
+        self.assertEqual(assertion.error_message, "Request to https://blazedemo.com/ didn't fail (200)")
+
+        assert_failed_req = samples[6]
+        self.assertEqual(assert_failed_req.status, "FAILED")
+        request = assert_failed_req.subsamples[0]
+        self.assertEqual(request.test_suite, "test_7_failed_request")
+        self.assertEqual(request.test_case, "http://notexists")
+        self.assertEqual(len(request.assertions), 0)
 
     def test_label_single_transaction(self):
         test_file = RESOURCES_DIR + "/test_single_transaction.py"

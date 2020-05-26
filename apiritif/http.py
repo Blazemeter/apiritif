@@ -26,8 +26,8 @@ import requests
 from lxml import etree
 
 import apiritif
-from apiritif.utilities import *
 from apiritif.thread import get_from_thread_store, put_into_thread_store
+from apiritif.utilities import *
 from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp, log, get_trace
 
 
@@ -74,11 +74,14 @@ class http(object):
         settings = session.merge_environment_settings(prepared.url, {}, False, False, None)
         try:
             response = session.send(prepared, allow_redirects=allow_redirects, timeout=timeout, **settings)
-        except requests.exceptions.Timeout:
+        except requests.exceptions.Timeout as exc:
+            recorder.record_http_request_failure(method, address, prepared, exc, session)
             raise TimeoutError("Connection to %s timed out" % address)
-        except requests.exceptions.ConnectionError:
+        except requests.exceptions.ConnectionError as exc:
+            recorder.record_http_request_failure(method, address, prepared, exc, session)
             raise ConnectionError("Connection to %s failed" % address)
-        except BaseException:
+        except BaseException as exc:
+            recorder.record_http_request_failure(method, address, prepared, exc, session)
             raise
         http.log.info("Response: %s %s", response.status_code, response.reason)
         http.log.debug("Response headers: %r", response.headers)
@@ -221,7 +224,7 @@ class smart_transaction(transaction_logged):
         super(smart_transaction, self).__enter__()
         put_into_thread_store(test_case=self.name, test_suite=self.test_suite)
         for func in apiritif.get_transaction_handlers()["enter"]:
-            func(self.name, self.test_suite)    # params for compatibility, remove if bzt > 1.4.1 in cloud
+            func(self.name, self.test_suite)  # params for compatibility, remove if bzt > 1.4.1 in cloud
 
         self.controller.startTest()
 
@@ -278,6 +281,32 @@ class Request(Event):
 
     def __repr__(self):
         return "Request(method=%r, address=%r)" % (self.method, self.address)
+
+
+class RequestFailure(Request):
+    def __init__(self, method, address, request, exc, session):
+        """
+
+        :type method: str
+        :type address: str
+        :type request: requests.PreparedRequest
+        :type exc: BaseException
+        :type session: requests.Session
+        """
+        response = requests.Response()
+        response.request = request
+        response.status_code = 999
+        response._content = ""
+
+        super(RequestFailure, self).__init__(method, address, request, HTTPResponse(response), session)
+        self.method = method
+        self.address = address
+        self.request = request
+        self.exception = str(exc)
+        self.session = session
+
+    def __repr__(self):
+        return "RequestFailure(method=%r, address=%r)" % (self.method, self.address)
 
 
 class TransactionStarted(Event):
@@ -364,6 +393,10 @@ class _EventRecorder(object):
 
     def record_http_request(self, method, address, request, response, session):
         self.record_event(Request(method, address, request, response, session))
+
+    def record_http_request_failure(self, method, address, request, exception, session):
+        failure = RequestFailure(method, address, request, exception, session)
+        self.record_event(failure)
 
     def record_assertion(self, assertion_name, target_response):
         self.record_event(Assertion(assertion_name, target_response))
