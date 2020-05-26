@@ -302,7 +302,7 @@ class RequestFailure(Request):
         self.method = method
         self.address = address
         self.request = request
-        self.exception = str(exc)
+        self.exception = exc
         self.session = session
 
     def __repr__(self):
