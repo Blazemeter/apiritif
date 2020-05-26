@@ -111,11 +111,11 @@ class TestSamples(TestCase):
         self.assertEqual(1, len(first.subsamples))
         first_req = first.subsamples[0]
         self.assertEqual(first_req.test_suite, "blazedemo 123")
-        self.assertEqual(first_req.test_case, 'http://demo.blazemeter.com/echo.php?echo=123')
+        self.assertEqual(first_req.test_case, 'https://api.demoblaze.com/entries')
 
         self.assertEqual(second.test_suite, "test_requests")
         self.assertEqual(second.test_case, "blazedemo 456")
         self.assertEqual(1, len(second.subsamples))
         second_req = second.subsamples[0]
         self.assertEqual(second_req.test_suite, "blazedemo 456")
-        self.assertEqual(second_req.test_case, 'http://demo.blazemeter.com/echo.php?echo=456')
+        self.assertEqual(second_req.test_case, 'https://api.demoblaze.com/entries')
