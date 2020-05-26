@@ -80,7 +80,7 @@ class TestRequests(unittest.TestCase):
 
     def test_assert_in_headers(self):
         response = http.get('http://blazedemo.com/')
-        response.assert_in_headers("Content-Type: text/html")
+        response.assert_in_headers("content-type: text/html")
 
     def test_assert_not_in_headers(self):
         response = http.get('http://blazedemo.com/')
@@ -88,7 +88,7 @@ class TestRequests(unittest.TestCase):
 
     def test_assert_regex_in_headers(self):
         response = http.get('http://blazedemo.com/')
-        response.assert_regex_in_headers(r"Content-Type: .+")
+        response.assert_regex_in_headers(r"content-type: .+")
 
     def test_assert_regex_not_in_headers(self):
         response = http.get('http://blazedemo.com/')

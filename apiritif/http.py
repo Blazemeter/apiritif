@@ -24,6 +24,7 @@ from io import BytesIO
 import jsonpath_rw
 import requests
 from lxml import etree
+from requests.structures import CaseInsensitiveDict
 
 import apiritif
 from apiritif.thread import get_from_thread_store, put_into_thread_store
@@ -550,7 +551,7 @@ class HTTPResponse(object):
         self.status_code = int(py_response.status_code)
         self.reason = py_response.reason
 
-        self.headers = dict(py_response.headers)
+        self.headers = CaseInsensitiveDict(py_response.headers)
         self.cookies = {x: py_response.cookies.get(x) for x in py_response.cookies}
 
         self.text = py_response.text
