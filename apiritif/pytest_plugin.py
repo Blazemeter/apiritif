@@ -68,7 +68,7 @@ class ApiritifPytestPlugin(object):
         for item in items:
             self._filter(item['subsamples'])
             if self._detail_level >= 4:
-                if isinstance(item['extras']['requestBody'], bytes):
+                if isinstance(item['extras'].get('requestBody'), bytes):
                     item['extras']['requestBody'] = item['extras']['requestBody'].decode('utf-8')
 
             if self._detail_level <= 3:
