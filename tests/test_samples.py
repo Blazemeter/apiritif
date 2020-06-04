@@ -14,7 +14,7 @@ class CachingWriter(object):
         self.samples = []
 
     def add(self, sample, test_count, success_count):
-        print(sample, test_count, success_count )
+        print(sample, test_count, success_count)
         self.samples.append(sample)
 
 
@@ -31,7 +31,7 @@ class TestSamples(TestCase):
         store.writer = CachingWriter()
         nose.run(argv=[__file__, test_file, '-v'], addplugins=[Recorder()])
         samples = store.writer.samples
-        self.assertEqual(len(samples), 6)
+        self.assertEqual(len(samples), 7)
 
         single = samples[0]
         self.assertEqual(single.test_suite, 'TestTransactions')
@@ -85,7 +85,14 @@ class TestSamples(TestCase):
         assertion = request.assertions[0]
         self.assertEqual(assertion.name, "assert_failed")
         self.assertEqual(assertion.failed, True)
-        self.assertEqual(assertion.error_message, "Request to http://blazedemo.com/ didn't fail (200)")
+        self.assertEqual(assertion.error_message, "Request to https://blazedemo.com/ didn't fail (200)")
+
+        assert_failed_req = samples[6]
+        self.assertEqual(assert_failed_req.status, "FAILED")
+        request = assert_failed_req.subsamples[0]
+        self.assertEqual(request.test_suite, "test_7_failed_request")
+        self.assertEqual(request.test_case, "http://notexists")
+        self.assertEqual(len(request.assertions), 0)
 
     def test_label_single_transaction(self):
         test_file = RESOURCES_DIR + "/test_single_transaction.py"
@@ -104,11 +111,11 @@ class TestSamples(TestCase):
         self.assertEqual(1, len(first.subsamples))
         first_req = first.subsamples[0]
         self.assertEqual(first_req.test_suite, "blazedemo 123")
-        self.assertEqual(first_req.test_case, 'http://demo.blazemeter.com/echo.php?echo=123')
+        self.assertEqual(first_req.test_case, 'https://api.demoblaze.com/entries')
 
         self.assertEqual(second.test_suite, "test_requests")
         self.assertEqual(second.test_case, "blazedemo 456")
         self.assertEqual(1, len(second.subsamples))
         second_req = second.subsamples[0]
         self.assertEqual(second_req.test_suite, "blazedemo 456")
-        self.assertEqual(second_req.test_case, 'http://demo.blazemeter.com/echo.php?echo=456')
+        self.assertEqual(second_req.test_case, 'https://api.demoblaze.com/entries')

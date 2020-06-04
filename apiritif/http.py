@@ -24,10 +24,11 @@ from io import BytesIO
 import jsonpath_rw
 import requests
 from lxml import etree
+from requests.structures import CaseInsensitiveDict
 
 import apiritif
-from apiritif.utilities import *
 from apiritif.thread import get_from_thread_store, put_into_thread_store
+from apiritif.utilities import *
 from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp, log, get_trace
 
 
@@ -48,7 +49,8 @@ class http(object):
 
     @staticmethod
     def request(method, address, session=None,
-                params=None, headers=None, cookies=None, data=None, json=None, allow_redirects=True, timeout=30):
+                params=None, headers=None, cookies=None, data=None, json=None, files=None,
+                allow_redirects=True, timeout=30):
         """
 
         :param method: str
@@ -57,8 +59,8 @@ class http(object):
         :rtype: HTTPResponse
         """
         http.log.info("Request: %s %s", method, address)
-        msg = "Request: params=%r, headers=%r, cookies=%r, data=%r, json=%r, allow_redirects=%r, timeout=%r"
-        http.log.debug(msg, params, headers, cookies, data, json, allow_redirects, timeout)
+        msg = "Request: params=%r, headers=%r, cookies=%r, data=%r, json=%r, files=%r, allow_redirects=%r, timeout=%r"
+        http.log.debug(msg, params, headers, cookies, data, json, files, allow_redirects, timeout)
 
         if headers is None:
             headers = {}
@@ -68,16 +70,19 @@ class http(object):
         if session is None:
             session = requests.Session()
         request = requests.Request(method, address,
-                                   params=params, headers=headers, cookies=cookies, json=json, data=data)
+                                   params=params, headers=headers, cookies=cookies, json=json, data=data, files=files)
         prepared = session.prepare_request(request)
         settings = session.merge_environment_settings(prepared.url, {}, False, False, None)
         try:
             response = session.send(prepared, allow_redirects=allow_redirects, timeout=timeout, **settings)
-        except requests.exceptions.Timeout:
+        except requests.exceptions.Timeout as exc:
+            recorder.record_http_request_failure(method, address, prepared, exc, session)
             raise TimeoutError("Connection to %s timed out" % address)
-        except requests.exceptions.ConnectionError:
+        except requests.exceptions.ConnectionError as exc:
+            recorder.record_http_request_failure(method, address, prepared, exc, session)
             raise ConnectionError("Connection to %s failed" % address)
-        except BaseException:
+        except BaseException as exc:
+            recorder.record_http_request_failure(method, address, prepared, exc, session)
             raise
         http.log.info("Response: %s %s", response.status_code, response.reason)
         http.log.debug("Response headers: %r", response.headers)
@@ -220,7 +225,7 @@ class smart_transaction(transaction_logged):
         super(smart_transaction, self).__enter__()
         put_into_thread_store(test_case=self.name, test_suite=self.test_suite)
         for func in apiritif.get_transaction_handlers()["enter"]:
-            func(self.name, self.test_suite)    # params for compatibility, remove if bzt > 1.4.1 in cloud
+            func(self.name, self.test_suite)  # params for compatibility, remove if bzt > 1.4.1 in cloud
 
         self.controller.startTest()
 
@@ -277,6 +282,32 @@ class Request(Event):
 
     def __repr__(self):
         return "Request(method=%r, address=%r)" % (self.method, self.address)
+
+
+class RequestFailure(Request):
+    def __init__(self, method, address, request, exc, session):
+        """
+
+        :type method: str
+        :type address: str
+        :type request: requests.PreparedRequest
+        :type exc: BaseException
+        :type session: requests.Session
+        """
+        response = requests.Response()
+        response.request = request
+        response.status_code = 999
+        response._content = ""
+
+        super(RequestFailure, self).__init__(method, address, request, HTTPResponse(response), session)
+        self.method = method
+        self.address = address
+        self.request = request
+        self.exception = exc
+        self.session = session
+
+    def __repr__(self):
+        return "RequestFailure(method=%r, address=%r)" % (self.method, self.address)
 
 
 class TransactionStarted(Event):
@@ -364,6 +395,10 @@ class _EventRecorder(object):
     def record_http_request(self, method, address, request, response, session):
         self.record_event(Request(method, address, request, response, session))
 
+    def record_http_request_failure(self, method, address, request, exception, session):
+        failure = RequestFailure(method, address, request, exception, session)
+        self.record_event(failure)
+
     def record_assertion(self, assertion_name, target_response):
         self.record_event(Assertion(assertion_name, target_response))
 
@@ -447,7 +482,8 @@ class HTTPTarget(object):
         return addr
 
     def request(self, method, path,
-                params=None, headers=None, cookies=None, data=None, json=None, allow_redirects=None, timeout=None):
+                params=None, headers=None, cookies=None, data=None, json=None, files=None,
+                allow_redirects=None, timeout=None):
         """
         Prepares and sends an HTTP request. Returns the HTTPResponse object.
 
@@ -471,7 +507,7 @@ class HTTPTarget(object):
         req_headers.update(headers)
 
         response = http.request(method, address, session=self.__session,
-                                params=params, headers=req_headers, cookies=cookies, data=data, json=json,
+                                params=params, headers=req_headers, cookies=cookies, data=data, json=json, files=files,
                                 allow_redirects=allow_redirects, timeout=timeout)
         if self._auto_assert_ok:
             response.assert_ok()
@@ -515,8 +551,8 @@ class HTTPResponse(object):
         self.status_code = int(py_response.status_code)
         self.reason = py_response.reason
 
-        self.headers = dict(py_response.headers)
-        self.cookies = dict(py_response.cookies)
+        self.headers = CaseInsensitiveDict(py_response.headers)
+        self.cookies = {x: py_response.cookies.get(x) for x in py_response.cookies}
 
         self.text = py_response.text
         self.content = py_response.content

@@ -16,8 +16,11 @@ limitations under the License.
 """
 
 import copy
+import traceback
 
 import apiritif
+from apiritif.http import RequestFailure
+from apiritif.utils import get_trace
 
 
 class Assertion(object):
@@ -159,14 +162,19 @@ class ApiritifSampleExtractor(object):
         return [toplevel_sample]
 
     def _parse_request(self, item):
+        is_failure = isinstance(item, RequestFailure)
         current_tran = self.active_transactions[-1]
         sample = Sample(
             test_suite=current_tran.test_case,
             test_case=item.address,
-            status="PASSED",
+            status="FAILED" if is_failure else "PASSED",
             start_time=item.timestamp,
             duration=item.response.elapsed.total_seconds(),
         )
+        if is_failure:
+            sample.error_msg = str(item.exception).split('\n')[0]
+            sample.error_trace = traceback.format_exception(type(item.exception), item.exception, None)
+
         sample.path = current_tran.path + [PathComponent("request", item.address)]
         extras = self._extract_extras(item)
         if extras:

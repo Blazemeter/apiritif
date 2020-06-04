@@ -52,9 +52,9 @@ class ApiritifPytestPlugin(object):
         sample = Sample()
         extr = ApiritifSampleExtractor()
         trace = extr.parse_recording(recording, sample)
-        subsamples = trace[0].to_dict()['subsamples']
-        self._filter(subsamples)
-        return subsamples
+        toplevel_sample = trace[0].to_dict()
+        self._filter([toplevel_sample])
+        return toplevel_sample
 
     @pytest.hookimpl(tryfirst=True)
     def pytest_sessionfinish(self, session):
@@ -67,11 +67,11 @@ class ApiritifPytestPlugin(object):
     def _filter(self, items):
         for item in items:
             self._filter(item['subsamples'])
-            if self._detail_level >= 3:
-                if isinstance(item['extras']['requestBody'], bytes):
+            if self._detail_level >= 4:
+                if isinstance(item['extras'].get('requestBody'), bytes):
                     item['extras']['requestBody'] = item['extras']['requestBody'].decode('utf-8')
 
-            if self._detail_level <= 2:
+            if self._detail_level <= 3:
                 item['extras'].pop('requestCookiesRaw', None)
                 item['extras'].pop('requestCookies', None)
                 item['extras'].pop('requestBody', None)
@@ -79,7 +79,7 @@ class ApiritifPytestPlugin(object):
                 item['extras'].pop('requestHeaders', None)
                 item['extras'].pop('responseHeaders', None)
 
-            if self._detail_level <= 1:
+            if self._detail_level <= 2:
                 item.pop('extras', None)
                 item.pop('subsamples', None)
                 item.pop('assertions', None)

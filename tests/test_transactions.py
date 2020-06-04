@@ -4,7 +4,7 @@ import unittest
 
 from apiritif import http, transaction, transaction_logged
 
-target = http.target('https://jsonplaceholder.typicode.com')
+target = http.target('https://httpbin.org')
 target.keep_alive(True)
 target.auto_assert_ok(False)
 target.use_cookies(True)
