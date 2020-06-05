@@ -797,6 +797,15 @@ class HTTPResponse(object):
             return default
         return matches[0].value
 
+    def extract_cssselect(self, selector, attribute=None, default=None):
+        tree = html.fromstring(self.text)
+        q = tree.cssselect(selector)
+        matches = [(x.text if attribute is None else x.attrib[attribute]) for x in q]
+
+        if not matches:
+            return default
+        return matches[0]
+
     def extract_xpath(self, xpath_query, default=None, parser_type='html', validate=False):
         parser = etree.HTMLParser() if parser_type == 'html' else etree.XMLParser(dtd_validation=validate)
         tree = etree.parse(BytesIO(self.content), parser)
