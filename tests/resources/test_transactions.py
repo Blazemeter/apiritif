@@ -27,3 +27,6 @@ class TestTransactions(TestCase):
 
     def test_6_apiritif_assertions_failed(self):
         apiritif.http.get("http://blazedemo.com/").assert_failed()  # this assertion intentionally fails
+
+    def test_7_failed_request(self):
+        apiritif.http.get("http://notexists")
