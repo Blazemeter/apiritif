@@ -126,6 +126,11 @@ response.assert_not_jsonpath(jsonpath_query)
 # assert that response body matches XPath query
 response.assert_xpath(xpath_query, parser_type='html', validate=False)
 response.assert_not_xpath(xpath_query, parser_type='html', validate=False)
+
+# assert that HTML response body contains CSS selector item
+response.assert_cssselect(selector, expected_value=None, attribute=None)
+response.assert_not_cssselect(selector, expected_value=None, attribute=None)
+
 ```
 
 Note that assertions can be chained, so the following construction is entirely valid:

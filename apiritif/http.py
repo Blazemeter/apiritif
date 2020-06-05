@@ -759,10 +759,10 @@ class HTTPResponse(object):
         return self
 
     @recorder.assertion_decorator
-    def assert_cssselect(self, query, expected_value=None, msg=None):
+    def assert_cssselect(self, query, expected_value=None, attribute=None, msg=None):
         tree = html.fromstring(self.text)
         q = tree.cssselect(query)
-        vals = [x.text for x in q]
+        vals = [(x.text if attribute is None else x.attrib[attribute]) for x in q]
 
         matches = expected_value in vals if expected_value is not None else vals
         if not matches:
@@ -771,9 +771,9 @@ class HTTPResponse(object):
         return self
 
     @recorder.assertion_decorator
-    def assert_not_cssselect(self, query, expected_value=None, msg=None):
+    def assert_not_cssselect(self, query, expected_value=None, attribute=None, msg=None):
         try:
-            self.assert_cssselect(query, expected_value)
+            self.assert_cssselect(query, expected_value, attribute)
         except AssertionError:
             return self
 
