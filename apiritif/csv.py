@@ -19,6 +19,7 @@ import threading
 
 import unicodecsv as csv
 from itertools import cycle, islice
+from chardet import detect
 
 import apiritif.thread as thread
 from apiritif.utils import NormalShutdown
@@ -38,12 +39,13 @@ class Reader(object):
 
 
 class CSVReaderPerThread(Reader):  # processes multi-thread specific
-    def __init__(self, filename, fieldnames=None, delimiter=None, loop=True, quoted=False):
+    def __init__(self, filename, fieldnames=None, delimiter=None, loop=True, quoted=False, encoding=None):
         self.filename = filename
         self.fieldnames = fieldnames
         self.delimiter = delimiter
         self.loop = loop
         self.quoted = quoted
+        self.encoding = encoding
 
     def _get_csv_reader(self, create=False):
         csv_readers = getattr(thread_data, "csv_readers", None)
@@ -59,7 +61,8 @@ class CSVReaderPerThread(Reader):  # processes multi-thread specific
                 first=thread.get_index(),
                 delimiter=self.delimiter,
                 loop=self.loop,
-                quoted=self.quoted)
+                quoted=self.quoted,
+                encoding=self.encoding)
 
             thread_data.csv_readers[id(self)] = csv_reader
 
@@ -83,7 +86,7 @@ class CSVReaderPerThread(Reader):  # processes multi-thread specific
 
 
 class CSVReader(Reader):
-    def __init__(self, filename, step=1, first=0, fieldnames=None, delimiter=None, loop=True, quoted=False):
+    def __init__(self, filename, step=1, first=0, fieldnames=None, delimiter=None, loop=True, quoted=False, encoding=None):
         self.step = step
         self.first = first
         self.csv = {}
@@ -95,7 +98,11 @@ class CSVReader(Reader):
 
         format_params["quoting"] = csv.QUOTE_MINIMAL if quoted else csv.QUOTE_NONE
 
-        self._reader = csv.DictReader(self.fds, encoding='utf-8', fieldnames=fieldnames, **format_params)
+        if not encoding:
+            encoding = detect(self.fds.read())['encoding']
+            self.fds.seek(0)
+
+        self._reader = csv.DictReader(self.fds, encoding=encoding, fieldnames=fieldnames, **format_params)
         if loop:
             self._reader = cycle(self._reader)
 
