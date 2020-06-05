@@ -16,6 +16,12 @@ class TestRequests(unittest.TestCase):
         response.assert_xpath('//head/title', parser_type='html', validate=False)
         response.assert_not_xpath('//yo/my/man', parser_type='html', validate=False)
 
+    def test_assert_cssselect(self):
+        response = http.get('http://blazedemo.com/')
+        response.assert_ok()
+        response.assert_cssselect('head title')
+        response.assert_not_cssselect('yo my man')
+
     def test_assert_jsonpath(self):
         response = http.get('https://jsonplaceholder.typicode.com/users')
         response.assert_ok()

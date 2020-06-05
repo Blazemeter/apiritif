@@ -23,7 +23,7 @@ from io import BytesIO
 
 import jsonpath_rw
 import requests
-from lxml import etree
+from lxml import etree, html
 from requests.structures import CaseInsensitiveDict
 
 import apiritif
@@ -757,6 +757,28 @@ class HTTPResponse(object):
             msg = msg or "XPath query %r did match response content: %s" % (xpath_query, self.text)
             raise AssertionError(msg)
         return self
+
+    @recorder.assertion_decorator
+    def assert_cssselect(self, query, expected_value=None, msg=None):
+        tree = html.fromstring(self.text)
+        q = tree.cssselect(query)
+        vals = [x.text for x in q]
+
+        matches = expected_value in vals if expected_value is not None else vals
+        if not matches:
+            msg = msg or "CSSSelect query %r didn't match response content: %s" % (query, self.text)
+            raise AssertionError(msg)
+        return self
+
+    @recorder.assertion_decorator
+    def assert_not_cssselect(self, query, expected_value=None, msg=None):
+        try:
+            self.assert_cssselect(query, expected_value)
+        except AssertionError:
+            return self
+
+        msg = msg or "CSSSelect query %r did match response content: %s" % (query, self.text)
+        raise AssertionError(msg)
 
     # TODO: assertTiming? to assert response time / connection time
 
