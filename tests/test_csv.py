@@ -168,3 +168,15 @@ class TestCSV(TestCase):
 
         self.assertTrue(len(threads["0"]) > 18)
 
+    def test_csv_encoding(self):
+        reader_utf8 = CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "resources/data/encoding_utf8.csv"), loop=False)
+        reader_utf16 = CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "resources/data/encoding_utf16.csv"), loop=False)
+        data_utf8, data_utf16 = [], []
+
+        reader_utf8.read_vars()
+        data_utf8.append(reader_utf8.get_vars())
+
+        reader_utf16.read_vars()
+        data_utf16.append(reader_utf16.get_vars())
+
+        self.assertEqual(data_utf8, data_utf16)
