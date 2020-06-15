@@ -21,8 +21,8 @@ import time
 from functools import wraps
 from io import BytesIO
 
-import jsonpath_rw
 import requests
+from jsonpath_ng.ext import parse as jsonpath_parse
 from lxml import etree, html
 from requests.structures import CaseInsensitiveDict
 
@@ -715,7 +715,7 @@ class HTTPResponse(object):
 
     @recorder.assertion_decorator
     def assert_jsonpath(self, jsonpath_query, expected_value=None, msg=None):
-        jsonpath_expr = jsonpath_rw.parse(jsonpath_query)
+        jsonpath_expr = jsonpath_parse(jsonpath_query)
         body = self.json()
         matches = jsonpath_expr.find(body)
         if not matches:
@@ -730,7 +730,7 @@ class HTTPResponse(object):
 
     @recorder.assertion_decorator
     def assert_not_jsonpath(self, jsonpath_query, msg=None):
-        jsonpath_expr = jsonpath_rw.parse(jsonpath_query)
+        jsonpath_expr = jsonpath_parse(jsonpath_query)
         body = self.json()
         matches = jsonpath_expr.find(body)
         if matches:
@@ -790,7 +790,7 @@ class HTTPResponse(object):
         return extracted_value
 
     def extract_jsonpath(self, jsonpath_query, default=None):
-        jsonpath_expr = jsonpath_rw.parse(jsonpath_query)
+        jsonpath_expr = jsonpath_parse(jsonpath_query)
         body = self.json()
         matches = jsonpath_expr.find(body)
         if not matches:
