@@ -92,6 +92,7 @@ response.assert_4xx()
 response.assert_5xx()
 response.assert_status_code(code)
 response.assert_not_status_code(code)
+response.assert_status_code_in(codes)
 
 # content-based assertions
 

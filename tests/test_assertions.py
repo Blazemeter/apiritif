@@ -56,6 +56,10 @@ class TestRequests(unittest.TestCase):
         response = http.get('http://blazedemo.com/')
         response.assert_status_code(200)
 
+    def test_assert_status_code_in(self):
+        response = http.get('http://blazedemo.com/')
+        response.assert_status_code_in((302, 200))
+
     def test_assert_not_status_code(self):
         response = http.get('http://blazedemo.com/not-found')
         response.assert_not_status_code(200)

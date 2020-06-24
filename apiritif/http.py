@@ -638,6 +638,15 @@ class HTTPResponse(object):
         return self
 
     @recorder.assertion_decorator
+    def assert_status_code_in(self, codes, msg=None):
+        actual = str(self.status_code)
+        expected = [str(code) for code in codes]
+        if actual not in expected:
+            msg = msg or "Actual status code (%s) is not one of expected expected (%s)" % (actual, expected)
+            raise AssertionError(msg)
+        return self
+
+    @recorder.assertion_decorator
     def assert_not_status_code(self, code, msg=None):
         actual = str(self.status_code)
         expected = str(code)
