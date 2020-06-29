@@ -21,9 +21,9 @@ import time
 from functools import wraps
 from io import BytesIO
 
-import jsonpath_rw
 import requests
-from lxml import etree
+from jsonpath_ng.ext import parse as jsonpath_parse
+from lxml import etree, html
 from requests.structures import CaseInsensitiveDict
 
 import apiritif
@@ -638,6 +638,15 @@ class HTTPResponse(object):
         return self
 
     @recorder.assertion_decorator
+    def assert_status_code_in(self, codes, msg=None):
+        actual = str(self.status_code)
+        expected = [str(code) for code in codes]
+        if actual not in expected:
+            msg = msg or "Actual status code (%s) is not one of expected expected (%s)" % (actual, expected)
+            raise AssertionError(msg)
+        return self
+
+    @recorder.assertion_decorator
     def assert_not_status_code(self, code, msg=None):
         actual = str(self.status_code)
         expected = str(code)
@@ -715,7 +724,7 @@ class HTTPResponse(object):
 
     @recorder.assertion_decorator
     def assert_jsonpath(self, jsonpath_query, expected_value=None, msg=None):
-        jsonpath_expr = jsonpath_rw.parse(jsonpath_query)
+        jsonpath_expr = jsonpath_parse(jsonpath_query)
         body = self.json()
         matches = jsonpath_expr.find(body)
         if not matches:
@@ -730,7 +739,7 @@ class HTTPResponse(object):
 
     @recorder.assertion_decorator
     def assert_not_jsonpath(self, jsonpath_query, msg=None):
-        jsonpath_expr = jsonpath_rw.parse(jsonpath_query)
+        jsonpath_expr = jsonpath_parse(jsonpath_query)
         body = self.json()
         matches = jsonpath_expr.find(body)
         if matches:
@@ -758,6 +767,28 @@ class HTTPResponse(object):
             raise AssertionError(msg)
         return self
 
+    @recorder.assertion_decorator
+    def assert_cssselect(self, query, expected_value=None, attribute=None, msg=None):
+        tree = html.fromstring(self.text)
+        q = tree.cssselect(query)
+        vals = [(x.text if attribute is None else x.attrib[attribute]) for x in q]
+
+        matches = expected_value in vals if expected_value is not None else vals
+        if not matches:
+            msg = msg or "CSSSelect query %r didn't match response content: %s" % (query, self.text)
+            raise AssertionError(msg)
+        return self
+
+    @recorder.assertion_decorator
+    def assert_not_cssselect(self, query, expected_value=None, attribute=None, msg=None):
+        try:
+            self.assert_cssselect(query, expected_value, attribute)
+        except AssertionError:
+            return self
+
+        msg = msg or "CSSSelect query %r did match response content: %s" % (query, self.text)
+        raise AssertionError(msg)
+
     # TODO: assertTiming? to assert response time / connection time
 
     def extract_regex(self, regex, default=None):
@@ -768,12 +799,21 @@ class HTTPResponse(object):
         return extracted_value
 
     def extract_jsonpath(self, jsonpath_query, default=None):
-        jsonpath_expr = jsonpath_rw.parse(jsonpath_query)
+        jsonpath_expr = jsonpath_parse(jsonpath_query)
         body = self.json()
         matches = jsonpath_expr.find(body)
         if not matches:
             return default
         return matches[0].value
+
+    def extract_cssselect(self, selector, attribute=None, default=None):
+        tree = html.fromstring(self.text)
+        q = tree.cssselect(selector)
+        matches = [(x.text if attribute is None else x.attrib[attribute]) for x in q]
+
+        if not matches:
+            return default
+        return matches[0]
 
     def extract_xpath(self, xpath_query, default=None, parser_type='html', validate=False):
         parser = etree.HTMLParser() if parser_type == 'html' else etree.XMLParser(dtd_validation=validate)

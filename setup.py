@@ -31,7 +31,7 @@ setup(
     download_url='https://github.com/Blazemeter/apiritif',
     docs_url='https://github.com/Blazemeter/apiritif',
 
-    install_requires=['nose', 'pytest', 'requests>=2.11.1', 'jsonpath-rw', 'lxml', 'unicodecsv', 'chardet'],
+    install_requires=['nose', 'pytest', 'requests>=2.11.1', 'jsonpath-ng', 'lxml', 'unicodecsv', 'cssselect', 'chardet'],
 
     entry_points={
         'pytest11': [
