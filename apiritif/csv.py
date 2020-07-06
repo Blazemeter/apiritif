@@ -17,7 +17,8 @@ limitations under the License.
 """
 import threading
 
-import unicodecsv as csv
+import csv
+from io import open
 from itertools import cycle, islice
 from chardet.universaldetector import UniversalDetector
 
@@ -91,7 +92,6 @@ class CSVReader(Reader):
         self.step = step
         self.first = first
         self.csv = {}
-        self.fds = open(filename, 'rb')
 
         format_params = {}
         if delimiter:
@@ -100,16 +100,18 @@ class CSVReader(Reader):
         format_params["quoting"] = csv.QUOTE_MINIMAL if quoted else csv.QUOTE_NONE
 
         if not encoding:
+            binary_file = open(filename, 'rb')
             detector = UniversalDetector()
-            for line in self.fds.readlines():
+            for line in binary_file.readlines():
                 detector.feed(line)
                 if detector.done:
                     break
             detector.close()
             encoding = detector.result['encoding']
-            self.fds.seek(0)
+            binary_file.close()
 
-        self._reader = csv.DictReader(self.fds, encoding=encoding, fieldnames=fieldnames, **format_params)
+        self.fds = open(filename, 'r', encoding=encoding)
+        self._reader = csv.DictReader(self.fds, fieldnames=fieldnames, **format_params)
         if loop:
             self._reader = cycle(self._reader)
 
