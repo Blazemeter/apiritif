@@ -3,11 +3,14 @@ import tempfile
 
 from unittest import TestCase
 from apiritif.loadgen import Params, Supervisor, ApiritifPlugin
-from apiritif.csv import CSVReaderPerThread
+from apiritif.csv import CSVReaderPerThread, thread_data
 from apiritif.utils import NormalShutdown
 
 
 class TestCSV(TestCase):
+    def setUp(self):
+        thread_data.csv_readers = {}
+
     def test_threads_and_processes(self):
         """ check if threads and processes can divide csv fairly """
         script = os.path.dirname(os.path.realpath(__file__)) + "/resources/test_thread_reader.py"
