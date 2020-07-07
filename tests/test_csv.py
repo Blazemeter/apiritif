@@ -3,11 +3,14 @@ import tempfile
 
 from unittest import TestCase
 from apiritif.loadgen import Params, Supervisor, ApiritifPlugin
-from apiritif.csv import CSVReaderPerThread
+from apiritif.csv import CSVReaderPerThread, thread_data
 from apiritif.utils import NormalShutdown
 
 
 class TestCSV(TestCase):
+    def setUp(self):
+        thread_data.csv_readers = {}
+
     def test_threads_and_processes(self):
         """ check if threads and processes can divide csv fairly """
         script = os.path.dirname(os.path.realpath(__file__)) + "/resources/test_thread_reader.py"
@@ -168,3 +171,15 @@ class TestCSV(TestCase):
 
         self.assertTrue(len(threads["0"]) > 18)
 
+    def test_csv_encoding(self):
+        reader_utf8 = CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "resources/data/encoding_utf8.csv"), loop=False)
+        reader_utf16 = CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "resources/data/encoding_utf16.csv"), loop=False)
+        data_utf8, data_utf16 = [], []
+
+        reader_utf8.read_vars()
+        data_utf8.append(reader_utf8.get_vars())
+
+        reader_utf16.read_vars()
+        data_utf16.append(reader_utf16.get_vars())
+
+        self.assertEqual(data_utf8, data_utf16)
