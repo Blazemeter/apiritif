@@ -30,3 +30,9 @@ class TestTransactions(TestCase):
 
     def test_7_failed_request(self):
         apiritif.http.get("http://notexists")
+
+    def test_8_assertion_trace_problem(self):
+        resp = apiritif.http.get("http://blazedemo.com/")
+        resp.assert_regex_in_body(".*")
+        resp.assert_regex_in_body(".+")
+        resp.assert_regex_in_body("no way this exists in body")

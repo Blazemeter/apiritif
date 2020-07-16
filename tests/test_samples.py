@@ -31,7 +31,7 @@ class TestSamples(TestCase):
         store.writer = CachingWriter()
         nose.run(argv=[__file__, test_file, '-v'], addplugins=[Recorder()])
         samples = store.writer.samples
-        self.assertEqual(len(samples), 7)
+        self.assertEqual(len(samples), 8)
 
         single = samples[0]
         self.assertEqual(single.test_suite, 'TestTransactions')
@@ -93,6 +93,16 @@ class TestSamples(TestCase):
         self.assertEqual(request.test_suite, "test_7_failed_request")
         self.assertEqual(request.test_case, "http://notexists")
         self.assertEqual(len(request.assertions), 0)
+
+        # checks if series of assertions is recorded into trace correctly
+        assert_seq_problem = samples[7]
+        self.assertEqual(assert_seq_problem.status, "FAILED")
+        request = assert_seq_problem.subsamples[0]
+        self.assertEqual(request.test_suite, "test_8_assertion_trace_problem")
+        self.assertEqual(len(request.assertions), 3)
+        self.assertFalse(request.assertions[0].failed)
+        self.assertFalse(request.assertions[1].failed)
+        self.assertTrue(request.assertions[2].failed)
 
     def test_label_single_transaction(self):
         test_file = RESOURCES_DIR + "/test_single_transaction.py"

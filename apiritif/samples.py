@@ -20,7 +20,6 @@ import traceback
 
 import apiritif
 from apiritif.http import RequestFailure
-from apiritif.utils import get_trace
 
 
 class Assertion(object):
@@ -91,9 +90,10 @@ class Sample(object):
         self.assertions.append(Assertion(name))
 
     def set_assertion_failed(self, name, error_message, error_trace=""):
-        for ass in self.assertions:
+        for ass in reversed(self.assertions):
             if ass.name == name:
                 ass.set_failed(error_message, error_trace)
+                break
         self.set_failed(error_message, error_trace)
 
     def to_dict(self):
