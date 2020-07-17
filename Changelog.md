@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.9.4 <sup>17 Jul 2020</sup>
+- improve csv encoding
+- fix assertion trace for multi-asserts
+- add 'assert_status_code_in' assertion
+- migrate onto modern jsonpath_ng
+- add lxml for cssselect
+- add CSSSelect assertion
+
 ## 0.9.3 <sup>03 May 2020</sup>
 - fix cookies processing
 - fix threads closing
