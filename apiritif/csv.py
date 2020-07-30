@@ -15,6 +15,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import re
 import threading
 
 import csv
@@ -40,7 +41,7 @@ class Reader(object):
 
 
 class CSVReaderPerThread(Reader):  # processes multi-thread specific
-    def __init__(self, filename, fieldnames=None, delimiter=None, loop=True, quoted=False, encoding=None):
+    def __init__(self, filename, fieldnames=None, delimiter=None, loop=True, quoted=None, encoding=None):
         self.filename = filename
         self.fieldnames = fieldnames
         self.delimiter = delimiter
@@ -87,7 +88,7 @@ class CSVReaderPerThread(Reader):  # processes multi-thread specific
 
 
 class CSVReader(Reader):
-    def __init__(self, filename, step=1, first=0, fieldnames=None, delimiter=None, loop=True, quoted=False,
+    def __init__(self, filename, step=1, first=0, fieldnames=None, delimiter=None, loop=True, quoted=None,
                  encoding=None):
         self.step = step
         self.first = first
@@ -96,6 +97,18 @@ class CSVReader(Reader):
         format_params = {}
         if delimiter:
             format_params["delimiter"] = delimiter
+
+        if quoted is None:
+            binary_file = open(filename, 'rb')
+            header = binary_file.readline()
+            binary_file.close()
+            detector = UniversalDetector()
+            detector.feed(header)
+            detector.close()
+            encoding = detector.result['encoding']
+            header = header[:-1].decode(encoding=encoding)
+            match = re.match(r'.*["\']\w+["\'](.["\']\w+["\'])+', header)
+            quoted = True if match is not None else False
 
         format_params["quoting"] = csv.QUOTE_MINIMAL if quoted else csv.QUOTE_NONE
 
