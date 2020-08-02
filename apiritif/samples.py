@@ -23,11 +23,12 @@ from apiritif.http import RequestFailure
 
 
 class Assertion(object):
-    def __init__(self, name, ):
+    def __init__(self, name, extras):
         self.name = name
         self.failed = False
         self.error_message = ""
         self.error_trace = ""
+        self.extras = extras
 
     def set_failed(self, error_message, error_trace=""):
         self.failed = True
@@ -86,8 +87,8 @@ class Sample(object):
         sample.set_parent(self)
         self.subsamples.append(sample)
 
-    def add_assertion(self, name):
-        self.assertions.append(Assertion(name))
+    def add_assertion(self, name, extras):
+        self.assertions.append(Assertion(name, extras))
 
     def set_assertion_failed(self, name, error_message, error_trace=""):
         for ass in reversed(self.assertions):
@@ -106,6 +107,8 @@ class Sample(object):
                 "name": ass.name,
                 "isFailed": ass.failed,
                 "errorMessage": ass.error_message,
+                "args": ass.extras['args'],
+                "kwargs": ass.extras['kwargs']
             })
 
         return {
@@ -222,7 +225,7 @@ class ApiritifSampleExtractor(object):
         sample = self.response_map.get(item.response, None)
         if sample is None:
             raise ValueError("Found assertion for unknown response")
-        sample.add_assertion(item.name)
+        sample.add_assertion(item.name, item.extras)
 
     def _parse_assertion_failure(self, item):
         sample = self.response_map.get(item.response, None)

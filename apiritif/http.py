@@ -331,10 +331,11 @@ class TransactionEnded(Event):
 
 
 class Assertion(Event):
-    def __init__(self, name, response):
+    def __init__(self, name, response, extras):
         super(Assertion, self).__init__()
         self.name = name
         self.response = response
+        self.extras = extras
 
     def __repr__(self):
         return "Assertion(name=%r)" % self.name
@@ -399,8 +400,8 @@ class _EventRecorder(object):
         failure = RequestFailure(method, address, request, exception, session)
         self.record_event(failure)
 
-    def record_assertion(self, assertion_name, target_response):
-        self.record_event(Assertion(assertion_name, target_response))
+    def record_assertion(self, assertion_name, target_response, extras):
+        self.record_event(Assertion(assertion_name, target_response, extras))
 
     def record_assertion_failure(self, assertion_name, target_response, failure_message):
         self.record_event(AssertionFailure(assertion_name, target_response, failure_message))
@@ -410,7 +411,8 @@ class _EventRecorder(object):
         @wraps(assertion_method)
         def _impl(self, *method_args, **method_kwargs):
             assertion_name = getattr(assertion_method, '__name__', 'assertion')
-            recorder.record_assertion(assertion_name, self)
+            extras = {"args": list(method_args), "kwargs": method_kwargs}
+            recorder.record_assertion(assertion_name, self, extras)
             try:
                 return assertion_method(self, *method_args, **method_kwargs)
             except BaseException as exc:
