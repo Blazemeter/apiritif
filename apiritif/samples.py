@@ -153,6 +153,8 @@ class ApiritifSampleExtractor(object):
                 self._parse_assertion(item)
             elif isinstance(item, apiritif.AssertionFailure):
                 self._parse_assertion_failure(item)
+            elif isinstance(item, apiritif.Event):
+                self._parse_generic_event(item)
             else:
                 raise ValueError("Unknown kind of event in apiritif recording: %s" % item)
 
@@ -232,6 +234,15 @@ class ApiritifSampleExtractor(object):
         if sample is None:
             raise ValueError("Found assertion failure for unknown response")
         sample.set_assertion_failed(item.name, item.failure_message, "")
+
+    def _parse_generic_event(self, item):
+        """
+        :type item: apiritif.Event
+        """
+        sample = self.response_map.get(item.response, None)
+        if sample is None:
+            raise ValueError("Generic event has to go after a request")
+        sample.extras.setdefault("additional_events", []).append(item.to_dict())
 
     @staticmethod
     def _headers_from_dict(headers):

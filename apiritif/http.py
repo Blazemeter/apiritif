@@ -259,25 +259,27 @@ class smart_transaction(transaction_logged):
 
 
 class Event(object):
-    def __init__(self):
+    def __init__(self, response=None):
         self.timestamp = time.time()
+        self.response = response
+
+    def to_dict(self):  # supposed to be overridden by extenders
+        return {}
 
 
 class Request(Event):
     def __init__(self, method, address, request, response, session):
         """
-
         :type method: str
         :type address: str
         :type request: requests.PreparedRequest
         :type response: HTTPResponse
         :type session: requests.Session
         """
-        super(Request, self).__init__()
+        super(Request, self).__init__(response)
         self.method = method
         self.address = address
         self.request = request
-        self.response = response
         self.session = session
 
     def __repr__(self):
@@ -312,7 +314,7 @@ class RequestFailure(Request):
 
 class TransactionStarted(Event):
     def __init__(self, transaction):
-        super(TransactionStarted, self).__init__()
+        super(TransactionStarted, self).__init__(None)
         self.transaction = transaction
         self.transaction_name = transaction.name
 
@@ -332,9 +334,8 @@ class TransactionEnded(Event):
 
 class Assertion(Event):
     def __init__(self, name, response, extras):
-        super(Assertion, self).__init__()
+        super(Assertion, self).__init__(response)
         self.name = name
-        self.response = response
         self.extras = extras
 
     def __repr__(self):
@@ -343,9 +344,8 @@ class Assertion(Event):
 
 class AssertionFailure(Event):
     def __init__(self, assertion_name, response, failure_message):
-        super(AssertionFailure, self).__init__()
+        super(AssertionFailure, self).__init__(response)
         self.name = assertion_name
-        self.response = response
         self.failure_message = failure_message
 
     def __repr__(self):
