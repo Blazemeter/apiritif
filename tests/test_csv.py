@@ -35,14 +35,14 @@ class TestCSV(TestCase):
                 content.extend(f.readlines()[1::2])
 
         threads = {"0": [], "1": [], "2": [], "3": []}
-        content = [item[item.index('"')+1:].strip() for item in content]
+        content = [item[item.index('"') + 1:].strip() for item in content]
         for item in content:
             self.assertEqual(item[0], item[2])  # thread equals target
-            self.assertEqual("a", item[-1])     # age is the same
+            self.assertEqual("a", item[-1])  # age is the same
             if item[6] == "0":
                 self.assertEqual(-1, item.find('+'))
             else:
-                self.assertNotEqual(-1, item.find('+'))     # name value is modified
+                self.assertNotEqual(-1, item.find('+'))  # name value is modified
             threads[item[0]].append(item[9:-2])
 
         # format: <user>:<pass>, quoting ignored
@@ -78,7 +78,7 @@ class TestCSV(TestCase):
                 content.extend(f.readlines()[1::2])
 
         threads = {"0": [], "1": []}
-        content = [item[item.index('"')+1:].strip() for item in content]
+        content = [item[item.index('"') + 1:].strip() for item in content]
         for item in content:
             threads[item[0]].append(item[2:])
 
@@ -128,7 +128,7 @@ class TestCSV(TestCase):
                 content.extend(f.readlines()[1::2])
 
         threads = {"0": []}
-        content = [item[item.index('"')+1:].strip() for item in content]
+        content = [item[item.index('"') + 1:].strip() for item in content]
         for item in content:
             threads[item[0]].append(item[2:])
 
@@ -165,15 +165,17 @@ class TestCSV(TestCase):
                 content.extend(f.readlines()[1::2])
 
         threads = {"0": []}
-        content = [item[item.index('"')+1:].strip() for item in content]
+        content = [item[item.index('"') + 1:].strip() for item in content]
         for item in content:
             threads[item[0]].append(item[2:])
 
         self.assertTrue(len(threads["0"]) > 18)
 
     def test_csv_encoding(self):
-        reader_utf8 = CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "resources/data/encoding_utf8.csv"), loop=False)
-        reader_utf16 = CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "resources/data/encoding_utf16.csv"), loop=False)
+        reader_utf8 = CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "resources/data/encoding_utf8.csv"),
+                                         loop=False)
+        reader_utf16 = CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "resources/data/encoding_utf16.csv"),
+                                          loop=False)
         data_utf8, data_utf16 = [], []
 
         reader_utf8.read_vars()
@@ -183,3 +185,20 @@ class TestCSV(TestCase):
         data_utf16.append(reader_utf16.get_vars())
 
         self.assertEqual(data_utf8, data_utf16)
+
+    def test_csv_quoted(self):
+        readers = [
+            CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "resources/data/quoted_utf8.csv"), loop=False),
+            CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "resources/data/quoted_utf16.csv"), loop=False),
+            CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "resources/data/unquoted_utf8.csv"), loop=False),
+            CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "resources/data/unquoted_utf16.csv"),
+                               loop=False)]
+        readers_data = []
+
+        for reader in readers:
+            reader.read_vars()
+            readers_data.append(reader.get_vars())
+
+        result = {'ac1': '1', 'bc1': '2', 'cc1': '3'}
+        for data in readers_data:
+            self.assertEqual(data, result)
