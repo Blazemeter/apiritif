@@ -59,7 +59,7 @@ class SampleController(object):
 
     def addError(self, assertion_name, error_msg, error_trace, is_transaction=False):
         if self.tran_mode == is_transaction:
-            self.current_sample.add_assertion(assertion_name)
+            self.current_sample.add_assertion(assertion_name, {"args": [], "kwargs": {}})
             self.current_sample.set_assertion_failed(assertion_name, error_msg, error_trace)
 
     def addFailure(self, error, is_transaction=False):
@@ -67,7 +67,7 @@ class SampleController(object):
             assertion_name = error[0].__name__
             error_msg = str(error[1]).split('\n')[0]
             error_trace = get_trace(error)
-            self.current_sample.add_assertion(assertion_name)
+            self.current_sample.add_assertion(assertion_name, {"args": [], "kwargs": {}})
             self.current_sample.set_assertion_failed(assertion_name, error_msg, error_trace)
 
     def addSuccess(self, is_transaction=False):
