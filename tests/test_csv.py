@@ -202,3 +202,19 @@ class TestCSV(TestCase):
         result = {'ac1': '1', 'bc1': '2', 'cc1': '3'}
         for data in readers_data:
             self.assertEqual(data, result)
+
+    def test_csv_delimiter(self):
+        readers = [
+            CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "resources/data/encoding_utf8.csv"), loop=False),
+            CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "resources/data/delimiter_tab.csv"), loop=False),
+            CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "resources/data/delimiter_semicolon.csv"),
+                               loop=False)]
+        readers_data = []
+
+        for reader in readers:
+            reader.read_vars()
+            readers_data.append(reader.get_vars())
+
+        result = {'ac1': '1', 'bc1': '2', 'cc1': '3'}
+        for data in readers_data:
+            self.assertEqual(data, result)

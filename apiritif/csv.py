@@ -93,37 +93,36 @@ class CSVReader(Reader):
         self.step = step
         self.first = first
         self.csv = {}
-
+        self.bin_fds = open(filename, 'rb')
         format_params = {}
-        if delimiter:
-            format_params["delimiter"] = delimiter
-
-        if quoted is None:
-            binary_file = open(filename, 'rb')
-            header = binary_file.readline()
-            binary_file.close()
-            detector = UniversalDetector()
-            detector.feed(header)
-            detector.close()
-            encoding = detector.result['encoding']
-            header = header[:-1].decode(encoding=encoding)
-            match = re.match(r'.*["\']\w+["\'](.["\']\w+["\'])+', header)
-            quoted = True if match is not None else False
-
-        format_params["quoting"] = csv.QUOTE_MINIMAL if quoted else csv.QUOTE_NONE
 
         if not encoding:
-            binary_file = open(filename, 'rb')
             detector = UniversalDetector()
-            for line in binary_file.readlines():
+            for line in self.bin_fds.readlines():
                 detector.feed(line)
                 if detector.done:
                     break
             detector.close()
             encoding = detector.result['encoding']
-            binary_file.close()
+            self.bin_fds.seek(0)
 
+        if quoted is None:
+            header = self.bin_fds.readline()
+            header = header[:-1].decode(encoding=encoding)
+            match = re.match(r'.*["\']\w+["\'](.["\']\w+["\'])+', header)
+            quoted = True if match is not None else False
+            self.bin_fds.seek(0)
+        format_params["quoting"] = csv.QUOTE_MINIMAL if quoted else csv.QUOTE_NONE
+
+        self.bin_fds.close()
         self.fds = open(filename, 'r', encoding=encoding)
+
+        if not delimiter:
+            dialect = csv.Sniffer().sniff(self.fds.read(1024))
+            self.fds.seek(0)
+            delimiter = dialect.delimiter
+        format_params["delimiter"] = delimiter
+
         self._reader = csv.DictReader(self.fds, fieldnames=fieldnames, **format_params)
         if loop:
             self._reader = cycle(self._reader)
