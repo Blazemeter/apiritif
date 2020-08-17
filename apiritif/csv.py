@@ -118,7 +118,7 @@ class CSVReader(Reader):
         self.fds = open(filename, 'r', encoding=encoding)
 
         if not delimiter:
-            dialect = csv.Sniffer().sniff(self.fds.read(1024))
+            dialect = csv.Sniffer().sniff(self.fds.read())
             self.fds.seek(0)
             delimiter = dialect.delimiter
         format_params["delimiter"] = delimiter
