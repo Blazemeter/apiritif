@@ -86,3 +86,8 @@ def clean_transaction_handlers():
 
 def set_transaction_handlers(handlers):
     put_into_thread_store(transaction_handlers=handlers)
+
+
+def extended_log(logline, logfile):
+    with open(logfile) as log:
+        log.write(logline)
