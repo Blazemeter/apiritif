@@ -14,6 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import datetime
 from threading import local
 
 
@@ -89,5 +90,5 @@ def set_transaction_handlers(handlers):
 
 
 def extended_log(logline, logfile):
-    with open(logfile) as log:
-        log.write(logline)
+    with open(logfile, 'at') as log:
+        log.write(f"{datetime.datetime.now()} {logline} \n")
