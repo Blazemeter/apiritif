@@ -14,7 +14,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import datetime
 from threading import local
 
 
@@ -89,6 +88,19 @@ def set_transaction_handlers(handlers):
     put_into_thread_store(transaction_handlers=handlers)
 
 
-def extended_log(logline, logfile):
-    with open(logfile, 'at') as log:
-        log.write(f"{datetime.datetime.now()} {logline} \n")
+def extended_log(logline):
+    for func in get_logging_handler():
+        func(logline)
+
+
+def set_logging_handler(handler):
+    put_into_thread_store(log_handler=handler)
+
+
+def get_logging_handler():
+    log_handler = get_from_thread_store('log_handler')
+    return log_handler
+
+
+def clean_logging_handler():
+    _thread_local.kwargs["log_handler"] = []
