@@ -89,18 +89,18 @@ def set_transaction_handlers(handlers):
 
 
 def extended_log(logline):
-    for func in get_logging_handler():
+    for func in get_logging_handlers():
         func(logline)
 
 
-def set_logging_handler(handler):
+def set_logging_handlers(handler):
     put_into_thread_store(log_handler=handler)
 
 
-def get_logging_handler():
+def get_logging_handlers():
     log_handler = get_from_thread_store('log_handler')
     return log_handler
 
 
-def clean_logging_handler():
+def clean_logging_handlers():
     _thread_local.kwargs["log_handler"] = []
