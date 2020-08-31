@@ -98,9 +98,9 @@ def set_logging_handlers(handler):
 
 
 def get_logging_handlers():
-    log_handler = get_from_thread_store('log_handler')
+    log_handler = get_from_thread_store("log_handlers")
     return log_handler
 
 
 def clean_logging_handlers():
-    _thread_local.kwargs["log_handler"] = []
+    _thread_local.kwargs["log_handlers"] = []
