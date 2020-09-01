@@ -93,37 +93,35 @@ class CSVReader(Reader):
         self.step = step
         self.first = first
         self.csv = {}
-
         format_params = {}
-        if delimiter:
-            format_params["delimiter"] = delimiter
+        if not encoding and quoted is None:
+            with open(filename, 'rb') as bin_fds:
+                if not encoding:
+                    detector = UniversalDetector()
+                    for line in bin_fds.readlines():
+                        detector.feed(line)
+                        if detector.done:
+                            break
+                    detector.close()
+                    encoding = detector.result['encoding']
+                    bin_fds.seek(0)
 
-        if quoted is None:
-            binary_file = open(filename, 'rb')
-            header = binary_file.readline()
-            binary_file.close()
-            detector = UniversalDetector()
-            detector.feed(header)
-            detector.close()
-            encoding = detector.result['encoding']
-            header = header[:-1].decode(encoding=encoding)
-            match = re.match(r'.*["\']\w+["\'](.["\']\w+["\'])+', header)
-            quoted = True if match is not None else False
-
+                if quoted is None:
+                    header = bin_fds.readline()
+                    header = header[:-1].decode(encoding=encoding)
+                    match = re.match(r'.*["\']\w+["\'](.["\']\w+["\'])+', header)
+                    quoted = True if match is not None else False
+                    bin_fds.seek(0)
         format_params["quoting"] = csv.QUOTE_MINIMAL if quoted else csv.QUOTE_NONE
 
-        if not encoding:
-            binary_file = open(filename, 'rb')
-            detector = UniversalDetector()
-            for line in binary_file.readlines():
-                detector.feed(line)
-                if detector.done:
-                    break
-            detector.close()
-            encoding = detector.result['encoding']
-            binary_file.close()
-
         self.fds = open(filename, 'r', encoding=encoding)
+
+        if not delimiter:
+            dialect = csv.Sniffer().sniff(self.fds.read())
+            self.fds.seek(0)
+            delimiter = dialect.delimiter
+        format_params["delimiter"] = delimiter
+
         self._reader = csv.DictReader(self.fds, fieldnames=fieldnames, **format_params)
         if loop:
             self._reader = cycle(self._reader)
