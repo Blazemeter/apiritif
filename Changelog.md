@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.5 <sup>01 sep 2020</sup>
+- add quoting auto detection feature
+- add ability to log actions externally
+- extend trace context
+
 ## 0.9.4 <sup>17 Jul 2020</sup>
 - improve csv encoding
 - fix assertion trace for multi-asserts
