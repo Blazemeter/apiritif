@@ -14,7 +14,7 @@ limitations under the License.
 """
 
 from .csv import CSVReaderPerThread
-from .thread import put_into_thread_store, get_from_thread_store, extended_log
+from .thread import put_into_thread_store, get_from_thread_store, external_log
 from .thread import get_transaction_handlers, set_transaction_handlers, get_iteration
 from .thread import get_logging_handlers, set_logging_handlers
 from .http import http, transaction, transaction_logged, smart_transaction, recorder
