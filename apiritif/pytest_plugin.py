@@ -69,7 +69,12 @@ class ApiritifPytestPlugin(object):
             self._filter(item['subsamples'])
             if self._detail_level >= 4:
                 if isinstance(item['extras'].get('requestBody'), bytes):
-                    item['extras']['requestBody'] = item['extras']['requestBody'].decode('utf-8')
+                    try:
+                        # optimistic
+                        item['extras']['requestBody'] = item['extras']['requestBody'].decode('utf-8')
+                    except UnicodeError:
+                        # worst case it is just byte sequence
+                        item['extras']['requestBody'] = item['extras']['requestBody'].decode('latin-1')
 
             if self._detail_level <= 3:
                 item['extras'].pop('requestCookiesRaw', None)

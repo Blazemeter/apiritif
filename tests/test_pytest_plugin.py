@@ -8,6 +8,7 @@ from _pytest.config.argparsing import Parser
 from _pytest.nodes import Node
 
 import apiritif
+from apiritif import http
 from apiritif.pytest_plugin import pytest_addoption, pytest_configure, pytest_unconfigure, ApiritifPytestPlugin
 
 ctype = namedtuple("config", ["option", "pluginmanager"])
@@ -54,13 +55,16 @@ class TestHTTPMethods(TestCase):
     def test_flow_maxdetail(self):
         tmp = tempfile.NamedTemporaryFile()
         tmp.close()
-        config = ctype(otype(tmp.name, 3), PytestPluginManager())
+        config = ctype(otype(tmp.name, 4), PytestPluginManager())
         plugin = ApiritifPytestPlugin(config)
         for _ in plugin.pytest_runtest_setup(None):
             pass
 
         with apiritif.transaction("tran") as tran:
             tran.set_request(bytes("test", 'utf8'))
+
+        http.post('http://httpbin.org/post', data=bytes([0xa0, 1, 2, 3]),
+                  headers={'Content-Type': 'application/octet-stream'})
 
         node = Node("test", nodeid="tst", config=config, session="some")
         for _ in plugin.pytest_runtest_teardown(node):
