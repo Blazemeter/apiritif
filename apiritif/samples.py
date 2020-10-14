@@ -226,7 +226,7 @@ class ApiritifSampleExtractor(object):
     def _parse_assertion(self, item):
         sample = self.response_map.get(item.response, None)
         if sample is None:
-            raise ValueError("Found assertion for unknown response")
+            raise ValueError("Found assertion for unknown response: %r", item.response)
         sample.add_assertion(item.name, item.extras)
 
     def _parse_assertion_failure(self, item):

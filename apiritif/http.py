@@ -31,6 +31,8 @@ from apiritif.thread import get_from_thread_store, put_into_thread_store
 from apiritif.utilities import *
 from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp, log, get_trace
 
+BODY_LIMIT = 256
+
 
 class TimeoutError(Exception):
     pass
@@ -730,7 +732,7 @@ class HTTPResponse(object):
         body = self.json()
         matches = jsonpath_expr.find(body)
         if not matches:
-            msg = msg or "JSONPath query %r didn't match response content: %s" % (jsonpath_query, body)
+            msg = msg or "JSONPath query %r didn't match response: %s" % (jsonpath_query, self.text[:BODY_LIMIT])
             raise AssertionError(msg)
         actual_value = matches[0].value
         if expected_value is not None and actual_value != expected_value:
@@ -745,7 +747,7 @@ class HTTPResponse(object):
         body = self.json()
         matches = jsonpath_expr.find(body)
         if matches:
-            msg = msg or "JSONPath query %r did match response content: %s" % (jsonpath_query, body)
+            msg = msg or "JSONPath query %r did match response: %s" % (jsonpath_query, self.text[:BODY_LIMIT])
             raise AssertionError(msg)
         return self
 
@@ -755,7 +757,7 @@ class HTTPResponse(object):
         tree = etree.parse(BytesIO(self.content), parser)
         matches = tree.xpath(xpath_query)
         if not matches:
-            msg = msg or "XPath query %r didn't match response content: %s" % (xpath_query, self.text)
+            msg = msg or "XPath query %r didn't match response content: %s" % (xpath_query, self.text[:BODY_LIMIT])
             raise AssertionError(msg)
         return self
 
@@ -765,7 +767,7 @@ class HTTPResponse(object):
         tree = etree.parse(BytesIO(self.content), parser)
         matches = tree.xpath(xpath_query)
         if matches:
-            msg = msg or "XPath query %r did match response content: %s" % (xpath_query, self.text)
+            msg = msg or "XPath query %r did match response content: %s" % (xpath_query, self.text[:BODY_LIMIT])
             raise AssertionError(msg)
         return self
 
@@ -777,7 +779,7 @@ class HTTPResponse(object):
 
         matches = expected_value in vals if expected_value is not None else vals
         if not matches:
-            msg = msg or "CSSSelect query %r didn't match response content: %s" % (query, self.text)
+            msg = msg or "CSSSelect query %r didn't match response content: %s" % (query, self.text[:BODY_LIMIT])
             raise AssertionError(msg)
         return self
 
@@ -788,7 +790,7 @@ class HTTPResponse(object):
         except AssertionError:
             return self
 
-        msg = msg or "CSSSelect query %r did match response content: %s" % (query, self.text)
+        msg = msg or "CSSSelect query %r did match response content: %s" % (query, self.text[:BODY_LIMIT])
         raise AssertionError(msg)
 
     # TODO: assertTiming? to assert response time / connection time
