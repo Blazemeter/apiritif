@@ -16,6 +16,7 @@ limitations under the License.
 """
 
 import copy
+import os
 import traceback
 
 import apiritif
@@ -284,8 +285,16 @@ class ApiritifSampleExtractor(object):
         req = request_event.request
         cookies = request_event.session.cookies
 
+        resp_text = resp.text
+        req_text = req.body or ""
+
+        hard_limit = int(os.environ.get("APIRITIF_TRACE_BODY_HARDLIMIT", "0"))
+        if hard_limit:
+            req_text = req_text[:hard_limit]
+            resp_text = resp_text[:hard_limit]
+
         return self._extras_dict(
             req.url, req.method, resp.status_code, resp.reason,
-            dict(resp.headers), resp.text, len(resp.content), resp.elapsed.total_seconds(),
-            req.body or "", cookies.get_dict(), dict(resp._request.headers)
+            dict(resp.headers), resp_text, len(resp.content), resp.elapsed.total_seconds(),
+            req_text, cookies.get_dict(), dict(resp._request.headers)
         )

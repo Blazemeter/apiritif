@@ -16,6 +16,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import copy
+import os
 import threading
 import time
 from functools import wraps
@@ -31,7 +32,7 @@ from apiritif.thread import get_from_thread_store, put_into_thread_store
 from apiritif.utilities import *
 from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp, log, get_trace
 
-BODY_LIMIT = 256
+BODY_LIMIT = int(os.environ.get("APIRITIF_TRACE_BODY_EXCLIMIT", "1024"))
 
 
 class TimeoutError(Exception):
