@@ -142,11 +142,12 @@ response.assert_ok().assert_in_body("Example")
 ## Transactions
 
 Apiritif allows to group multiple requests or actions into a transaction using a `transaction` context manager.
-For example when we have test action like bellow we want to execute this test as a separate piece.
+For example when we have test action like bellow we want to execute requests according to concrete user as a separate piece.
+Also we want to process test for `users/all` page even if something wrong with previous actions.
 
 ```python
 def test_with_login():
-    user_credentials = database.get_my_user();
+    user_credentials = data_mock.get_my_user()
     http.get("https://blazedemo.com/user/login?id="+user_credentials.id).assert_ok()
     http.get("https://blazedemo.com/user/id/personalPage").assert_ok()
     http.get("https://blazedemo.com/user/id/getPersonalData").assert_ok()
@@ -159,13 +160,14 @@ Here where we can use transaction in order to wrap login process in one block.
 ```python
 def test_with_login():
     with apiritif.transaction('Login'):
-        user_credentials = database.get_my_user();
+        user_credentials = data_mock.get_my_user()
         http.get("https://blazedemo.com/user/login?id="+user_credentials.id).assert_ok()
         http.get("https://blazedemo.com/user/id/personalPage").assert_ok()
         http.get("https://blazedemo.com/user/id/getPersonalData").assert_ok()
 
     http.get("https://blazedemo.com/users/all").assert_ok()
 ```
+At the same time requests to `users/all` page will be executed outside of transaction even if something inside transaction fails.
 
 Transaction defines the name for the block of code. This name with execution results of this particular block will be displayed in the output report.
 
@@ -187,9 +189,7 @@ class Tests(TestCase):
         http.get("https://blazedemo.com/contactUs").assert_ok()
         http.get("https://blazedemo.com/copyright").assert_ok()
 ```
-In this case we have multiple requests divided into blocks.
-I do not want to test pages under `users` space if it is not available.
-Also I want to process test for `contactUs` and `copyright` pages even if something wrong with users.
+In this case we have multiple requests divided into blocks. I do not want to test pages under `users` space if it is not available.
 For this purpose we can use `smart_transaction`.
 
 ```python
@@ -212,7 +212,6 @@ class Tests(TestCase):
         http.get("https://blazedemo.com/copyright").assert_ok()
 ```
 Now this two blocks are wrapped into `smart_transaction` which would help with error test flow handling and logging.
-At the same time requests to main page, `contactUs` and `copyright` will be executed outside of any transactions even if some of transactions fails.
 
 Also each transaction defines the name for the block of code and will be displayed in the output report.
  
@@ -250,7 +249,7 @@ class Tests(TestCase):
 
 ## Execution results
 
-Apiritif writes output data from tests in `apiritif.#.csv` files by default. Here `#` is number of executing thread.
+Apiritif writes output data from tests in `apiritif.#.csv` files by default. Here `#` is number of executing process.
 The output file is similar to this:
 ```csv
 timeStamp,elapsed,Latency,label,responseCode,responseMessage,success,allThreads,bytes
@@ -258,7 +257,8 @@ timeStamp,elapsed,Latency,label,responseCode,responseMessage,success,allThreads,
 1602759519186,0,0,Correct transaction,,,true,0,2
 1602759519187,0,0,Test with exception,,Exception: Horrible error,false,0,2
 ```  
-It contains test and transaction results for executed tests by one thread.
+It contains test and transaction results for executed tests by one process.
+
 ## Taurus Integration
 
 TODO: describe that Taurus can extract Apiritif's action log and handle it.
