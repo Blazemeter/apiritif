@@ -270,4 +270,8 @@ debug http requests and write test interactively.
 
 TODO: describe how to silence Apiritif logging.
 
+### Environment Variables
 
+There are environment variables to control length of response/request body to be written into traces and logs:
+  * `APIRITIF_TRACE_BODY_EXCLIMIT` - limit of body part to include into exception messages, default is 1024
+  * `APIRITIF_TRACE_BODY_HARDLIMIT` - limit of body length to include into JSON trace records, default is unlimited
