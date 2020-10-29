@@ -53,7 +53,7 @@ class http(object):
     @staticmethod
     def request(method, address, session=None,
                 params=None, headers=None, cookies=None, data=None, json=None, files=None,
-                allow_redirects=True, timeout=30):
+                allow_redirects=True, timeout=30, cert=None):
         """
 
         :param method: str
@@ -75,7 +75,7 @@ class http(object):
         request = requests.Request(method, address,
                                    params=params, headers=headers, cookies=cookies, json=json, data=data, files=files)
         prepared = session.prepare_request(request)
-        settings = session.merge_environment_settings(prepared.url, {}, False, False, None)
+        settings = session.merge_environment_settings(prepared.url, {}, False, False, cert)
         try:
             response = session.send(prepared, allow_redirects=allow_redirects, timeout=timeout, **settings)
         except requests.exceptions.Timeout as exc:
