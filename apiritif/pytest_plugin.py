@@ -1,5 +1,6 @@
 import json
 import sys
+import traceback
 
 import pytest
 
@@ -43,13 +44,23 @@ class ApiritifPytestPlugin(object):
         yield
 
     @pytest.hookimpl(hookwrapper=True)
-    def pytest_runtest_teardown(self, item):
-        self._trace_map[item.nodeid] = self._get_subsamples()
-        yield
+    def pytest_runtest_makereport(self, item, call):
+        report = yield
+        if call.when == 'call':
+            self._trace_map[item.nodeid] = self._get_subsamples(call, report.result, item)
 
-    def _get_subsamples(self):
+    def _get_subsamples(self, call, report, item):
         recording = self._pop_events()
         sample = Sample()
+        sample.test_case = item.name
+        if item.parent:
+            sample.test_suite = item.parent.name
+        sample.duration = report.duration
+        sample.status = 'PASSED' if report.passed else 'FAILED'
+        if call.excinfo:
+            sample.error_msg = str(call.excinfo.value)
+            sample.error_trace = traceback.format_tb(call.excinfo.tb)
+
         extr = ApiritifSampleExtractor()
         trace = extr.parse_recording(recording, sample)
         toplevel_sample = trace[0].to_dict()
