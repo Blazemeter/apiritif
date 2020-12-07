@@ -12,7 +12,7 @@ class TestResponse(TestCase):
     def test_cert_client(self):
         # client certificate configuration. requires cert file and password. public server: https://badssl.com/
         cert = (os.path.join(os.path.dirname(__file__), "resources/data/badssl.com-client.p12"), None)
-        response = http.get('http://badssl.test', cert=cert)
+        response = http.get('https://client.badssl.com/', cert=cert)
         response.assert_ok()
 
     def test_cert_server(self):
