@@ -4,7 +4,7 @@ import os
 from apiritif import http
 
 
-class TestResponce(TestCase):
+class TestResponse(TestCase):
     def test_cookies(self):
         response = http.get('http://httpbin.org/cookies/set?name=value', cookies={"foo": "bar"})
         response.assert_ok()
