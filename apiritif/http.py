@@ -75,7 +75,7 @@ class http(object):
         request = requests.Request(method, address,
                                    params=params, headers=headers, cookies=cookies, json=json, data=data, files=files)
         prepared = session.prepare_request(request)
-        settings = session.merge_environment_settings(prepared.url, {}, False, False, None)
+        settings = session.merge_environment_settings(prepared.request_url, {}, False, False, None)
         try:
             response = session.send(prepared, allow_redirects=allow_redirects, timeout=timeout, **settings)
         except requests.exceptions.Timeout as exc:
