@@ -5,28 +5,7 @@ certificate_file_p12 = 'badssl.com-client.p12'
 certificate_secret = 'badssl.com'
 
 
-def connect_with_requests():
-    import requests
-
-    r = requests.get(request_url, verify=certificate_file_pem)
-
-    print(r)
-    print(r.content)
-
-
-def connect_with_urllib3():
-    import urllib3
-
-    conn = urllib3.connection_from_url(
-        request_url,
-        ca_certs=certificate_file_pem,
-        key_password=certificate_secret,
-        cert_reqs='REQUIRED')
-
-    print(conn.request('get', request_url))
-
-
-def connect_with_httpclient():  # working approach
+def connect_with_httpclient():
     import http.client
     import ssl
 
@@ -43,13 +22,9 @@ def connect_with_httpclient():  # working approach
     print(data)
 
 
-connect_with_httpclient()
-
-
 def connect_with_openssl():
     import OpenSSL
     import socket
-
 
     cert_data = None
     cert_pass = certificate_secret.encode('utf8')
@@ -61,13 +36,24 @@ def connect_with_openssl():
 
     context = OpenSSL.SSL.Context(OpenSSL.SSL.SSLv23_METHOD)
     context.use_certificate(cert)
+
+    ca_certs = p12.get_ca_certificates()
+    if ca_certs:
+        for ca_cert in ca_certs:
+            context.add_extra_chain_cert(ca_cert)
     context.use_privatekey(p12.get_privatekey())
 
-    connection = OpenSSL.SSL.Connection(context, socket.socket())
+    connection = OpenSSL.SSL.Connection(context, socket.socket(socket.AF_INET, socket.SOCK_STREAM))
+    connection.set_tlsext_host_name(host.encode('utf8'))
 
     connection.connect((host, 443))
 
-    print(connection.write("hello there"))
+    connection.send('GET / HTTP/1.1\r\n'
+                    'User-Agent: python-requests/2.24.0\r\n'
+                    'HOST: ' + host + '\r\n'
+                    'Accept-Encoding: gzip, deflate\r\n'
+                    'Connection: Keep-Alive\r\n'
+                    '\r\n')
     print(connection.recv(1024))
 
 
@@ -81,7 +67,12 @@ def connect_with_ssl():
     sock = socket.create_connection((host, 443))
     ssl_sock = context.wrap_socket(sock, server_hostname=host)
 
-    ssl_sock.send("hello there".encode('utf8'))
-    print(ssl_sock.recv(1024))
+    ssl_sock.send(('GET / HTTP/1.1\r\n'
+                   'User-Agent: python-requests/2.24.0\r\n'
+                   'HOST: ' + host + '\r\n'
+                   'Accept-Encoding: gzip, deflate\r\n'
+                   'Connection: Keep-Alive\r\n'
+                   '\r\n').encode('utf8'))
+    print(ssl_sock.read(1024))
 
     ssl_sock.close()
