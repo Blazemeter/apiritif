@@ -28,7 +28,7 @@ from lxml import etree, html
 from requests.structures import CaseInsensitiveDict
 
 import apiritif
-from apiritif.ssl_plugin import SSLPlugin
+from apiritif.ssl_adapter import SSLAdapter
 from apiritif.thread import get_from_thread_store, put_into_thread_store
 from apiritif.utilities import *
 from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp, log, get_trace
@@ -54,7 +54,7 @@ class http(object):
     @staticmethod
     def request(method, address, session=None,
                 params=None, headers=None, cookies=None, data=None, json=None, files=None,
-                cert=None, encrypted_cert=None, allow_redirects=True, timeout=30):
+                encrypted_cert=None, allow_redirects=True, timeout=30):
         """
 
         :param method: str
@@ -74,11 +74,10 @@ class http(object):
         if session is None:
             session = requests.Session()
 
-        if cert is not None:
-            session.cert = cert
-        elif encrypted_cert is not None:
+        if encrypted_cert is not None:
             certificate_file_path, passphrase = encrypted_cert
-            SSLPlugin.use_encrypted_certificate(session, certificate_file_path, passphrase)
+            adapter = SSLAdapter(certificate_file_path=certificate_file_path, passphrase=passphrase)
+            session.mount('https://', adapter)
 
         request = requests.Request(method, address,
                                    params=params, headers=headers, cookies=cookies, json=json, data=data, files=files)
