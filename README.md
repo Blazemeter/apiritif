@@ -39,9 +39,18 @@ def get(address,               # URL for the request
         cookies=None,          # request cookies
         data=None,             # raw request data
         json=None,             # attach JSON object as request body
+        encrypted_cert=None,   # certificate to use with request 
         allow_redirects=True,  # automatically follow HTTP redirects
         timeout=30)            # request timeout, by default it's 30 seconds
 ```
+
+##### Certificate usage
+Currently `http` supports `pem` and `pkcs12` certificates. 
+Here is an example of certificate usage:
+```python
+http.get("http://api.example.com/posts", encrypted_cert=('./cert.pem', 'passphrase'))
+```
+First parameter is path to certificate, second is the passphrase certificate encrypted with.
 
 ## HTTP Targets
 

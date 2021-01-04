@@ -4,6 +4,7 @@ from apiritif.http import http
 from nose.tools import raises
 
 
+# TODO: This class contains integration tests. Need to be removed in future
 class TestSSL(TestCase):
     def setUp(self):
         self.host = 'client.badssl.com'
