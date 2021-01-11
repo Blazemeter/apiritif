@@ -1,4 +1,5 @@
 import OpenSSL
+import os
 from unittest import TestCase
 from apiritif.http import http
 from apiritif import ssl_adapter
@@ -81,13 +82,19 @@ class PyOpenSSLContextMock:
 
 class TestSSLAdapter(TestCase):
     def setUp(self):
+        self.current_dir = os.path.dirname(os.path.realpath(__file__))
         self.real_crypto = ssl_adapter.crypto
         self.real_PyOpenSSLContext = ssl_adapter.PyOpenSSLContext
         ssl_adapter.crypto = CryptoMock()
         ssl_adapter.PyOpenSSLContext = PyOpenSSLContextMock
 
+    def tearDown(self):
+        ssl_adapter.crypto = self.real_crypto
+        ssl_adapter.PyOpenSSLContext = self.real_PyOpenSSLContext
+
     def test_adapter_with_p12_cert(self):
-        adapter = ssl_adapter.SSLAdapter(certificate_file_path='certificates/dump-file.p12', passphrase='pass')
+        certificate_file_path = self.current_dir + '/certificates/dump-file.p12'
+        adapter = ssl_adapter.SSLAdapter(certificate_file_path=certificate_file_path, passphrase='pass')
 
         self.assertEqual('privatekey', adapter.ssl_context._ctx.privatekey)
         self.assertEqual('certificate', adapter.ssl_context._ctx.certificate.certificate)
@@ -96,7 +103,8 @@ class TestSSLAdapter(TestCase):
         self.assertEqual(0, ssl_adapter.crypto.load_privatekey_called)
 
     def test_adapter_with_pem_cert(self):
-        adapter = ssl_adapter.SSLAdapter(certificate_file_path='certificates/dump-file.pem', passphrase='pass')
+        certificate_file_path = self.current_dir + '/certificates/dump-file.pem'
+        adapter = ssl_adapter.SSLAdapter(certificate_file_path=certificate_file_path, passphrase='pass')
 
         self.assertEqual('privatekey', adapter.ssl_context._ctx.privatekey)
         self.assertEqual('certificate', adapter.ssl_context._ctx.certificate.certificate)
@@ -104,18 +112,15 @@ class TestSSLAdapter(TestCase):
         self.assertEqual(1, ssl_adapter.crypto.load_certificate_called)
         self.assertEqual(1, ssl_adapter.crypto.load_privatekey_called)
 
-    def tearDown(self):
-        ssl_adapter.crypto = self.real_crypto
-        ssl_adapter.PyOpenSSLContext = self.real_PyOpenSSLContext
-
 
 # TODO: This class contains integration tests. Need to be removed in future
 class TestSSL(TestCase):
     def setUp(self):
+        self.current_dir = os.path.dirname(os.path.realpath(__file__))
         self.host = 'client.badssl.com'
         self.request_url = 'https://client.badssl.com/'
-        self.certificate_file_pem = 'certificates/badssl.com-client.pem'
-        self.certificate_file_p12 = 'certificates/badssl.com-client.p12'
+        self.certificate_file_pem = self.current_dir + '/certificates/badssl.com-client.pem'
+        self.certificate_file_p12 = self.current_dir + '/certificates/badssl.com-client.p12'
         self.passphrase = 'badssl.com'
 
     def test_get_with_encrypted_p12_certificate(self):
@@ -129,7 +134,7 @@ class TestSSL(TestCase):
         self.assertEqual(200, response.status_code)
 
     def test_get_with_incorrect_certificate(self):
-        certificate_file_pem_incorrect = 'certificates/badssl.com-client-wrong.pem'
+        certificate_file_pem_incorrect = self.current_dir + '/certificates/badssl.com-client-wrong.pem'
         encrypted_cert = (certificate_file_pem_incorrect, self.passphrase)
         response = http.get(self.request_url, encrypted_cert=encrypted_cert)
         self.assertEqual(400, response.status_code)
