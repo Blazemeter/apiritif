@@ -294,7 +294,7 @@ class ApiritifSampleExtractor(object):
             resp_text = resp_text[:hard_limit]
 
         return self._extras_dict(
-            req.url, req.method, resp.status_code, resp.reason,
+            req.request_url, req.method, resp.status_code, resp.reason,
             dict(resp.headers), resp_text, len(resp.content), resp.elapsed.total_seconds(),
             req_text, cookies.get_dict(), dict(resp._request.headers)
         )
