@@ -16,7 +16,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import os
-import OpenSSL
+from OpenSSL import crypto
 from datetime import datetime
 from requests.adapters import HTTPAdapter
 from urllib3.contrib.pyopenssl import PyOpenSSLContext
@@ -81,15 +81,15 @@ class CertificateReader:
         CertificateReader._check_cert_not_expired(cert)
 
         context = PyOpenSSLContext(ssl_protocol)
-        context.ctx.use_certificate(cert)
+        context._ctx.use_certificate(cert)
 
         ca_certs = pkcs12_cert.get_ca_certificates()
         if ca_certs:
             for ca_cert in ca_certs:
                 CertificateReader._check_cert_not_expired(ca_cert)
-                context.ctx.add_extra_chain_cert(ca_cert)
+                context._ctx.add_extra_chain_cert(ca_cert)
 
-        context.ctx.use_privatekey(pkcs12_cert.get_privatekey())
+        context._ctx.use_privatekey(pkcs12_cert.get_privatekey())
 
         return context
 
@@ -101,14 +101,14 @@ class CertificateReader:
 
     @staticmethod
     def _create_openssl_cert_from_pem(certificate_data, certificate_password):
-        cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, certificate_data)
-        key = OpenSSL.crypto.load_privatekey(OpenSSL.crypto.FILETYPE_PEM, certificate_data, passphrase=certificate_password)
+        cert = crypto.load_certificate(crypto.FILETYPE_PEM, certificate_data)
+        key = crypto.load_privatekey(crypto.FILETYPE_PEM, certificate_data, passphrase=certificate_password)
 
-        pkcs = OpenSSL.crypto.PKCS12()
+        pkcs = crypto.PKCS12()
         pkcs.set_privatekey(key)
         pkcs.set_certificate(cert)
         return pkcs
 
     @staticmethod
     def _create_openssl_cert_from_pkcs12(certificate_data, certificate_password):
-        return OpenSSL.crypto.load_pkcs12(certificate_data, certificate_password)
+        return crypto.load_pkcs12(certificate_data, certificate_password)
