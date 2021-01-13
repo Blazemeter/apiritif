@@ -27,7 +27,7 @@ def fake_process(trace_fname):
 
     yield
 
-    node = Node("test", nodeid="tst", config=config, session="some")
+    node = Node._create("test", nodeid="tst", config=config, session="some")
     node._report_sections = []
     node.location = []
     node.user_properties = []
