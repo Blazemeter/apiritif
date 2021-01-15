@@ -19,7 +19,7 @@ from setuptools import setup
 setup(
     name="apiritif",
     packages=['apiritif'],
-    version="0.9.5",
+    version="0.9.6",
     description='Python framework for API testing',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
