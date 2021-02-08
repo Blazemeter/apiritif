@@ -1,10 +1,9 @@
+import asyncio
 import copy
 import logging
 import os
 import tempfile
-import time
 from unittest import TestCase
-from multiprocessing.pool import CLOSE
 
 import apiritif
 from apiritif import store, thread
@@ -22,9 +21,21 @@ class DummyWriter(JTLSampleWriter):
             log.write("%s\n" % os.getpid())
 
 
+def _run_until_complete(awaitable):
+    loop = asyncio.get_event_loop()
+    return loop.run_until_complete(awaitable)
+
+
 class TestLoadGen(TestCase):
     def setUp(self):
         self.required_method_called = False
+        self.base_loop = asyncio.get_event_loop()
+        self.test_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.test_loop)
+
+    def tearDown(self):
+        asyncio.set_event_loop(self.base_loop)
+        self.test_loop.close()
 
     def get_required_method(self, method):
         def required_method(*args, **kwargs):
@@ -57,7 +68,7 @@ class TestLoadGen(TestCase):
         params.verbose = True
 
         worker = Worker(params)
-        self.assertRaises(RuntimeError, worker.run_nose, params)
+        self.assertRaises(RuntimeError, _run_until_complete, worker)
 
         with open(outfile.name, 'rt') as _file:
             _file.read()
@@ -71,9 +82,9 @@ class TestLoadGen(TestCase):
         params.report = outfile.name
         params.tests = dummy_tests
 
+        loop = asyncio.get_event_loop()
         worker = Worker(params)
-        worker.start()
-        worker.join()
+        _run_until_complete(worker)
 
     def test_empty_worker(self):
         outfile = tempfile.NamedTemporaryFile()
@@ -85,9 +96,9 @@ class TestLoadGen(TestCase):
         params.tests = []
 
         worker = Worker(params)
-        worker.close = self.get_required_method(worker.close)   # check whether close has been called
+        worker.finish = self.get_required_method(worker.finish)   # check whether close has been called
         try:
-            worker.start()
+            _run_until_complete(worker)
         except:     # assertRaises doesn't catch it
             pass
         self.assertTrue(self.required_method_called)
@@ -100,9 +111,7 @@ class TestLoadGen(TestCase):
         params.concurrency = 9
         params.iterations = 5
         sup = Supervisor(params)
-        sup.start()
-        while sup.isAlive():
-            time.sleep(1)
+        _run_until_complete(sup)
 
     def test_empty_supervisor(self):
         outfile = tempfile.NamedTemporaryFile()
@@ -112,11 +121,9 @@ class TestLoadGen(TestCase):
         params.concurrency = 9
         params.iterations = 5
         sup = Supervisor(params)
-        sup.start()
-        while sup.isAlive():
-            time.sleep(1)
+        self.assertRaises(RuntimeError, _run_until_complete, sup)
 
-        self.assertEqual(CLOSE, sup.workers._state)
+        #self.assertEqual(CLOSE, sup.workers._state)
 
     def test_writers_x3(self):
         # writers must:
@@ -152,9 +159,7 @@ class TestLoadGen(TestCase):
         Worker.__init__ = dummy_worker_init
         try:
             sup = Supervisor(params)
-            sup.start()
-            while sup.isAlive():
-                time.sleep(1)
+            _run_until_complete(sup)
 
             with open(workers_log) as log:
                 writers = log.readlines()
@@ -213,9 +218,7 @@ class TestLoadGen(TestCase):
         apiritif.set_transaction_handlers = mock_set_handlers
         try:
             sup = Supervisor(params)
-            sup.start()
-            while sup.isAlive():
-                time.sleep(1)
+            _run_until_complete(sup)
 
             with open(handlers_log) as log:
                 handlers = log.readlines()
@@ -288,8 +291,7 @@ class TestLoadGen(TestCase):
         params.tests = dummy_tests
 
         worker = Worker(params)
-        worker.start()
-        worker.join()
+        _run_until_complete(worker)
 
         with open(outfile.name) as fds:
             print(fds.read())

@@ -23,9 +23,10 @@ import os
 import sys
 import time
 import traceback
-from multiprocessing.pool import ThreadPool
+import asyncio
 from optparse import OptionParser
-from threading import Thread
+from asyncio import Task
+from concurrent.futures import ThreadPoolExecutor
 
 from nose.config import Config, all_config_files
 from nose.core import TestProgram
@@ -44,7 +45,7 @@ from apiritif.utils import NormalShutdown, log, get_trace
 # TODO: disable assertions for load mode
 
 
-def spawn_worker(params):
+async def spawn_worker(params):
     """
     This method has to be module level function
 
@@ -53,9 +54,7 @@ def spawn_worker(params):
     setup_logging(params)
     log.info("Adding worker: idx=%s\tconcurrency=%s\tresults=%s", params.worker_index, params.concurrency,
              params.report)
-    worker = Worker(params)
-    worker.start()
-    worker.join()
+    await Worker(params)
 
 
 class Params(object):
@@ -82,7 +81,7 @@ class Params(object):
         return "%s" % self.__dict__
 
 
-class Supervisor(Thread):
+class Supervisor(Task):
     """
     apiritif-loadgen CLI utility
         overwatch workers, kill them when terminated
@@ -91,12 +90,9 @@ class Supervisor(Thread):
     """
 
     def __init__(self, params):
-        super(Supervisor, self).__init__(target=self._start_workers)
-        self.setDaemon(True)
-        self.setName(self.__class__.__name__)
-
         self.params = params
-        self.workers = None
+        self.workers = []
+        super(Supervisor, self).__init__(coro=self._start_workers())
 
     def _concurrency_slicer(self, ):
         total_concurrency = 0
@@ -123,49 +119,46 @@ class Supervisor(Thread):
 
         assert total_concurrency == self.params.concurrency
 
-    def _start_workers(self):
+    async def _start_workers(self):
         log.info("Total workers: %s", self.params.worker_count)
 
         thread.set_total(self.params.concurrency)
-        self.workers = multiprocessing.Pool(processes=self.params.worker_count)
         args = list(self._concurrency_slicer())
 
-        try:
-            self.workers.map(spawn_worker, args)
-        finally:
-            self.workers.close()
-            self.workers.join()
+        self.workers = [asyncio.ensure_future(spawn_worker(worker_args)) for worker_args in args]
+        await asyncio.gather(*self.workers)
         # TODO: watch the total test duration, if set, 'cause iteration might last very long
 
 
-class Worker(ThreadPool):
+class Worker(Task):
     def __init__(self, params):
         """
         :type params: Params
         """
-        super(Worker, self).__init__(params.concurrency)
         self.params = params
+        self.futures = []
         if self.params.report.lower().endswith(".ldjson"):
             store.writer = LDJSONSampleWriter(self.params.report)
         else:
             store.writer = JTLSampleWriter(self.params.report)
+        super(Worker, self).__init__(self.start())
 
-    def start(self):
+    async def start(self):
         params = list(self._get_thread_params())
         with store.writer:  # writer must be closed finally
             try:
-                self.map(self.run_nose, params)
+                self.futures = [asyncio.ensure_future(self.run_nose(future_params)) for future_params in params]
+                await asyncio.gather(*self.futures)
             finally:
-                self.close()
+                self.finish()
 
-    def close(self):
+    def finish(self):
         log.info("Workers finished, awaiting result writer")
         while not store.writer.is_queue_empty() and store.writer.is_alive():
             time.sleep(0.1)
         log.info("Results written, shutting down")
-        super(Worker, self).close()
 
-    def run_nose(self, params):
+    async def run_nose(self, params):
         """
         :type params: Params
         """
@@ -176,7 +169,7 @@ class Worker(ThreadPool):
 
         end_time = self.params.ramp_up + self.params.hold_for
         end_time += time.time() if end_time else 0
-        time.sleep(params.delay)
+        await asyncio.sleep(params.delay)
 
         plugin = ApiritifPlugin()
         store.writer.concurrency += 1
@@ -259,22 +252,22 @@ class LDJSONSampleWriter(object):
         self._samples_queue = multiprocessing.Queue()
 
         self._writing = False
-        self._writer_thread = Thread(target=self._writer)
-        self._writer_thread.setDaemon(True)
-        self._writer_thread.setName(self.__class__.__name__)
+        self._writer_loop = asyncio.get_event_loop()
+        self._writer_future = None
 
     def __enter__(self):
         self.out_stream = open(self.output_file, "wb")
         self._writing = True
-        self._writer_thread.start()
+        self._writer_future = self._writer_loop.run_in_executor(None, self._writer)
         return self
 
     def is_alive(self):
-        return self._writer_thread.is_alive()
+        return not self._writer_future.done()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._writing = False
-        self._writer_thread.join()
+        if self._writer_future:
+            self._writer_future.cancel()
         self.out_stream.close()
 
     def add(self, sample, test_count, success_count):
@@ -538,9 +531,9 @@ def setup_logging(params):
 def main():
     cmd_params = cmdline_to_params()
     setup_logging(cmd_params)
-    supervisor = Supervisor(cmd_params)
-    supervisor.start()
-    supervisor.join()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(Supervisor(cmd_params))
+    loop.stop()
 
 
 if __name__ == '__main__':

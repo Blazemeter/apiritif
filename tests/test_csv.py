@@ -1,3 +1,4 @@
+import asyncio
 import os
 import tempfile
 
@@ -7,9 +8,21 @@ from apiritif.csv import CSVReaderPerThread, thread_data
 from apiritif.utils import NormalShutdown
 
 
+def _run_until_complete(awaitable):
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(awaitable)
+
+
 class TestCSV(TestCase):
     def setUp(self):
         thread_data.csv_readers = {}
+        self.base_loop = asyncio.get_event_loop()
+        self.test_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.test_loop)
+
+    def tearDown(self):
+        asyncio.set_event_loop(self.base_loop)
+        self.test_loop.close()
 
     def test_threads_and_processes(self):
         """ check if threads and processes can divide csv fairly """
@@ -26,8 +39,7 @@ class TestCSV(TestCase):
         params.worker_count = 2
 
         sup = Supervisor(params)
-        sup.start()
-        sup.join()
+        _run_until_complete(sup)
 
         content = []
         for i in range(params.worker_count):
@@ -69,8 +81,7 @@ class TestCSV(TestCase):
         params.worker_count = 1
 
         sup = Supervisor(params)
-        sup.start()
-        sup.join()
+        _run_until_complete(sup)
 
         content = []
         for i in range(params.worker_count):
@@ -119,8 +130,7 @@ class TestCSV(TestCase):
         params.worker_count = 1
 
         sup = Supervisor(params)
-        sup.start()
-        sup.join()
+        _run_until_complete(sup)
 
         content = []
         for i in range(params.worker_count):
@@ -154,8 +164,7 @@ class TestCSV(TestCase):
             ApiritifPlugin.handleError = lambda a, b, c: False
 
             sup = Supervisor(params)
-            sup.start()
-            sup.join()
+            _run_until_complete(sup)
         finally:
             ApiritifPlugin.handleError = handler
 
