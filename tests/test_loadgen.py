@@ -37,10 +37,10 @@ class TestLoadGen(TestCase):
         asyncio.set_event_loop(self.base_loop)
         self.test_loop.close()
 
-    def get_required_method(self, method):
-        def required_method(*args, **kwargs):
+    def get_required_method_async(self, method):
+        async def required_method(*args, **kwargs):
             self.required_method_called = True
-            method(*args, **kwargs)
+            await method(*args, **kwargs)
         return required_method
 
     def test_thread(self):
@@ -53,7 +53,7 @@ class TestLoadGen(TestCase):
         params.tests = dummy_tests
 
         worker = Worker(params)
-        worker.run_nose(params)
+        _run_until_complete(worker)
 
     def test_setup_errors(self):
         error_tests = [os.path.join(os.path.dirname(__file__), "resources", "test_setup_errors.py")]
@@ -82,7 +82,6 @@ class TestLoadGen(TestCase):
         params.report = outfile.name
         params.tests = dummy_tests
 
-        loop = asyncio.get_event_loop()
         worker = Worker(params)
         _run_until_complete(worker)
 
@@ -96,47 +95,51 @@ class TestLoadGen(TestCase):
         params.tests = []
 
         worker = Worker(params)
-        worker.finish = self.get_required_method(worker.finish)   # check whether close has been called
-        try:
-            _run_until_complete(worker)
-        except:     # assertRaises doesn't catch it
-            pass
-        self.assertTrue(self.required_method_called)
+        self.assertRaises(RuntimeError, _run_until_complete, worker)
 
     def test_supervisor(self):
         outfile = tempfile.NamedTemporaryFile()
         params = Params()
         params.tests = dummy_tests
-        params.report = outfile.name + "%s"
+        params.report = outfile.name
         params.concurrency = 9
         params.iterations = 5
-        sup = Supervisor(params)
-        _run_until_complete(sup)
+
+        supervisor = Supervisor(params)
+        _run_until_complete(supervisor)
 
     def test_empty_supervisor(self):
         outfile = tempfile.NamedTemporaryFile()
         params = Params()
         params.tests = []
-        params.report = outfile.name + "%s"
+        params.report = outfile.name
         params.concurrency = 9
         params.iterations = 5
-        sup = Supervisor(params)
-        self.assertRaises(RuntimeError, _run_until_complete, sup)
 
-        #self.assertEqual(CLOSE, sup.workers._state)
+        supervisor = Supervisor(params)
+        original_finish = supervisor.finish
+        supervisor.finish = self.get_required_method_async(supervisor.finish)   # check whether close has been called
+
+        self.assertRaises(RuntimeError, _run_until_complete, supervisor)
+        self.assertTrue(self.required_method_called)
+        for worker in supervisor.workers:
+            self.assertTrue(worker.done())
+
+        supervisor.finish = original_finish
 
     def test_writers_x3(self):
         # writers must:
         #   1. be the same for threads of one process
         #   2. be set up only once
         #   3. be different for different processes
-        def dummy_worker_init(self, params):
+        def dummy_supervisor_init(self, params):
             """
             :type params: Params
             """
-            super(Worker, self).__init__(params.concurrency)
             self.params = params
             store.writer = DummyWriter(self.params.report, self.params.workers_log)
+
+            super(Supervisor, self).__init__(coro=self._start_workers())
 
         outfile = tempfile.NamedTemporaryFile()
         outfile.close()
@@ -148,29 +151,26 @@ class TestLoadGen(TestCase):
         params.workers_log = workers_log
 
         params.tests = [os.path.join(os.path.dirname(__file__), "resources", "test_smart_transactions.py")]
-        params.report = outfile.name + "%s"
+        params.report = outfile.name
 
-        # it causes 2 processes and 3 threads (totally)
+        # it causes 3 workers totally
         params.concurrency = 3
-        params.worker_count = 2
 
         params.iterations = 2
-        saved_worker_init = Worker.__init__
-        Worker.__init__ = dummy_worker_init
+        saved_supervisor_init = Supervisor.__init__
+        Supervisor.__init__ = dummy_supervisor_init
         try:
-            sup = Supervisor(params)
-            _run_until_complete(sup)
+            supervisor = Supervisor(params)
+            _run_until_complete(supervisor)
 
             with open(workers_log) as log:
                 writers = log.readlines()
-            self.assertEqual(2, len(writers))
-            self.assertNotEqual(writers[0], writers[1])
+            self.assertEqual(1, len(writers))
         finally:
-            Worker.__init__ = saved_worker_init
+            Supervisor.__init__ = saved_supervisor_init
 
             os.remove(workers_log)
-            for i in range(params.worker_count):
-                os.remove(params.report % i)
+            os.remove(params.report)
 
     def test_handlers(self):
         # handlers must:
@@ -205,7 +205,7 @@ class TestLoadGen(TestCase):
         thread.handlers_log = handlers_log
 
         params.tests = [os.path.join(os.path.dirname(__file__), "resources", "test_smart_transactions.py")]
-        params.report = outfile.name + "%s"
+        params.report = outfile.name
 
         # it causes 2 processes and 3 threads (totally)
         params.concurrency = 3
@@ -217,8 +217,8 @@ class TestLoadGen(TestCase):
         apiritif.get_transaction_handlers = mock_get_handlers
         apiritif.set_transaction_handlers = mock_set_handlers
         try:
-            sup = Supervisor(params)
-            _run_until_complete(sup)
+            supervisor = Supervisor(params)
+            _run_until_complete(supervisor)
 
             with open(handlers_log) as log:
                 handlers = log.readlines()
@@ -232,8 +232,7 @@ class TestLoadGen(TestCase):
             apiritif.set_transaction_handlers = saved_set_handlers
 
             os.remove(handlers_log)
-            for i in range(params.worker_count):
-                os.remove(params.report % i)
+            os.remove(outfile.name)
 
     def test_ramp_up1(self):
         outfile = tempfile.NamedTemporaryFile()
@@ -246,18 +245,17 @@ class TestLoadGen(TestCase):
         params1.ramp_up = 60
         params1.steps = 5
 
-        params1.worker_count = 2
         params1.worker_index = 0
 
-        worker1 = Worker(params1)
-        res1 = [x.delay for x in worker1._get_thread_params()]
+        supervisor1 = Supervisor(params1)
+        res1 = [x.delay for x in supervisor1._get_worker_params()]
         print(res1)
         self.assertEquals(params1.concurrency, len(res1))
 
         params2 = copy.deepcopy(params1)
         params2.worker_index = 1
-        worker2 = Worker(params2)
-        res2 = [x.delay for x in worker2._get_thread_params()]
+        supervisor2 = Supervisor(params2)
+        res2 = [x.delay for x in supervisor2._get_worker_params()]
         print(res2)
         self.assertEquals(params2.concurrency, len(res2))
 
@@ -273,11 +271,10 @@ class TestLoadGen(TestCase):
         params1.tests = dummy_tests
         params1.ramp_up = 60
 
-        params1.worker_count = 1
         params1.worker_index = 0
 
-        worker1 = Worker(params1)
-        res1 = [x.delay for x in worker1._get_thread_params()]
+        supervisor1 = Supervisor(params1)
+        res1 = [x.delay for x in supervisor1._get_worker_params()]
         print(res1)
         self.assertEquals(params1.concurrency, len(res1))
 

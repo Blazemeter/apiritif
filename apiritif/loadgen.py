@@ -26,7 +26,6 @@ import traceback
 import asyncio
 from optparse import OptionParser
 from asyncio import Task
-from concurrent.futures import ThreadPoolExecutor
 
 from nose.config import Config, all_config_files
 from nose.core import TestProgram
@@ -45,24 +44,10 @@ from apiritif.utils import NormalShutdown, log, get_trace
 # TODO: disable assertions for load mode
 
 
-async def spawn_worker(params):
-    """
-    This method has to be module level function
-
-    :type params: Params
-    """
-    setup_logging(params)
-    log.info("Adding worker: idx=%s\tconcurrency=%s\tresults=%s", params.worker_index, params.concurrency,
-             params.report)
-    await Worker(params)
-
-
 class Params(object):
     def __init__(self):
         super(Params, self).__init__()
         self.worker_index = 0
-        self.worker_count = 1
-        self.thread_index = 0
         self.report = None
 
         self.delay = 0
@@ -92,42 +77,56 @@ class Supervisor(Task):
     def __init__(self, params):
         self.params = params
         self.workers = []
+
+        if self.params.report.lower().endswith(".ldjson"):
+            store.writer = LDJSONSampleWriter(self.params.report)
+        else:
+            store.writer = JTLSampleWriter(self.params.report)
+
         super(Supervisor, self).__init__(coro=self._start_workers())
 
-    def _concurrency_slicer(self, ):
-        total_concurrency = 0
-        inc = self.params.concurrency / float(self.params.worker_count)
-        assert inc >= 1
-        for idx in range(0, self.params.worker_count):
-            progress = (idx + 1) * inc
+    async def finish(self):
+        log.info("Workers finished, awaiting result writer")
+        await store.writer.finish()
+        await store.writer
+        log.info("Results written, shutting down")
 
-            conc = int(round(progress - total_concurrency))
-            assert conc > 0
+    def _get_worker_params(self):
+        if not self.params.steps or self.params.steps < 0:
+            self.params.steps = sys.maxsize
 
-            log.debug("Idx: %s, concurrency: %s", idx, conc)
+        step_granularity = self.params.ramp_up / self.params.steps
+        for worker_index in range(self.params.concurrency):
+            delay = worker_index * float(self.params.ramp_up) / self.params.concurrency
+            delay -= delay % step_granularity if step_granularity else 0
 
             params = copy.deepcopy(self.params)
-            params.worker_index = idx
-            params.thread_index = total_concurrency  # for subprocess it's index of its first thread
-            params.concurrency = conc
-            params.report = self.params.report % idx
-            params.worker_count = self.params.worker_count
-
-            total_concurrency += conc
-
+            params.worker_index = worker_index
+            params.delay = delay
             yield params
 
-        assert total_concurrency == self.params.concurrency
-
     async def _start_workers(self):
-        log.info("Total workers: %s", self.params.worker_count)
+        log.info("Total workers: %s", self.params.concurrency)
 
         thread.set_total(self.params.concurrency)
-        args = list(self._concurrency_slicer())
+        args = list(self._get_worker_params())
 
-        self.workers = [asyncio.ensure_future(spawn_worker(worker_args)) for worker_args in args]
-        await asyncio.gather(*self.workers)
-        # TODO: watch the total test duration, if set, 'cause iteration might last very long
+        try:
+            self.workers = [asyncio.create_task(self._spawn_worker(worker_args)) for worker_args in args]
+            await asyncio.gather(*self.workers)
+            # TODO: watch the total test duration, if set, 'cause iteration might last very long
+        finally:
+            await self.finish()
+
+    async def _spawn_worker(self, params):
+        """
+        This method has to be module level function
+
+        :type params: Params
+        """
+        setup_logging(params)
+        log.info("Adding worker: idx=%s\tresults=%s", params.worker_index, params.report)
+        await Worker(params)
 
 
 class Worker(Task):
@@ -137,48 +136,29 @@ class Worker(Task):
         """
         self.params = params
         self.futures = []
-        if self.params.report.lower().endswith(".ldjson"):
-            store.writer = LDJSONSampleWriter(self.params.report)
-        else:
-            store.writer = JTLSampleWriter(self.params.report)
-        super(Worker, self).__init__(self.start())
+        super(Worker, self).__init__(self.run_nose())
 
-    async def start(self):
-        params = list(self._get_thread_params())
-        with store.writer:  # writer must be closed finally
-            try:
-                self.futures = [asyncio.ensure_future(self.run_nose(future_params)) for future_params in params]
-                await asyncio.gather(*self.futures)
-            finally:
-                self.finish()
-
-    def finish(self):
-        log.info("Workers finished, awaiting result writer")
-        while not store.writer.is_queue_empty() and store.writer.is_alive():
-            time.sleep(0.1)
-        log.info("Results written, shutting down")
-
-    async def run_nose(self, params):
+    async def run_nose(self):
         """
         :type params: Params
         """
-        thread.set_index(params.thread_index)
-        log.debug("[%s] Starting nose iterations: %s", params.worker_index, params)
-        assert isinstance(params.tests, list)
+        thread.set_index(self.params.worker_index)
+        log.debug("[%s] Starting nose iterations: %s", self.params.worker_index, self.params)
+        assert isinstance(self.params.tests, list)
         # argv.extend(['--with-apiritif', '--nocapture', '--exe', '--nologcapture'])
 
         end_time = self.params.ramp_up + self.params.hold_for
         end_time += time.time() if end_time else 0
-        await asyncio.sleep(params.delay)
+        await asyncio.sleep(self.params.delay)
 
         plugin = ApiritifPlugin()
         store.writer.concurrency += 1
 
         config = Config(env=os.environ, files=all_config_files(), plugins=DefaultPluginManager())
         config.plugins.addPlugins(extraplugins=[plugin])
-        config.testNames = params.tests
-        config.verbosity = 3 if params.verbose else 0
-        if params.verbose:
+        config.testNames = self.params.tests
+        config.verbosity = 3 if self.params.verbose else 0
+        if self.params.verbose:
             config.stream = open(os.devnull, "w")  # FIXME: use "with", allow writing to file/log
 
         iteration = 0
@@ -193,11 +173,11 @@ class Worker(Task):
 
                 # reasons to stop
                 if plugin.stop_reason:
-                    log.debug("[%s] finished prematurely: %s", params.worker_index, plugin.stop_reason)
-                elif 0 < params.iterations <= iteration:
-                    log.debug("[%s] iteration limit reached: %s", params.worker_index, params.iterations)
+                    log.debug("[%s] finished prematurely: %s", self.params.worker_index, plugin.stop_reason)
+                elif 0 < self.params.iterations <= iteration:
+                    log.debug("[%s] iteration limit reached: %s", self.params.worker_index, self.params.iterations)
                 elif 0 < end_time <= time.time():
-                    log.debug("[%s] duration limit reached: %s", params.worker_index, params.hold_for)
+                    log.debug("[%s] duration limit reached: %s", self.params.worker_index, self.params.hold_for)
                 else:
                     continue  # continue if no one is faced
 
@@ -205,26 +185,11 @@ class Worker(Task):
         finally:
             store.writer.concurrency -= 1
 
-            if params.verbose:
+            if self.params.verbose:
                 config.stream.close()
 
     def __reduce__(self):
         raise NotImplementedError()
-
-    def _get_thread_params(self):
-        if not self.params.steps or self.params.steps < 0:
-            self.params.steps = sys.maxsize
-
-        step_granularity = self.params.ramp_up / self.params.steps
-        ramp_up_per_thread = self.params.ramp_up / self.params.concurrency
-        for thr_idx in range(self.params.concurrency):
-            offset = self.params.worker_index * ramp_up_per_thread / float(self.params.worker_count)
-            delay = offset + thr_idx * float(self.params.ramp_up) / self.params.concurrency
-            delay -= delay % step_granularity if step_granularity else 0
-            params = copy.deepcopy(self.params)
-            params.thread_index = self.params.thread_index + thr_idx
-            params.delay = delay
-            yield params
 
 
 class ApiritifTestProgram(TestProgram):
@@ -239,35 +204,34 @@ class ApiritifTestProgram(TestProgram):
         self.createTests()
 
 
-class LDJSONSampleWriter(object):
+class LDJSONSampleWriter(Task):
     """
     :type out_stream: file
     """
 
     def __init__(self, output_file):
-        super(LDJSONSampleWriter, self).__init__()
         self.concurrency = 0
         self.output_file = output_file
         self.out_stream = None
         self._samples_queue = multiprocessing.Queue()
-
-        self._writing = False
-        self._writer_loop = asyncio.get_event_loop()
-        self._writer_future = None
-
-    def __enter__(self):
-        self.out_stream = open(self.output_file, "wb")
         self._writing = True
-        self._writer_future = self._writer_loop.run_in_executor(None, self._writer)
-        return self
+
+        self._init_out_stream()
+
+        super(LDJSONSampleWriter, self).__init__(self._writer())
 
     def is_alive(self):
-        return not self._writer_future.done()
+        return not self.done()
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    async def finish(self):
+        while not self.is_queue_empty():
+            await asyncio.sleep(0.1)
+
         self._writing = False
-        if self._writer_future:
-            self._writer_future.cancel()
+
+        while self.is_alive():
+            await asyncio.sleep(0.1)
+
         self.out_stream.close()
 
     def add(self, sample, test_count, success_count):
@@ -276,10 +240,13 @@ class LDJSONSampleWriter(object):
     def is_queue_empty(self):
         return self._samples_queue.empty()
 
-    def _writer(self):
+    def _init_out_stream(self):
+        self.out_stream = open(self.output_file, "wb")
+
+    async def _writer(self):
         while self._writing:
             if self._samples_queue.empty():
-                time.sleep(0.1)
+                await asyncio.sleep(0.1)
 
             while not self._samples_queue.empty():
                 item = self._samples_queue.get(block=True)
@@ -306,8 +273,8 @@ class JTLSampleWriter(LDJSONSampleWriter):
     def __init__(self, output_file):
         super(JTLSampleWriter, self).__init__(output_file)
 
-    def __enter__(self):
-        obj = super(JTLSampleWriter, self).__enter__()
+    def _init_out_stream(self):
+        super(JTLSampleWriter, self)._init_out_stream()
 
         fieldnames = ["timeStamp", "elapsed", "Latency", "label", "responseCode", "responseMessage", "success",
                       "allThreads", "bytes"]
@@ -316,8 +283,6 @@ class JTLSampleWriter(LDJSONSampleWriter):
                                      encoding='utf-8')
         self.writer.writeheader()
         self.out_stream.flush()
-
-        return obj
 
     def _write_sample(self, sample, test_count, success_count):
         """
@@ -498,7 +463,7 @@ def cmdline_to_params():
     parser.add_option('', '--ramp-up', action='store', type="float", default=0)
     parser.add_option('', '--steps', action='store', type="int", default=sys.maxsize)
     parser.add_option('', '--hold-for', action='store', type="float", default=0)
-    parser.add_option('', '--result-file-template', action='store', type="str", default="result-%s.csv")
+    parser.add_option('', '--result-file-template', action='store', type="str", default="result.csv")
     parser.add_option('', '--verbose', action='store_true', default=False)
     opts, args = parser.parse_args()
     log.debug("%s %s", opts, args)
@@ -512,7 +477,6 @@ def cmdline_to_params():
 
     params.report = opts.result_file_template
     params.tests = args
-    params.worker_count = 1  # min(params.concurrency, multiprocessing.cpu_count())
     params.verbose = opts.verbose
 
     return params
@@ -531,9 +495,7 @@ def setup_logging(params):
 def main():
     cmd_params = cmdline_to_params()
     setup_logging(cmd_params)
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(Supervisor(cmd_params))
-    loop.stop()
+    asyncio.run(Supervisor(cmd_params))
 
 
 if __name__ == '__main__':

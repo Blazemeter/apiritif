@@ -16,7 +16,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import re
-import threading
+import contextvars
 
 import csv
 from io import open
@@ -26,8 +26,7 @@ from chardet.universaldetector import UniversalDetector
 import apiritif.thread as thread
 from apiritif.utils import NormalShutdown
 
-thread_data = threading.local()
-
+csv_readers_var = contextvars.ContextVar("thread_data")
 
 class Reader(object):
     def read_vars(self):
@@ -50,11 +49,11 @@ class CSVReaderPerThread(Reader):  # processes multi-thread specific
         self.encoding = encoding
 
     def _get_csv_reader(self, create=False):
-        csv_readers = getattr(thread_data, "csv_readers", None)
+        csv_readers = csv_readers_var.get(None)
         if not csv_readers:
-            thread_data.csv_readers = {}
+            csv_readers_var.set({})
 
-        csv_reader = thread_data.csv_readers.get(id(self))
+        csv_reader = csv_readers_var.get().get(id(self))
         if not csv_reader and create:
             csv_reader = CSVReader(
                 filename=self.filename,
@@ -66,7 +65,9 @@ class CSVReaderPerThread(Reader):  # processes multi-thread specific
                 quoted=self.quoted,
                 encoding=self.encoding)
 
-            thread_data.csv_readers[id(self)] = csv_reader
+            csv_readers = csv_readers_var.get()
+            csv_readers[id(self)] = csv_reader
+            csv_readers_var.set(csv_readers)
 
         return csv_reader
 
@@ -76,7 +77,10 @@ class CSVReaderPerThread(Reader):  # processes multi-thread specific
     def close(self):
         csv_reader = self._get_csv_reader()
         if csv_reader:
-            del thread_data.csv_readers[id(self)]
+            csv_readers = csv_readers_var.get()
+            del csv_readers[id(self)]
+            csv_readers_var.set(csv_readers)
+
             csv_reader.close()
 
     def get_vars(self):

@@ -15,9 +15,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from threading import local
+from contextvars import ContextVar
 
 
 _total = 1
+index_var = ContextVar('index')
+iteration_var = ContextVar('iteration')
+args_var = ContextVar('args')
+kwargs_var = ContextVar('kwargs')
+
 _thread_local = local()
 
 
@@ -31,22 +37,20 @@ def get_total():
     return _total
 
 
-def set_index(index):
-    _thread_local.index = index
+def set_index(value):
+    index_var.set(value)
 
 
 def get_index():
-    index = getattr(_thread_local, "index", 0)
-    return index
+    return index_var.get(0)
 
 
-def set_iteration(iteration):
-    _thread_local.iteration = iteration
+def set_iteration(value):
+    iteration_var.set(value)
 
 
 def get_iteration():
-    iteration = getattr(_thread_local, "iteration", 0)
-    return iteration
+    return iteration_var.get(0)
 
 
 def put_into_thread_store(*args, **kwargs):

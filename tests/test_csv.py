@@ -4,7 +4,7 @@ import tempfile
 
 from unittest import TestCase
 from apiritif.loadgen import Params, Supervisor, ApiritifPlugin
-from apiritif.csv import CSVReaderPerThread, thread_data
+from apiritif.csv import CSVReaderPerThread, csv_readers_var
 from apiritif.utils import NormalShutdown
 
 
@@ -15,7 +15,7 @@ def _run_until_complete(awaitable):
 
 class TestCSV(TestCase):
     def setUp(self):
-        thread_data.csv_readers = {}
+        csv_readers_var.set({})
         self.base_loop = asyncio.get_event_loop()
         self.test_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.test_loop)
@@ -28,7 +28,7 @@ class TestCSV(TestCase):
         """ check if threads and processes can divide csv fairly """
         script = os.path.dirname(os.path.realpath(__file__)) + "/resources/test_thread_reader.py"
         outfile = tempfile.NamedTemporaryFile()
-        report = outfile.name + "-%s.csv"
+        report = outfile.name + ".csv"
         outfile.close()
         print(report)
         params = Params()
@@ -36,15 +36,13 @@ class TestCSV(TestCase):
         params.iterations = 2
         params.report = report
         params.tests = [script]
-        params.worker_count = 2
 
-        sup = Supervisor(params)
-        _run_until_complete(sup)
+        supervisor = Supervisor(params)
+        _run_until_complete(supervisor)
 
         content = []
-        for i in range(params.worker_count):
-            with open(report % i) as f:
-                content.extend(f.readlines()[1::2])
+        with open(report) as f:
+            content.extend(f.readlines()[1::2])
 
         threads = {"0": [], "1": [], "2": [], "3": []}
         content = [item[item.index('"') + 1:].strip() for item in content]
@@ -70,7 +68,7 @@ class TestCSV(TestCase):
         """ check different reading speed, fieldnames and separators """
         script = os.path.dirname(os.path.realpath(__file__)) + "/resources/test_two_readers.py"
         outfile = tempfile.NamedTemporaryFile()
-        report = outfile.name + "-%s.csv"
+        report = outfile.name + ".csv"
         outfile.close()
         print(report)
         params = Params()
@@ -78,15 +76,13 @@ class TestCSV(TestCase):
         params.iterations = 3
         params.report = report
         params.tests = [script]
-        params.worker_count = 1
 
-        sup = Supervisor(params)
-        _run_until_complete(sup)
+        supervisor = Supervisor(params)
+        _run_until_complete(supervisor)
 
         content = []
-        for i in range(params.worker_count):
-            with open(report % i) as f:
-                content.extend(f.readlines()[1::2])
+        with open(report) as f:
+            content.extend(f.readlines()[1::2])
 
         threads = {"0": [], "1": []}
         content = [item[item.index('"') + 1:].strip() for item in content]
@@ -119,7 +115,7 @@ class TestCSV(TestCase):
         """ check different reading speed, fieldnames and separators """
         script = os.path.dirname(os.path.realpath(__file__)) + "/resources/test_reader_no_loop.py"
         outfile = tempfile.NamedTemporaryFile()
-        report = outfile.name + "-%s.csv"
+        report = outfile.name + ".csv"
         outfile.close()
         print(report)
         params = Params()
@@ -127,15 +123,13 @@ class TestCSV(TestCase):
         params.iterations = 10
         params.report = report
         params.tests = [script]
-        params.worker_count = 1
 
-        sup = Supervisor(params)
-        _run_until_complete(sup)
+        supervisor = Supervisor(params)
+        _run_until_complete(supervisor)
 
         content = []
-        for i in range(params.worker_count):
-            with open(report % i) as f:
-                content.extend(f.readlines()[1::2])
+        with open(report) as f:
+            content.extend(f.readlines()[1::2])
 
         threads = {"0": []}
         content = [item[item.index('"') + 1:].strip() for item in content]
@@ -148,7 +142,7 @@ class TestCSV(TestCase):
         """ check different reading speed, fieldnames and separators """
         script = os.path.dirname(os.path.realpath(__file__)) + "/resources/test_reader_no_loop.py"
         outfile = tempfile.NamedTemporaryFile()
-        report = outfile.name + "-%s.csv"
+        report = outfile.name + ".csv"
         outfile.close()
         print(report)
         params = Params()
@@ -163,15 +157,14 @@ class TestCSV(TestCase):
             # wrong handler: doesn't stop iterations
             ApiritifPlugin.handleError = lambda a, b, c: False
 
-            sup = Supervisor(params)
-            _run_until_complete(sup)
+            supervisor = Supervisor(params)
+            _run_until_complete(supervisor)
         finally:
             ApiritifPlugin.handleError = handler
 
         content = []
-        for i in range(params.worker_count):
-            with open(report % i) as f:
-                content.extend(f.readlines()[1::2])
+        with open(report) as f:
+            content.extend(f.readlines()[1::2])
 
         threads = {"0": []}
         content = [item[item.index('"') + 1:].strip() for item in content]
