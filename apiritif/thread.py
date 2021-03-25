@@ -14,17 +14,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from threading import local
 from contextvars import ContextVar
 
 
-_total = 1
-index_var = ContextVar('index')
-iteration_var = ContextVar('iteration')
-args_var = ContextVar('args')
-kwargs_var = ContextVar('kwargs')
+class ContextVariables:
+    index = ContextVar('index')
+    iteration = ContextVar('iteration')
+    args = ContextVar('args')
+    kwargs = ContextVar('kwargs')
+    transaction_handlers = ContextVar('transaction_handlers')
+    log_handlers = ContextVar('log_handlers')
 
-_thread_local = local()
+
+_total = 1
 
 
 def set_total(total):
@@ -38,58 +40,60 @@ def get_total():
 
 
 def set_index(value):
-    index_var.set(value)
+    ContextVariables.index.set(value)
 
 
 def get_index():
-    return index_var.get(0)
+    return ContextVariables.index.get(0)
 
 
 def set_iteration(value):
-    iteration_var.set(value)
+    ContextVariables.iteration.set(value)
 
 
 def get_iteration():
-    return iteration_var.get(0)
+    return ContextVariables.iteration.get(0)
 
 
 def put_into_thread_store(*args, **kwargs):
     if args:
-        _thread_local.args = args
+        ContextVariables.args.set(args)
     if kwargs:
-        current_kwargs = getattr(_thread_local, "kwargs", {})
+        current_kwargs = ContextVariables.kwargs.get({})
         current_kwargs.update(kwargs)
-        _thread_local.kwargs = current_kwargs
+        ContextVariables.kwargs.set(current_kwargs)
 
 
 def get_from_thread_store(names=None):
-    if names and hasattr(_thread_local, "kwargs"):
+    current_kwargs = ContextVariables.kwargs.get(None)
+    if names and current_kwargs:
         only_one = False
         if isinstance(names, str):
             names = [names]
             only_one = True
-        kwargs = [_thread_local.kwargs.get(key) for key in names]
+        kwargs = [current_kwargs.get(key) for key in names]
         if only_one:
             return kwargs[0]
         else:
             return kwargs
 
-    elif hasattr(_thread_local, "args"):
-        return _thread_local.args
+    else:
+        current_args = ContextVariables.args.get(None)
+        if current_args:
+            return current_args
 
 
 def get_transaction_handlers():
-    transaction_handlers = get_from_thread_store('transaction_handlers')
-    return transaction_handlers
+    return ContextVariables.transaction_handlers.get()
 
 
 def clean_transaction_handlers():
     handlers = {'enter': [], 'exit': []}
-    _thread_local.kwargs["transaction_handlers"] = handlers
+    ContextVariables.transaction_handlers.set(handlers)
 
 
 def set_transaction_handlers(handlers):
-    put_into_thread_store(transaction_handlers=handlers)
+    ContextVariables.transaction_handlers.set(handlers)
 
 
 def external_log(log_line):
@@ -98,13 +102,12 @@ def external_log(log_line):
 
 
 def set_logging_handlers(handlers):
-    put_into_thread_store(log_handlers=handlers)
+    ContextVariables.log_handlers.set(handlers)
 
 
 def get_logging_handlers():
-    log_handlers = get_from_thread_store("log_handlers")
-    return log_handlers
+    return ContextVariables.log_handlers.get()
 
 
 def clean_logging_handlers():
-    _thread_local.kwargs["log_handlers"] = []
+    ContextVariables.log_handlers.set([])

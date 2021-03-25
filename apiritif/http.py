@@ -17,7 +17,7 @@ limitations under the License.
 """
 import copy
 import os
-import threading
+import contextvars
 import time
 from functools import wraps
 from io import BytesIO
@@ -363,20 +363,14 @@ class AssertionFailure(Event):
 
 
 class _EventRecorder(object):
-    local = threading.local()
+    recording = contextvars.ContextVar('recording')
 
     def __init__(self):
         self.log = log.getChild('recorder')
         self.log.debug("Creating recorder")
 
-    def get_recording(self):
-        rec = getattr(self.local, 'recording', None)
-        if rec is None:
-            self.local.recording = []
-        return self.local.recording
-
     def pop_events(self, from_ts, to_ts):
-        recording = self.get_recording()
+        recording = self.recording.get([])
         collected = []
         new_recording = []
         for event in recording:
@@ -386,12 +380,14 @@ class _EventRecorder(object):
                 new_recording.append(event)
         del recording[:]
         recording.extend(new_recording)
+        self.recording.set(recording)
         return collected
 
     def record_event(self, event):
         self.log.debug("Recording event %r", event)
-        recording = self.get_recording()
+        recording = self.recording.get([])
         recording.append(event)
+        self.recording.set(recording)
 
     def record_transaction_start(self, tran):
         self.record_event(TransactionStarted(tran))
