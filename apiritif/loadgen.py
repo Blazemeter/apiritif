@@ -24,6 +24,7 @@ import sys
 import time
 import traceback
 import asyncio
+import queue
 from optparse import OptionParser
 from asyncio import Task
 
@@ -88,7 +89,6 @@ class Supervisor(Task):
     async def finish(self):
         log.info("Workers finished, awaiting result writer")
         await store.writer.finish()
-        await store.writer
         log.info("Results written, shutting down")
 
     def _get_worker_params(self):
@@ -213,7 +213,7 @@ class LDJSONSampleWriter(Task):
         self.concurrency = 0
         self.output_file = output_file
         self.out_stream = None
-        self._samples_queue = multiprocessing.Queue()
+        self._samples_queue = queue.Queue()
         self._writing = True
 
         self._init_out_stream()
@@ -224,14 +224,8 @@ class LDJSONSampleWriter(Task):
         return not self.done()
 
     async def finish(self):
-        while not self.is_queue_empty():
-            await asyncio.sleep(0.1)
-
         self._writing = False
-
-        while self.is_alive():
-            await asyncio.sleep(0.1)
-
+        await self
         self.out_stream.close()
 
     def add(self, sample, test_count, success_count):
@@ -245,8 +239,7 @@ class LDJSONSampleWriter(Task):
 
     async def _writer(self):
         while self._writing:
-            if self._samples_queue.empty():
-                await asyncio.sleep(0.1)
+            await asyncio.sleep(0.1)
 
             while not self._samples_queue.empty():
                 item = self._samples_queue.get(block=True)
