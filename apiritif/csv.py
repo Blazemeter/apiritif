@@ -26,7 +26,8 @@ from chardet.universaldetector import UniversalDetector
 import apiritif.thread as thread
 from apiritif.utils import NormalShutdown
 
-csv_readers_var = contextvars.ContextVar("thread_data")
+csv_readers_var = contextvars.ContextVar("csv_readers")
+
 
 class Reader(object):
     def read_vars(self):
