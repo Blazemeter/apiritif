@@ -23,7 +23,7 @@ from io import open
 from itertools import cycle, islice
 from chardet.universaldetector import UniversalDetector
 
-import apiritif.thread as thread
+import apiritif.context as context
 from apiritif.utils import NormalShutdown
 
 csv_readers_var = contextvars.ContextVar("csv_readers")
@@ -59,8 +59,8 @@ class CSVReaderPerThread(Reader):  # processes multi-thread specific
             csv_reader = CSVReader(
                 filename=self.filename,
                 fieldnames=self.fieldnames,
-                step=thread.get_total(),
-                first=thread.get_index(),
+                step=context.get_total(),
+                first=context.get_index(),
                 delimiter=self.delimiter,
                 loop=self.loop,
                 quoted=self.quoted,

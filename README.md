@@ -204,7 +204,7 @@ For this purpose we can use `smart_transaction`.
 ```python
 class Tests(TestCase):
     def setUp(self):
-        apiritif.put_into_thread_store(func_mode=True)
+        apiritif.save_to_context(func_mode=True)
     
     def test_available_pages():
         http.get("https://blazedemo.com/").assert_ok()
@@ -224,7 +224,7 @@ Now this two blocks are wrapped into `smart_transaction` which would help with e
 
 Also each transaction defines the name for the block of code and will be displayed in the output report.
  
-Now about `apiritif.put_into_thread_store(func_mode=True)`, this is test execution mode for apiritif.
+Now about `apiritif.save_to_context(func_mode=True)`, this is test execution mode for apiritif.
 We can execute all of the transactions in test no matter what or stop after first failed transaction.
 This flag tells to apiritif "Stop execution if some transaction failed". `False` says "Run till the end in any case".
 

@@ -4,7 +4,7 @@ import os
 import tempfile
 
 import apiritif
-from apiritif import store, thread
+from apiritif import store, context
 from apiritif.loadgen import Worker, Params, Supervisor, JTLSampleWriter
 from tests.testcases import AsyncTestCase
 
@@ -165,7 +165,7 @@ class TestLoadGen(AsyncTestCase):
         #   1. be unique for thread
         #   2. be set up every launch of test suite
         def log_line(line):
-            with open(thread.handlers_log, 'a') as log:
+            with open(context.handlers_log, 'a') as log:
                 log.write("%s\n" % line)
 
         saved_get_handlers = apiritif.get_transaction_handlers
@@ -178,12 +178,12 @@ class TestLoadGen(AsyncTestCase):
 
             length = "%s/%s" % (len(transaction_handlers['enter']), len(transaction_handlers['exit']))
             log_line("get: {pid: %s, idx: %s, iteration: %s, len: %s}" %
-                     (os.getpid(), thread.get_index(), thread.get_iteration(), length))
+                     (os.getpid(), context.get_index(), context.get_iteration(), length))
             return transaction_handlers
 
         def mock_set_handlers(handlers):
             log_line("set: {pid: %s, idx: %s, iteration: %s, handlers: %s}," %
-                     (os.getpid(), thread.get_index(), thread.get_iteration(), handlers))
+                     (os.getpid(), context.get_index(), context.get_iteration(), handlers))
             saved_set_handlers(handlers)
 
         outfile = tempfile.NamedTemporaryFile()
@@ -193,7 +193,7 @@ class TestLoadGen(AsyncTestCase):
 
         # use this log to spy on writers
         handlers_log = outfile.name + '-handlers.log'
-        thread.handlers_log = handlers_log
+        context.handlers_log = handlers_log
 
         params.tests = [os.path.join(os.path.dirname(__file__), "resources", "test_smart_transactions.py")]
         params.report = outfile.name

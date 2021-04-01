@@ -108,7 +108,7 @@ class TransactionTask(asyncio.Task):
         super(TransactionTask, self).__init__(coro=self._run_transaction())
 
     async def _run_transaction(self):
-        apiritif.put_into_thread_store(driver=self.driver, func_mode=False, controller=self.controller)
+        apiritif.save_to_context(driver=self.driver, func_mode=False, controller=self.controller)
         apiritif.set_transaction_handlers({'enter': [self._enter_handler], 'exit': [self._exit_handler]})
 
         await asyncio.sleep(0.1)
@@ -119,7 +119,7 @@ class TransactionTask(asyncio.Task):
             self.transaction_controller = tran.controller
             raise Exception(self.exception_message)
 
-        self.message_from_thread_store = apiritif.get_from_thread_store('message')
+        self.message_from_thread_store = apiritif.get_from_context('message')
 
     def _enter_handler(self, name, suite):
         self.name_from_handler = name

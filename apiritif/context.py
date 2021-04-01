@@ -15,6 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from contextvars import ContextVar
+import warnings
 
 
 class ContextVariables:
@@ -58,7 +59,7 @@ def get_iteration():
     return context_variables.iteration.get(0)
 
 
-def put_into_thread_store(*args, **kwargs):
+def save_to_context(*args, **kwargs):
     if args:
         context_variables.args.set(args)
     if kwargs:
@@ -67,7 +68,12 @@ def put_into_thread_store(*args, **kwargs):
         context_variables.kwargs.set(current_kwargs)
 
 
-def get_from_thread_store(names=None):
+def put_into_thread_store(*args, **kwargs):
+    warnings.warn('`put_into_thread_store` function is deprecated. Use `put_into_thread_store` instead', DeprecationWarning)
+    save_to_context(*args, **kwargs)
+
+
+def get_from_context(names=None):
     current_kwargs = context_variables.kwargs.get(None)
     if names and current_kwargs:
         only_one = False
@@ -84,6 +90,11 @@ def get_from_thread_store(names=None):
         current_args = context_variables.args.get(None)
         if current_args:
             return current_args
+
+
+def get_from_thread_store(names=None):
+    warnings.warn('`get_from_thread_store` function is deprecated. Use `get_from_context` instead', DeprecationWarning)
+    return get_from_context(names)
 
 
 def get_transaction_handlers():

@@ -29,7 +29,7 @@ from requests.structures import CaseInsensitiveDict
 
 import apiritif
 from apiritif.ssl_adapter import SSLAdapter
-from apiritif.thread import get_from_thread_store, put_into_thread_store
+from apiritif.context import get_from_context, save_to_context
 from apiritif.utilities import *
 from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp, log, get_trace
 
@@ -218,7 +218,7 @@ class transaction_logged(transaction):
 class smart_transaction(transaction_logged):
     def __init__(self, name):
         super(smart_transaction, self).__init__(name=name)
-        self.driver, self.func_mode, self.controller = get_from_thread_store(("driver", "func_mode", "controller"))
+        self.driver, self.func_mode, self.controller = get_from_context(("driver", "func_mode", "controller"))
 
         if self.controller.tran_mode:
             # as isn't first smart_transaction, we must recall init of current_sample
@@ -233,7 +233,7 @@ class smart_transaction(transaction_logged):
 
     def __enter__(self):
         super(smart_transaction, self).__enter__()
-        put_into_thread_store(test_case=self.name, test_suite=self.test_suite)
+        save_to_context(test_case=self.name, test_suite=self.test_suite)
         for func in apiritif.get_transaction_handlers()["enter"]:
             func(self.name, self.test_suite)  # params for compatibility, remove if bzt > 1.4.1 in cloud
 
@@ -259,7 +259,7 @@ class smart_transaction(transaction_logged):
             status = 'success'
             self.controller.addSuccess(is_transaction=True)
 
-        put_into_thread_store(status=status, message=message)
+        save_to_context(status=status, message=message)
         for func in apiritif.get_transaction_handlers()["exit"]:
             func(status, message)  # params for compatibility, remove if bzt > 1.4.1 in cloud
 

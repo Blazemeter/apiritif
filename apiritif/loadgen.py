@@ -18,7 +18,6 @@ import copy
 import unicodecsv as csv
 import json
 import logging
-import multiprocessing
 import os
 import sys
 import time
@@ -35,7 +34,7 @@ from nose.plugins import Plugin
 from nose.plugins.manager import DefaultPluginManager
 
 import apiritif
-import apiritif.thread as thread
+import apiritif.context as context
 import apiritif.store as store
 from apiritif.utils import NormalShutdown, log, get_trace
 
@@ -108,7 +107,7 @@ class Supervisor(Task):
     async def _start_workers(self):
         log.info("Total workers: %s", self.params.concurrency)
 
-        thread.set_total(self.params.concurrency)
+        context.set_total(self.params.concurrency)
         args = list(self._get_worker_params())
 
         try:
@@ -142,7 +141,7 @@ class Worker(Task):
         """
         :type params: Params
         """
-        thread.set_index(self.params.worker_index)
+        context.set_index(self.params.worker_index)
         log.debug("[%s] Starting nose iterations: %s", self.params.worker_index, self.params)
         assert isinstance(self.params.tests, list)
         # argv.extend(['--with-apiritif', '--nocapture', '--exe', '--nologcapture'])
@@ -165,7 +164,7 @@ class Worker(Task):
         try:
             while True:
                 log.debug("Starting iteration:: index=%d,start_time=%.3f", iteration, time.time())
-                thread.set_iteration(iteration)
+                context.set_iteration(iteration)
                 ApiritifTestProgram(config=config)
                 log.debug("Finishing iteration:: index=%d,end_time=%.3f", iteration, time.time())
 
@@ -347,7 +346,7 @@ class ApiritifPlugin(Plugin):
     def __init__(self):
         super(ApiritifPlugin, self).__init__()
         self.controller = store.SampleController(log)
-        apiritif.put_into_thread_store(controller=self.controller)  # parcel for smart_transactions
+        apiritif.save_to_context(controller=self.controller)  # parcel for smart_transactions
         self.stop_reason = ""
 
     def finalize(self, result):
@@ -361,8 +360,8 @@ class ApiritifPlugin(Plugin):
         """
         before test run
         """
-        thread.clean_transaction_handlers()
-        thread.clean_logging_handlers()
+        context.clean_transaction_handlers()
+        context.clean_logging_handlers()
         addr = test.address()  # file path, package.subpackage.module, class.method
         test_file, module_fqn, class_method = addr
         test_fqn = test.id()  # [package].module.class.method

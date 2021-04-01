@@ -1,21 +1,21 @@
 import asyncio
 
 from unittest import TestCase
-from apiritif import thread
+from apiritif import context
 
 
 class AsyncTestCase(TestCase):
     def setUp(self):
         self.base_loop = asyncio.get_event_loop()
-        self.base_context_vars = thread.context_variables
+        self.base_context_vars = context.context_variables
 
         self.test_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.test_loop)
-        thread.context_variables = thread.ContextVariables()
+        context.context_variables = context.ContextVariables()
 
     def tearDown(self):
         asyncio.set_event_loop(self.base_loop)
-        thread.context_variables = self.base_context_vars
+        context.context_variables = self.base_context_vars
         self.test_loop.close()
 
     def run_until_complete(self, awaitable):

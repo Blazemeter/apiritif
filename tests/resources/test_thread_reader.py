@@ -3,7 +3,7 @@ import unittest
 
 
 import apiritif
-from apiritif.thread import get_index
+from apiritif.context import get_index
 
 reader_1 = apiritif.CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "data/source0.csv"))
 
@@ -24,7 +24,7 @@ def setup():    # setup_module
     reader_1.read_vars()
     vars.update(reader_1.get_vars())
 
-    apiritif.put_into_thread_store(vars, target)
+    apiritif.save_to_context(vars, target)
 
 
 # class Test0(unittest.TestCase):
@@ -34,7 +34,7 @@ def setup():    # setup_module
 
 class Test1(unittest.TestCase):
     def setUp(self):
-        self.vars, self.target = apiritif.get_from_thread_store()
+        self.vars, self.target = apiritif.get_from_context()
 
     def test_10(self):
         log_it("10", self.target, self.vars)

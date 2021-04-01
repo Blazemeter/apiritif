@@ -36,7 +36,7 @@ class TestSmartTransactions(unittest.TestCase):
 
         }
 
-        apiritif.put_into_thread_store(
+        apiritif.save_to_context(
             driver=self.driver,
             func_mode=False)  # don't stop after failed test case
 
