@@ -363,9 +363,8 @@ class AssertionFailure(Event):
 
 
 class _EventRecorder(object):
-    recording = contextvars.ContextVar('recording')
-
     def __init__(self):
+        self.recording = contextvars.ContextVar('recording')
         self.log = log.getChild('recorder')
         self.log.debug("Creating recorder")
 

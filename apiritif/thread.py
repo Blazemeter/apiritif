@@ -18,13 +18,16 @@ from contextvars import ContextVar
 
 
 class ContextVariables:
-    index = ContextVar('index')
-    iteration = ContextVar('iteration')
-    args = ContextVar('args')
-    kwargs = ContextVar('kwargs')
-    transaction_handlers = ContextVar('transaction_handlers')
-    log_handlers = ContextVar('log_handlers')
+    def __init__(self):
+        self.index = ContextVar('index')
+        self.iteration = ContextVar('iteration')
+        self.args = ContextVar('args')
+        self.kwargs = ContextVar('kwargs')
+        self.transaction_handlers = ContextVar('transaction_handlers')
+        self.log_handlers = ContextVar('log_handlers')
 
+
+context_variables = ContextVariables()
 
 _total = 1
 
@@ -40,32 +43,32 @@ def get_total():
 
 
 def set_index(value):
-    ContextVariables.index.set(value)
+    context_variables.index.set(value)
 
 
 def get_index():
-    return ContextVariables.index.get(0)
+    return context_variables.index.get(0)
 
 
 def set_iteration(value):
-    ContextVariables.iteration.set(value)
+    context_variables.iteration.set(value)
 
 
 def get_iteration():
-    return ContextVariables.iteration.get(0)
+    return context_variables.iteration.get(0)
 
 
 def put_into_thread_store(*args, **kwargs):
     if args:
-        ContextVariables.args.set(args)
+        context_variables.args.set(args)
     if kwargs:
-        current_kwargs = ContextVariables.kwargs.get({})
+        current_kwargs = context_variables.kwargs.get({})
         current_kwargs.update(kwargs)
-        ContextVariables.kwargs.set(current_kwargs)
+        context_variables.kwargs.set(current_kwargs)
 
 
 def get_from_thread_store(names=None):
-    current_kwargs = ContextVariables.kwargs.get(None)
+    current_kwargs = context_variables.kwargs.get(None)
     if names and current_kwargs:
         only_one = False
         if isinstance(names, str):
@@ -78,22 +81,22 @@ def get_from_thread_store(names=None):
             return kwargs
 
     else:
-        current_args = ContextVariables.args.get(None)
+        current_args = context_variables.args.get(None)
         if current_args:
             return current_args
 
 
 def get_transaction_handlers():
-    return ContextVariables.transaction_handlers.get()
+    return context_variables.transaction_handlers.get()
 
 
 def clean_transaction_handlers():
     handlers = {'enter': [], 'exit': []}
-    ContextVariables.transaction_handlers.set(handlers)
+    context_variables.transaction_handlers.set(handlers)
 
 
 def set_transaction_handlers(handlers):
-    ContextVariables.transaction_handlers.set(handlers)
+    context_variables.transaction_handlers.set(handlers)
 
 
 def external_log(log_line):
@@ -102,12 +105,12 @@ def external_log(log_line):
 
 
 def set_logging_handlers(handlers):
-    ContextVariables.log_handlers.set(handlers)
+    context_variables.log_handlers.set(handlers)
 
 
 def get_logging_handlers():
-    return ContextVariables.log_handlers.get()
+    return context_variables.log_handlers.get()
 
 
 def clean_logging_handlers():
-    ContextVariables.log_handlers.set([])
+    context_variables.log_handlers.set([])

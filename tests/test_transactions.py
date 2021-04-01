@@ -1,10 +1,11 @@
 import logging
 import time
 import unittest
-import threading
+import asyncio
 import apiritif
 
 from apiritif import http, transaction, transaction_logged, smart_transaction
+from tests.testcases import AsyncTestCase
 
 target = http.target('https://httpbin.org')
 target.keep_alive(True)
@@ -95,7 +96,7 @@ class ControllerMock(object):
         pass
 
 
-class TransactionThread(threading.Thread):
+class TransactionTask(asyncio.Task):
     def __init__(self, index):
         self.index = index
         self.driver = 'Driver %d' % self.index
@@ -104,11 +105,13 @@ class TransactionThread(threading.Thread):
         self.thread_name = 'Transaction %d' % self.index
         self.exception_message = 'Thread %d failed' % self.index
 
-        super(TransactionThread, self).__init__(target=self._run_transaction)
+        super(TransactionTask, self).__init__(coro=self._run_transaction())
 
-    def _run_transaction(self):
+    async def _run_transaction(self):
         apiritif.put_into_thread_store(driver=self.driver, func_mode=False, controller=self.controller)
         apiritif.set_transaction_handlers({'enter': [self._enter_handler], 'exit': [self._exit_handler]})
+
+        await asyncio.sleep(0.1)
 
         tran = smart_transaction(self.thread_name)
         with tran:
@@ -126,15 +129,13 @@ class TransactionThread(threading.Thread):
         self.message_from_handler = message
 
 
-class TestMultiThreadTransaction(unittest.TestCase):
+class TestMultiThreadTransaction(AsyncTestCase):
 
     def test_Transaction_data_per_thread(self):
-        transactions = [TransactionThread(i) for i in range(5)]
+        transactions = [TransactionTask(i) for i in range(15)]
 
-        for tran in transactions:
-            tran.start()
-        for tran in transactions:
-            tran.join()
+        self.run_until_complete(transactions)
+
         for tran in transactions:
             self.assertEqual(tran.transaction_controller, tran.controller)
             self.assertEqual(tran.transaction_driver, tran.driver)

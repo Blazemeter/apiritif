@@ -1,13 +1,12 @@
-import asyncio
 import copy
 import logging
 import os
 import tempfile
-from unittest import TestCase
 
 import apiritif
 from apiritif import store, thread
 from apiritif.loadgen import Worker, Params, Supervisor, JTLSampleWriter
+from tests.testcases import AsyncTestCase
 
 dummy_tests = [os.path.join(os.path.dirname(__file__), "resources", "test_dummy.py")]
 
@@ -21,21 +20,10 @@ class DummyWriter(JTLSampleWriter):
             log.write("%s\n" % os.getpid())
 
 
-def _run_until_complete(awaitable):
-    loop = asyncio.get_event_loop()
-    return loop.run_until_complete(awaitable)
-
-
-class TestLoadGen(TestCase):
+class TestLoadGen(AsyncTestCase):
     def setUp(self):
         self.required_method_called = False
-        self.base_loop = asyncio.get_event_loop()
-        self.test_loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self.test_loop)
-
-    def tearDown(self):
-        asyncio.set_event_loop(self.base_loop)
-        self.test_loop.close()
+        super(TestLoadGen, self).setUp()
 
     def get_required_method_async(self, method):
         async def required_method(*args, **kwargs):
@@ -53,7 +41,7 @@ class TestLoadGen(TestCase):
         params.tests = dummy_tests
 
         worker = Worker(params)
-        _run_until_complete(worker)
+        self.run_until_complete(worker)
 
     def test_setup_errors(self):
         error_tests = [os.path.join(os.path.dirname(__file__), "resources", "test_setup_errors.py")]
@@ -68,7 +56,7 @@ class TestLoadGen(TestCase):
         params.verbose = True
 
         worker = Worker(params)
-        self.assertRaises(RuntimeError, _run_until_complete, worker)
+        self.assertRaises(RuntimeError, self.run_until_complete, worker)
 
         with open(outfile.name, 'rt') as _file:
             _file.read()
@@ -83,7 +71,7 @@ class TestLoadGen(TestCase):
         params.tests = dummy_tests
 
         worker = Worker(params)
-        _run_until_complete(worker)
+        self.run_until_complete(worker)
 
     def test_empty_worker(self):
         outfile = tempfile.NamedTemporaryFile()
@@ -95,7 +83,7 @@ class TestLoadGen(TestCase):
         params.tests = []
 
         worker = Worker(params)
-        self.assertRaises(RuntimeError, _run_until_complete, worker)
+        self.assertRaises(RuntimeError, self.run_until_complete, worker)
 
     def test_supervisor(self):
         outfile = tempfile.NamedTemporaryFile()
@@ -106,7 +94,7 @@ class TestLoadGen(TestCase):
         params.iterations = 5
 
         supervisor = Supervisor(params)
-        _run_until_complete(supervisor)
+        self.run_until_complete(supervisor)
 
     def test_empty_supervisor(self):
         outfile = tempfile.NamedTemporaryFile()
@@ -120,7 +108,7 @@ class TestLoadGen(TestCase):
         original_finish = supervisor.finish
         supervisor.finish = self.get_required_method_async(supervisor.finish)   # check whether close has been called
 
-        self.assertRaises(RuntimeError, _run_until_complete, supervisor)
+        self.assertRaises(RuntimeError, self.run_until_complete, supervisor)
         self.assertTrue(self.required_method_called)
         for worker in supervisor.workers:
             self.assertTrue(worker.done())
@@ -161,7 +149,7 @@ class TestLoadGen(TestCase):
         Supervisor.__init__ = dummy_supervisor_init
         try:
             supervisor = Supervisor(params)
-            _run_until_complete(supervisor)
+            self.run_until_complete(supervisor)
 
             with open(workers_log) as log:
                 writers = log.readlines()
@@ -180,8 +168,11 @@ class TestLoadGen(TestCase):
             with open(thread.handlers_log, 'a') as log:
                 log.write("%s\n" % line)
 
+        saved_get_handlers = apiritif.get_transaction_handlers
+        saved_set_handlers = apiritif.set_transaction_handlers
+
         def mock_get_handlers():
-            transaction_handlers = thread.get_from_thread_store('transaction_handlers')
+            transaction_handlers = saved_get_handlers()
             if not transaction_handlers:
                 transaction_handlers = {'enter': [], 'exit': []}
 
@@ -193,7 +184,7 @@ class TestLoadGen(TestCase):
         def mock_set_handlers(handlers):
             log_line("set: {pid: %s, idx: %s, iteration: %s, handlers: %s}," %
                      (os.getpid(), thread.get_index(), thread.get_iteration(), handlers))
-            thread.put_into_thread_store(transaction_handlers=handlers)
+            saved_set_handlers(handlers)
 
         outfile = tempfile.NamedTemporaryFile()
         outfile.close()
@@ -212,13 +203,11 @@ class TestLoadGen(TestCase):
         params.worker_count = 2
 
         params.iterations = 2
-        saved_get_handlers = apiritif.get_transaction_handlers
-        saved_set_handlers = apiritif.set_transaction_handlers
         apiritif.get_transaction_handlers = mock_get_handlers
         apiritif.set_transaction_handlers = mock_set_handlers
         try:
             supervisor = Supervisor(params)
-            _run_until_complete(supervisor)
+            self.run_until_complete(supervisor)
 
             with open(handlers_log) as log:
                 handlers = log.readlines()
@@ -288,7 +277,7 @@ class TestLoadGen(TestCase):
         params.tests = dummy_tests
 
         worker = Worker(params)
-        _run_until_complete(worker)
+        self.run_until_complete(worker)
 
         with open(outfile.name) as fds:
             print(fds.read())
