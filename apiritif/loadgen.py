@@ -471,6 +471,12 @@ def cmdline_to_params():
     params.tests = args
     params.verbose = opts.verbose
 
+    # TODO Remove try-except after 1.0.0. Created to support old report patterns.
+    try:
+        params.report = params.report % 0
+    except:
+        pass
+
     return params
 
 
