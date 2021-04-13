@@ -1,11 +1,16 @@
 import copy
 import logging
 import os
+import time
 import tempfile
+import asyncio
+
+from asyncio import Task
 
 import apiritif
 from apiritif import store, context
 from apiritif.loadgen import Worker, Params, Supervisor, JTLSampleWriter
+from apiritif.samples import Sample
 from tests.testcases import AsyncTestCase
 
 dummy_tests = [os.path.join(os.path.dirname(__file__), "resources", "test_dummy.py")]
@@ -114,51 +119,6 @@ class TestLoadGen(AsyncTestCase):
             self.assertTrue(worker.done())
 
         supervisor.finish = original_finish
-
-    def test_writers_x3(self):
-        # writers must:
-        #   1. be the same for threads of one process
-        #   2. be set up only once
-        #   3. be different for different processes
-        def dummy_supervisor_init(self, params):
-            """
-            :type params: Params
-            """
-            self.params = params
-            store.writer = DummyWriter(self.params.report, self.params.workers_log)
-
-            super(Supervisor, self).__init__(coro=self._start_workers())
-
-        outfile = tempfile.NamedTemporaryFile()
-        outfile.close()
-
-        params = Params()
-
-        # use this log to spy on writers
-        workers_log = outfile.name + '-workers.log'
-        params.workers_log = workers_log
-
-        params.tests = [os.path.join(os.path.dirname(__file__), "resources", "test_smart_transactions.py")]
-        params.report = outfile.name
-
-        # it causes 3 workers totally
-        params.concurrency = 3
-
-        params.iterations = 2
-        saved_supervisor_init = Supervisor.__init__
-        Supervisor.__init__ = dummy_supervisor_init
-        try:
-            supervisor = Supervisor(params)
-            self.run_until_complete(supervisor)
-
-            with open(workers_log) as log:
-                writers = log.readlines()
-            self.assertEqual(1, len(writers))
-        finally:
-            Supervisor.__init__ = saved_supervisor_init
-
-            os.remove(workers_log)
-            os.remove(params.report)
 
     def test_handlers(self):
         # handlers must:
@@ -281,3 +241,81 @@ class TestLoadGen(AsyncTestCase):
 
         with open(outfile.name) as fds:
             print(fds.read())
+
+
+class SampleGenerator(Task):
+    def __init__(self, writer, index, outfile_name):
+        self.writer = writer
+        self.index = index
+        self.outfile_name = outfile_name
+        self.sample = Sample(start_time=index, duration=index, test_case="Generator %s" % index)
+
+        super(SampleGenerator, self).__init__(coro=self._write_sample())
+
+    async def _write_sample(self):
+        self.writer.add(self.sample, self.index, self.index)
+        time.sleep(0.2)
+        #await asyncio.sleep(0.2)
+
+        with open(self.outfile_name) as log:
+            self.written_results = log.readlines()
+
+
+class TestWriter(AsyncTestCase):
+    def test_writer_works_in_background(self):
+        outfile = tempfile.NamedTemporaryFile()
+        outfile.close()
+
+        writer = JTLSampleWriter(outfile.name)
+        sample_generators = [SampleGenerator(writer, i, outfile.name) for i in range(5)]
+
+        self.run_until_complete(sample_generators)
+        self.run_until_complete(writer.finish())
+
+        for generator in sample_generators:
+            self.assertTrue(len(generator.written_results) > 1)
+
+    def test_writers_x3(self):
+        # writers must:
+        #   1. be the same for threads of one process
+        #   2. be set up only once
+        #   3. be different for different processes
+        def dummy_supervisor_init(self, params):
+            """
+            :type params: Params
+            """
+            self.params = params
+            store.writer = DummyWriter(self.params.report, self.params.workers_log)
+
+            super(Supervisor, self).__init__(coro=self._start_workers())
+
+        outfile = tempfile.NamedTemporaryFile()
+        outfile.close()
+
+        params = Params()
+
+        # use this log to spy on writers
+        workers_log = outfile.name + '-workers.log'
+        params.workers_log = workers_log
+
+        params.tests = [os.path.join(os.path.dirname(__file__), "resources", "test_smart_transactions.py")]
+        params.report = outfile.name
+
+        # it causes 3 workers totally
+        params.concurrency = 3
+
+        params.iterations = 2
+        saved_supervisor_init = Supervisor.__init__
+        Supervisor.__init__ = dummy_supervisor_init
+        try:
+            supervisor = Supervisor(params)
+            self.run_until_complete(supervisor)
+
+            with open(workers_log) as log:
+                writers = log.readlines()
+            self.assertEqual(1, len(writers))
+        finally:
+            Supervisor.__init__ = saved_supervisor_init
+
+            os.remove(workers_log)
+            os.remove(params.report)
