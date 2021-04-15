@@ -30,6 +30,12 @@ class TestLoadGen(AsyncTestCase):
         self.required_method_called = False
         super(TestLoadGen, self).setUp()
 
+    def get_required_method(self, method):
+        def required_method(*args, **kwargs):
+            self.required_method_called = True
+            method(*args, **kwargs)
+        return required_method
+
     def get_required_method_async(self, method):
         async def required_method(*args, **kwargs):
             self.required_method_called = True
@@ -111,7 +117,7 @@ class TestLoadGen(AsyncTestCase):
 
         supervisor = Supervisor(params)
         original_finish = supervisor.finish
-        supervisor.finish = self.get_required_method_async(supervisor.finish)   # check whether close has been called
+        supervisor.finish = self.get_required_method (supervisor.finish)   # check whether close has been called
 
         self.assertRaises(RuntimeError, self.run_until_complete, supervisor)
         self.assertTrue(self.required_method_called)
@@ -270,7 +276,7 @@ class TestWriter(AsyncTestCase):
         sample_generators = [SampleGenerator(writer, i, outfile.name) for i in range(5)]
 
         self.run_until_complete(sample_generators)
-        self.run_until_complete(writer.finish())
+        writer.finish()
 
         for generator in sample_generators:
             self.assertTrue(len(generator.written_results) > 1)

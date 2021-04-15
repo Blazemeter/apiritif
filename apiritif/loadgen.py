@@ -26,6 +26,7 @@ import asyncio
 import queue
 from optparse import OptionParser
 from asyncio import Task
+from threading import Thread
 
 from nose.config import Config, all_config_files
 from nose.core import TestProgram
@@ -85,9 +86,9 @@ class Supervisor(Task):
 
         super(Supervisor, self).__init__(coro=self._start_workers())
 
-    async def finish(self):
+    def finish(self):
         log.info("Workers finished, awaiting result writer")
-        await store.writer.finish()
+        store.writer.finish()
         log.info("Results written, shutting down")
 
     def _get_worker_params(self):
@@ -115,7 +116,7 @@ class Supervisor(Task):
             await asyncio.gather(*self.workers)
             # TODO: watch the total test duration, if set, 'cause iteration might last very long
         finally:
-            await self.finish()
+            self.finish()
 
     async def _spawn_worker(self, params):
         """
@@ -203,28 +204,32 @@ class ApiritifTestProgram(TestProgram):
         self.createTests()
 
 
-class LDJSONSampleWriter(Task):
+class LDJSONSampleWriter(object):
     """
     :type out_stream: file
     """
 
     def __init__(self, output_file):
+        super(LDJSONSampleWriter, self).__init__()
         self.concurrency = 0
         self.output_file = output_file
-        self.out_stream = None
         self._samples_queue = queue.Queue()
-        self._writing = True
 
         self._init_out_stream()
 
-        super(LDJSONSampleWriter, self).__init__(self._writer())
+        self._writer_thread = Thread(target=self._writer)
+        self._writer_thread.setDaemon(True)
+        self._writer_thread.setName(self.__class__.__name__)
+
+        self._writing = True
+        self._writer_thread.start()
 
     def is_alive(self):
-        return not self.done()
+        return self._writer_thread.is_alive()
 
-    async def finish(self):
+    def finish(self):
         self._writing = False
-        await self
+        self._writer_thread.join()
         self.out_stream.close()
 
     def add(self, sample, test_count, success_count):
@@ -236,9 +241,10 @@ class LDJSONSampleWriter(Task):
     def _init_out_stream(self):
         self.out_stream = open(self.output_file, "wb")
 
-    async def _writer(self):
+    def _writer(self):
         while self._writing:
-            await asyncio.sleep(0.1)
+            if self._samples_queue.empty():
+                time.sleep(0.1)
 
             while not self._samples_queue.empty():
                 item = self._samples_queue.get(block=True)
