@@ -1,8 +1,10 @@
 import logging
 import time
 import unittest
+import threading
+import apiritif
 
-from apiritif import http, transaction, transaction_logged
+from apiritif import http, transaction, transaction_logged, smart_transaction
 
 target = http.target('https://httpbin.org')
 target.keep_alive(True)
@@ -64,3 +66,79 @@ class TestRequests(unittest.TestCase):
     def test_9_transaction_logged(self):
         with transaction_logged("Label") as tran:
             logging.warning("TODO: capture logging to assert for result")
+
+
+class ControllerMock(object):
+    class CurrentSampleMock:
+        def __init__(self, index):
+            self.test_case = 'TestCase %d' % index
+            self.test_suite = 'TestSuite %d' % index
+
+    def __init__(self, index):
+        self.tran_mode = True
+        self.test_info = {}
+        self.current_sample = self.CurrentSampleMock(index)
+
+    def beforeTest(self):
+        pass
+
+    def startTest(self):
+        pass
+
+    def stopTest(self, is_transaction):
+        pass
+
+    def addError(self, name, msg, trace, is_transaction):
+        pass
+
+    def afterTest(self, is_transaction):
+        pass
+
+
+class TransactionThread(threading.Thread):
+    def __init__(self, index):
+        self.index = index
+        self.driver = 'Driver %d' % self.index
+        self.controller = ControllerMock(self.index)
+
+        self.thread_name = 'Transaction %d' % self.index
+        self.exception_message = 'Thread %d failed' % self.index
+
+        super(TransactionThread, self).__init__(target=self._run_transaction)
+
+    def _run_transaction(self):
+        apiritif.put_into_thread_store(driver=self.driver, func_mode=False, controller=self.controller)
+        apiritif.set_transaction_handlers({'enter': [self._enter_handler], 'exit': [self._exit_handler]})
+
+        tran = smart_transaction(self.thread_name)
+        with tran:
+            self.transaction_driver = tran.driver
+            self.transaction_controller = tran.controller
+            raise Exception(self.exception_message)
+
+        self.message_from_thread_store = apiritif.get_from_thread_store('message')
+
+    def _enter_handler(self, name, suite):
+        self.name_from_handler = name
+        self.suite_from_handler = suite
+
+    def _exit_handler(self, status, message):
+        self.message_from_handler = message
+
+
+class TestMultiThreadTransaction(unittest.TestCase):
+
+    def test_Transaction_data_per_thread(self):
+        transactions = [TransactionThread(i) for i in range(5)]
+
+        for tran in transactions:
+            tran.start()
+        for tran in transactions:
+            tran.join()
+        for tran in transactions:
+            self.assertEqual(tran.transaction_controller, tran.controller)
+            self.assertEqual(tran.transaction_driver, tran.driver)
+            self.assertEqual(tran.name_from_handler, tran.thread_name)
+            self.assertEqual(tran.suite_from_handler, tran.controller.current_sample.test_suite)
+            self.assertEqual(tran.message_from_handler, tran.exception_message)
+            self.assertEqual(tran.message_from_thread_store, tran.exception_message)
