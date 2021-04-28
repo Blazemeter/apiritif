@@ -128,6 +128,10 @@ class TransactionThread(threading.Thread):
 
 class TestMultiThreadTransaction(unittest.TestCase):
 
+    # Transaction data should be different for each thread.
+    # Here TransactionThread class puts all transaction data into thread store.
+    # Then we save all thread data from real transaction data to our mock.
+    # As the result written and saved data should be the same.
     def test_Transaction_data_per_thread(self):
         transactions = [TransactionThread(i) for i in range(5)]
 
