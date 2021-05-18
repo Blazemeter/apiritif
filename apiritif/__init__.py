@@ -14,6 +14,7 @@ limitations under the License.
 """
 
 from .csv import CSVReaderPerThread
+from .plugin import import_plugins
 from .thread import put_into_thread_store, get_from_thread_store, external_log
 from .thread import get_transaction_handlers, set_transaction_handlers, get_iteration
 from .thread import get_logging_handlers, set_logging_handlers
@@ -21,3 +22,7 @@ from .http import http, transaction, transaction_logged, smart_transaction, reco
 from .http import Event, TransactionStarted, TransactionEnded, Request, Assertion, AssertionFailure
 from .utilities import *
 from .utils import headers_as_text, assert_regexp, assert_not_regexp, log
+
+# TODO: move logging init here???
+import_plugins()
+
