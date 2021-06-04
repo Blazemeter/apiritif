@@ -218,7 +218,7 @@ class transaction_logged(transaction):
 class smart_transaction(transaction_logged):
     def __init__(self, name):
         super(smart_transaction, self).__init__(name=name)
-        self.driver, self.func_mode, self.controller, self.handlers = get_from_thread_store(("driver", "func_mode", "controller", "handlers"))
+        self.driver, self.func_mode, self.controller = get_from_thread_store(("driver", "func_mode", "controller"))
 
         if self.controller.tran_mode:
             # as isn't first smart_transaction, we must recall init of current_sample
@@ -236,8 +236,6 @@ class smart_transaction(transaction_logged):
         put_into_thread_store(test_case=self.name, test_suite=self.test_suite)
         for func in apiritif.get_transaction_handlers()["enter"]:
             func(self.name, self.test_suite)  # params for compatibility, remove if bzt > 1.4.1 in cloud
-            for handler in self.handlers:
-                handler.log(f'starting smart transaction {self.name}')
 
         self.controller.startTest()
 

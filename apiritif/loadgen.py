@@ -36,7 +36,7 @@ from nose.plugins.manager import DefaultPluginManager
 import apiritif
 import apiritif.thread as thread
 import apiritif.store as store
-from apiritif.plugin import ActionHandlerFactory
+from apiritif.action_plugins import ActionHandlerFactory, import_plugins
 from apiritif.utils import NormalShutdown, log, get_trace
 
 
@@ -191,9 +191,11 @@ class Worker(ThreadPool):
 
         iteration = 0
         handlers = ActionHandlerFactory.create_all()
-        print(f"HANDLERS {handlers}")
-        # todo: handlers.startup()
-        thread.put_into_thread_store(handlers=handlers)
+        log.debug(f'Action handlers created {handlers}')
+        thread.put_into_thread_store(action_handlers=handlers)
+        for handler in handlers:
+            handler.startup()
+
         try:
             while True:
                 log.debug("Starting iteration:: index=%d,start_time=%.3f", iteration, time.time())
@@ -215,11 +217,13 @@ class Worker(ThreadPool):
 
                 break
         finally:
-            # todo: handlers.finalize()
             store.writer.concurrency -= 1
 
             if params.verbose:
                 config.stream.close()
+
+            for handler in handlers:
+                handler.finalize()
 
     def __reduce__(self):
         raise NotImplementedError()
@@ -417,7 +421,6 @@ class ApiritifPlugin(Plugin):
         before test run
         """
         thread.clean_transaction_handlers()
-        thread.clean_logging_handlers()
         addr = test.address()  # file path, package.subpackage.module, class.method
         test_file, module_fqn, class_method = addr
         test_fqn = test.id()  # [package].module.class.method
@@ -544,6 +547,7 @@ def setup_logging(params):
 def main():
     cmd_params = cmdline_to_params()
     setup_logging(cmd_params)
+    import_plugins()
     supervisor = Supervisor(cmd_params)
     supervisor.start()
     supervisor.join()

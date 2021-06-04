@@ -1,24 +1,44 @@
+import inspect
+import os
 from abc import ABCMeta, abstractmethod
 from importlib import import_module
 from inspect import isclass
 from pathlib import Path
 from pkgutil import iter_modules
 
-from ..utils import log
+from .utils import log
+
+PLUGINS_PATH = 'PLUGINS_PATH'
 
 
 def import_plugins():
-    root_path = Path(__file__).resolve().parent
-    for (_, module_name, _) in iter_modules([root_path]):
-        module = import_module(f"{__name__}.{module_name}")
-        for class_name in dir(module):
-            module_subclass = getattr(module, class_name)
-            if isclass(module_subclass) and issubclass(module_subclass, BaseActionHandler):
-                log.info(f'Apiritif plugin found: {class_name}')
-                globals()[class_name] = module_subclass
+    path = os.environ.get(PLUGINS_PATH, None)
+    if not path:
+        log.debug('Plugins PATH not found, continue without plugins')
+        return
+
+    package = Path(path).resolve().name
+    log.info(f'Plugins package {package}')
+
+    #  modules listing in the root package
+    for (_, module_name, _) in iter_modules([path]):
+        full_name = f'{package}.{module_name}'
+        log.info(f'Importing module {full_name}')
+        module = import_module(full_name)
+
+        # list of members in module
+        for name, obj in inspect.getmembers(module):
+            if isclass(obj) and issubclass(obj, BaseActionHandler):
+                log.info(f'Apiritif plugin found: {name}')
+                globals()[name] = obj
 
 
 class BaseActionHandler(metaclass=ABCMeta):
+
+    YAML_ACTION_START = 'yaml_action_start'
+    YAML_ACTION_END = 'yaml_action_end'
+    TEST_CASE_START = 'test_case_start'
+    TEST_CASE_STOP = 'test_case_stop'
 
     def __init__(self, **kwargs):
         pass
@@ -28,7 +48,7 @@ class BaseActionHandler(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def log(self, log_line):
+    def handle(self, action_type, action):
         pass
 
     @abstractmethod
@@ -37,7 +57,6 @@ class BaseActionHandler(metaclass=ABCMeta):
 
 
 class ActionHandlerFactory:
-
     registry = {}
 
     @classmethod
