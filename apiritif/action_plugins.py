@@ -1,3 +1,4 @@
+
 import inspect
 import os
 from abc import ABCMeta, abstractmethod
@@ -48,7 +49,7 @@ class BaseActionHandler(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def handle(self, action_type, action):
+    def handle(self, session_id, action_type, action):
         pass
 
     @abstractmethod

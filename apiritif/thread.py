@@ -89,10 +89,10 @@ def set_transaction_handlers(handlers):
     put_into_thread_store(transaction_handlers=handlers)
 
 
-def external_handler(action_type, action):
+def external_handler(session_id, action_type, action):
     for handler in get_action_handlers():
         if isinstance(handler, BaseActionHandler):
-            handler.handle(action_type, action)
+            handler.handle(session_id, action_type, action)
 
 
 def get_action_handlers():
