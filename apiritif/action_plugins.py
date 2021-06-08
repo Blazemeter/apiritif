@@ -8,7 +8,7 @@ from inspect import isclass
 from pathlib import Path
 from pkgutil import iter_modules
 
-from .utils import log
+from apiritif.utils import log
 
 PLUGINS_PATH = 'PLUGINS_PATH'
 
