@@ -1,6 +1,7 @@
 
 import inspect
 import os
+import sys
 from abc import ABCMeta, abstractmethod
 from importlib import import_module
 from inspect import isclass
@@ -18,14 +19,16 @@ def import_plugins():
         log.debug('Plugins PATH not found, continue without plugins')
         return
 
+    # add plugins path to PYTHONPATH
+    sys.path.append(path)
+
     package = Path(path).resolve().name
     log.info(f'Plugins package {package}')
 
     #  modules listing in the root package
     for (_, module_name, _) in iter_modules([path]):
-        full_name = f'{package}.{module_name}'
-        log.info(f'Importing module {full_name}')
-        module = import_module(full_name)
+        log.info(f'Importing module {module_name}')
+        module = import_module(module_name)
 
         # list of members in module
         for name, obj in inspect.getmembers(module):
