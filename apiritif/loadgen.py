@@ -152,6 +152,7 @@ class Worker(ThreadPool):
             store.writer = JTLSampleWriter(self.params.report)
 
     def start(self):
+        import_plugins()
         params = list(self._get_thread_params())
         with store.writer:  # writer must be closed finally
             try:
@@ -547,7 +548,6 @@ def setup_logging(params):
 def main():
     cmd_params = cmdline_to_params()
     setup_logging(cmd_params)
-    import_plugins()
     supervisor = Supervisor(cmd_params)
     supervisor.start()
     supervisor.join()
