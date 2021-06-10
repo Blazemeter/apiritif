@@ -112,3 +112,8 @@ def set_logging_handlers(handlers):
 # Deprecated
 def get_logging_handlers():
     pass
+
+
+# Deprecated
+def add_logging_handlers(methods=None):
+    pass
