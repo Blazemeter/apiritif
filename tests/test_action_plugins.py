@@ -8,7 +8,7 @@ from apiritif.action_plugins import PLUGINS_PATH, import_plugins, ActionHandlerF
 
 class TestRequests(TestCase):
 
-    def setUp(self) -> None:
+    def setUp(self):
         # create temp python package
         self.temp_dir = tempfile.TemporaryDirectory()
         plugin_dir = os.path.join(self.temp_dir.name, 'plugins')
@@ -21,14 +21,12 @@ class TestRequests(TestCase):
         # create plugin file
         template_path = os.path.join(os.path.dirname(__file__), "resources", "action_plugin_template.txt")
         action_plugin = os.path.join(plugin_dir, 'bzm_logger.py')
-        with open(template_path, 'rb') as f_in:
-            with open(action_plugin, 'wb') as f_out:
-                shutil.copyfileobj(f_in, f_out)
+        shutil.copyfile(template_path, action_plugin)
 
         # add path to env vars
         os.environ[PLUGINS_PATH] = plugin_dir
 
-    def tearDown(self) -> None:
+    def tearDown(self):
         if os.environ.get(PLUGINS_PATH):
             del os.environ[PLUGINS_PATH]
 

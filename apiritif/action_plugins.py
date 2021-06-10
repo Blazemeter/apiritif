@@ -1,10 +1,7 @@
-
-import inspect
 import os
 import sys
 from abc import ABCMeta, abstractmethod
 from importlib import import_module
-from inspect import isclass
 from pathlib import Path
 from pkgutil import iter_modules
 
@@ -28,13 +25,7 @@ def import_plugins():
     #  modules listing in the root package
     for (_, module_name, _) in iter_modules([path]):
         log.info(f'Importing module {module_name}')
-        module = import_module(module_name)
-
-        # list of members in module
-        for name, obj in inspect.getmembers(module):
-            if isclass(obj) and issubclass(obj, BaseActionHandler):
-                log.info(f'Apiritif plugin found: {name}')
-                globals()[name] = obj
+        import_module(module_name)
 
 
 class BaseActionHandler(metaclass=ABCMeta):
@@ -64,10 +55,6 @@ class ActionHandlerFactory:
     registry = {}
 
     @classmethod
-    def reg(cls, name, wrapped_class):
-        cls.registry[name] = wrapped_class
-
-    @classmethod
     def register(cls, name):
         def inner_wrapper(wrapped_class):
             cls.registry[name] = wrapped_class
@@ -79,11 +66,11 @@ class ActionHandlerFactory:
     def create_handler(cls, name, **kwargs):
         if name not in cls.registry:
             log.warning('Handler %s does not exist in the registry', name)
-            return None
+            return
 
         exec_class = cls.registry[name]
         return exec_class(**kwargs)
 
     @classmethod
     def create_all(cls, **kwargs):
-        return [cls.create_handler(name, **kwargs) for name in cls.registry.keys()]
+        return [cls.create_handler(name, **kwargs) for name in cls.registry]
