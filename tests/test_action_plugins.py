@@ -3,7 +3,12 @@ from unittest import TestCase
 import tempfile
 import shutil
 
+import apiritif
+from apiritif import thread
+
 from apiritif.action_plugins import PLUGINS_PATH, import_plugins, ActionHandlerFactory, BaseActionHandler
+from apiritif.loadgen import Worker, Params
+from tests.test_loadgen import dummy_tests
 
 
 class TestRequests(TestCase):
@@ -25,13 +30,13 @@ class TestRequests(TestCase):
 
         # add path to env vars
         os.environ[PLUGINS_PATH] = plugin_dir
+        import_plugins()
 
     def tearDown(self):
         if os.environ.get(PLUGINS_PATH):
             del os.environ[PLUGINS_PATH]
 
     def test_flow(self):
-        import_plugins()
         plugins = ActionHandlerFactory.create_all()
         self.assertEquals(1, len(plugins))
         plugin = plugins.pop(0)
@@ -45,3 +50,26 @@ class TestRequests(TestCase):
             ('session_id', BaseActionHandler.YAML_ACTION_START, 'data'),
             plugin.actions.pop()
         )
+
+    def test_external_handler(self):
+        plugins = ActionHandlerFactory.create_all()
+        apiritif.put_into_thread_store(action_handlers=plugins)
+        apiritif.external_handler('session_id', BaseActionHandler.YAML_ACTION_START, 'data')
+        plugin = plugins.pop(0)
+        self.assertEquals(
+            ('session_id', BaseActionHandler.YAML_ACTION_START, 'data'),
+            plugin.actions.pop()
+        )
+
+    def test_loadgen(self):
+        params = Params()
+        params.iterations = 1
+        params.concurrency = 1
+        params.report = 'log.ldjson'
+        params.tests = dummy_tests
+        worker = Worker(params)
+        worker.run_nose(params)
+        action_handlers = thread.get_from_thread_store('action_handlers')
+        plugin = action_handlers.pop(0)
+        self.assertTrue(plugin.started)
+        self.assertTrue(plugin.ended)
