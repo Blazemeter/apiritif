@@ -20,3 +20,5 @@ from .http import http, transaction, transaction_logged, smart_transaction, reco
 from .http import Event, TransactionStarted, TransactionEnded, Request, Assertion, AssertionFailure
 from .utilities import *
 from .utils import headers_as_text, assert_regexp, assert_not_regexp, log
+# DEPRECATED
+from .thread import get_logging_handlers, set_logging_handlers, external_log
