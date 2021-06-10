@@ -95,9 +95,20 @@ def external_handler(session_id, action_type, action):
             handler.handle(session_id, action_type, action)
 
 
+def get_action_handlers():
+    return get_from_thread_store("action_handlers")
+
+
+# Deprecated
 def external_log(log_line):
     pass
 
 
-def get_action_handlers():
-    return get_from_thread_store("action_handlers")
+# Deprecated
+def set_logging_handlers(handlers):
+    pass
+
+
+# Deprecated
+def get_logging_handlers():
+    pass
