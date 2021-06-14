@@ -3,11 +3,13 @@ import logging
 import os
 import tempfile
 import time
+import threading
 from unittest import TestCase
 from multiprocessing.pool import CLOSE
 
 import apiritif
 from apiritif import store, thread
+from apiritif.samples import Sample
 from apiritif.loadgen import Worker, Params, Supervisor, JTLSampleWriter
 
 dummy_tests = [os.path.join(os.path.dirname(__file__), "resources", "test_dummy.py")]
@@ -117,55 +119,6 @@ class TestLoadGen(TestCase):
             time.sleep(1)
 
         self.assertEqual(CLOSE, sup.workers._state)
-
-    def test_writers_x3(self):
-        # writers must:
-        #   1. be the same for threads of one process
-        #   2. be set up only once
-        #   3. be different for different processes
-        def dummy_worker_init(self, params):
-            """
-            :type params: Params
-            """
-            super(Worker, self).__init__(params.concurrency)
-            self.params = params
-            store.writer = DummyWriter(self.params.report, self.params.workers_log)
-
-        outfile = tempfile.NamedTemporaryFile()
-        outfile.close()
-
-        params = Params()
-
-        # use this log to spy on writers
-        workers_log = outfile.name + '-workers.log'
-        params.workers_log = workers_log
-
-        params.tests = [os.path.join(os.path.dirname(__file__), "resources", "test_smart_transactions.py")]
-        params.report = outfile.name + "%s"
-
-        # it causes 2 processes and 3 threads (totally)
-        params.concurrency = 3
-        params.worker_count = 2
-
-        params.iterations = 2
-        saved_worker_init = Worker.__init__
-        Worker.__init__ = dummy_worker_init
-        try:
-            sup = Supervisor(params)
-            sup.start()
-            while sup.isAlive():
-                time.sleep(1)
-
-            with open(workers_log) as log:
-                writers = log.readlines()
-            self.assertEqual(2, len(writers))
-            self.assertNotEqual(writers[0], writers[1])
-        finally:
-            Worker.__init__ = saved_worker_init
-
-            os.remove(workers_log)
-            for i in range(params.worker_count):
-                os.remove(params.report % i)
 
     def test_handlers(self):
         # handlers must:
@@ -293,3 +246,137 @@ class TestLoadGen(TestCase):
 
         with open(outfile.name) as fds:
             print(fds.read())
+
+
+class SampleGenerator(threading.Thread):
+    def __init__(self, writer, index, outfile_name):
+        super(SampleGenerator, self).__init__(target=self._write_sample)
+        self.writer = writer
+        self.index = index
+        self.outfile_name = outfile_name
+        self.sample = Sample(start_time=index, duration=index, test_case="Generator %s" % index)
+
+    def _write_sample(self):
+        self.writer.add(self.sample, self.index, self.index)
+        time.sleep(0.2)
+
+        with open(self.outfile_name) as log:
+            self.written_results = log.readlines()
+
+
+class TestWriter(TestCase):
+
+    # Writer have to write results while application is running.
+    # Here some fake threads (SampleGenerator) send `Sample` on writing.
+    # Then after a delay we exposing data from the result file and verify there is something already written.
+    def test_writer_works_in_background(self):
+        outfile = tempfile.NamedTemporaryFile()
+        outfile.close()
+
+        writer = JTLSampleWriter(outfile.name)
+        sample_generators = [SampleGenerator(writer, i, outfile.name) for i in range(5)]
+
+        with writer:
+            for generator in sample_generators:
+                generator.start()
+            for generator in sample_generators:
+                generator.join()
+
+        while not writer.is_queue_empty() and writer.is_alive():
+            time.sleep(0.1)
+
+        for generator in sample_generators:
+            self.assertTrue(len(generator.written_results) > 1)
+
+    def test_writers_x3(self):
+        # writers must:
+        #   1. be the same for threads of one process
+        #   2. be set up only once
+        #   3. be different for different processes
+        def dummy_worker_init(self, params):
+            """
+            :type params: Params
+            """
+            super(Worker, self).__init__(params.concurrency)
+            self.params = params
+            store.writer = DummyWriter(self.params.report, self.params.workers_log)
+
+        outfile = tempfile.NamedTemporaryFile()
+        outfile.close()
+
+        params = Params()
+
+        # use this log to spy on writers
+        workers_log = outfile.name + '-workers.log'
+        params.workers_log = workers_log
+
+        params.tests = [os.path.join(os.path.dirname(__file__), "resources", "test_smart_transactions.py")]
+        params.report = outfile.name + "%s"
+
+        # it causes 2 processes and 3 threads (totally)
+        params.concurrency = 3
+        params.worker_count = 2
+
+        params.iterations = 2
+        saved_worker_init = Worker.__init__
+        Worker.__init__ = dummy_worker_init
+        try:
+            sup = Supervisor(params)
+            sup.start()
+            while sup.isAlive():
+                time.sleep(1)
+
+            with open(workers_log) as log:
+                writers = log.readlines()
+            self.assertEqual(2, len(writers))
+            self.assertNotEqual(writers[0], writers[1])
+        finally:
+            Worker.__init__ = saved_worker_init
+
+            os.remove(workers_log)
+            for i in range(params.worker_count):
+                os.remove(params.report % i)
+
+
+def mock_spawn_worker(params):
+    with open(params.report, 'w') as log:
+        log.write(str(os.getpid()))
+        time.sleep(0.2)
+
+
+class TestMultiprocessing(TestCase):
+
+    # Each worker should be spawned in separate process
+    # Replace new process function `spawn_worker` with `mock_spawn_worker`
+    # This mock function writes in process report file pid of the process
+    # Test collect data from all report files and verify different ids count.
+    def test_worker_spawned_as_separate_process(self):
+        outfile = tempfile.NamedTemporaryFile()
+        outfile.close()
+
+        params = Params()
+        params.report = outfile.name + "%s"
+        params.concurrency = 15
+        params.worker_count = 15
+
+        params.iterations = 1
+        saved_spawn_worker = apiritif.loadgen.spawn_worker
+        apiritif.loadgen.spawn_worker = mock_spawn_worker
+
+        try:
+            sup = Supervisor(params)
+            sup.start()
+            while sup.isAlive():
+                time.sleep(0.1)
+
+            process_ids = []
+            for i in range(params.worker_count):
+                with open(params.report % i) as f:
+                    process_ids.extend(f.readlines())
+            self.assertEqual(params.worker_count, len(set(process_ids)))
+
+        finally:
+            apiritif.loadgen.spawn_worker = saved_spawn_worker
+
+            for i in range(params.worker_count):
+                os.remove(params.report % i)
