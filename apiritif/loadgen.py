@@ -133,6 +133,9 @@ class Supervisor(Thread):
         try:
             self.workers.map(spawn_worker, args)
         finally:
+            if 'GRACEFUL' in os.environ and os.environ['GRACEFUL'] == 'init':
+                log.info("Graceful shutdown initiated.")
+                os.environ['GRACEFUL'] = 'done'
             self.workers.close()
             self.workers.join()
         # TODO: watch the total test duration, if set, 'cause iteration might last very long
@@ -151,6 +154,8 @@ class Worker(ThreadPool):
             store.writer = JTLSampleWriter(self.params.report)
 
     def start(self):
+        if 'GRACEFUL' in os.environ and os.environ['GRACEFUL'] == 'init':
+            self.close()
         params = list(self._get_thread_params())
         with store.writer:  # writer must be closed finally
             try:
