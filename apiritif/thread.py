@@ -16,6 +16,7 @@ limitations under the License.
 """
 from threading import local
 
+from apiritif.action_plugins import BaseActionHandler
 
 _total = 1
 _thread_local = local()
@@ -88,19 +89,31 @@ def set_transaction_handlers(handlers):
     put_into_thread_store(transaction_handlers=handlers)
 
 
+def external_handler(session_id, action_type, action):
+    for handler in get_action_handlers():
+        if isinstance(handler, BaseActionHandler):
+            handler.handle(session_id, action_type, action)
+
+
+def get_action_handlers():
+    return get_from_thread_store("action_handlers")
+
+
+# Deprecated
 def external_log(log_line):
-    for func in get_logging_handlers():
-        func(log_line)
+    pass
 
 
+# Deprecated
 def set_logging_handlers(handlers):
-    put_into_thread_store(log_handlers=handlers)
+    pass
 
 
+# Deprecated
 def get_logging_handlers():
-    log_handlers = get_from_thread_store("log_handlers")
-    return log_handlers
+    pass
 
 
-def clean_logging_handlers():
-    _thread_local.kwargs["log_handlers"] = []
+# Deprecated
+def add_logging_handlers(methods=None):
+    pass

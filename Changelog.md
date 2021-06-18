@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.7 <sup> 15 Jun 2021</sup>
+- add external handlers feature
+
+## 0.9.6 <sup> 15 jan 2021</sup>
+- support client-side certificates
+- improve error trace info
+- fix problem of binary POST tracing
+- detect delimiter in csv files automatically
+
 ## 0.9.5 <sup>01 sep 2020</sup>
 - add quoting auto detection feature
 - add ability to log actions externally

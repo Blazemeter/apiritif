@@ -1,0 +1,21 @@
+from apiritif.action_plugins import BaseActionHandler, ActionHandlerFactory
+
+
+@ActionHandlerFactory.register('local')
+class BZMActionHandler(BaseActionHandler):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.started = False
+        self.ended = False
+        self.actions = []
+
+    def startup(self):
+        self.started = True
+
+    def finalize(self):
+        self.ended = True
+
+    def handle(self, session_id, action_type, action):
+        self.actions.append((session_id, action_type, action))
+        print(f'BZM: {session_id}, {action_type}, {action}')
