@@ -4,6 +4,9 @@ from unittest import TestCase
 from apiritif.http import http
 from apiritif import ssl_adapter
 from nose.tools import raises
+from urllib3 import disable_warnings
+
+disable_warnings()
 
 
 class CryptoMock:
