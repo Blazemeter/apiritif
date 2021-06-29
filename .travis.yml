@@ -16,4 +16,4 @@ install:
 - pip install codecov nose nose-exclude nose-timer
 script: coverage run -m nose --exclude-dir=tests/resources --with-timer
 after_success:
-  - coverage report -m && codecov
+  - codecov
