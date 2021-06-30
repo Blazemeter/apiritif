@@ -1,5 +1,8 @@
 from apiritif import http
 from unittest import TestCase
+from urllib3 import disable_warnings
+
+disable_warnings()
 
 
 class TestRequests(TestCase):

@@ -3,10 +3,12 @@ from unittest import TestCase
 
 import nose
 
+from urllib3 import disable_warnings
 from apiritif import store
 from apiritif.loadgen import ApiritifPlugin
 
 RESOURCES_DIR = os.path.dirname(os.path.realpath(__file__)) + "/resources"
+disable_warnings()
 
 
 class CachingWriter(object):
@@ -14,7 +16,6 @@ class CachingWriter(object):
         self.samples = []
 
     def add(self, sample, test_count, success_count):
-        print(sample, test_count, success_count)
         self.samples.append(sample)
 
 

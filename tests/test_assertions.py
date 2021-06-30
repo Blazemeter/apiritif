@@ -1,6 +1,9 @@
 import unittest
 
 from apiritif import http
+from urllib3 import disable_warnings
+
+disable_warnings()
 
 
 class TestRequests(unittest.TestCase):
