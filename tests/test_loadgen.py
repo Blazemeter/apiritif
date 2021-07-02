@@ -6,7 +6,6 @@ import time
 import threading
 from unittest import TestCase
 from multiprocessing.pool import CLOSE
-from urllib3 import disable_warnings
 
 import apiritif
 from apiritif import store, thread
@@ -15,7 +14,6 @@ from apiritif.loadgen import Worker, Params, Supervisor, JTLSampleWriter
 
 dummy_tests = [os.path.join(os.path.dirname(__file__), "resources", "test_dummy.py")]
 logging.basicConfig(level=logging.DEBUG)
-disable_warnings()
 
 
 class DummyWriter(JTLSampleWriter):
