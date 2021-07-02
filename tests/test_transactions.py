@@ -4,12 +4,14 @@ import unittest
 import threading
 import apiritif
 
+from urllib3 import disable_warnings
 from apiritif import http, transaction, transaction_logged, smart_transaction
 
 target = http.target('https://httpbin.org')
 target.keep_alive(True)
 target.auto_assert_ok(False)
 target.use_cookies(True)
+disable_warnings()
 
 
 class TestRequests(unittest.TestCase):

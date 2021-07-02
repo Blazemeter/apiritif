@@ -17,7 +17,6 @@ class TestCSV(TestCase):
         outfile = tempfile.NamedTemporaryFile()
         report = outfile.name + "-%s.csv"
         outfile.close()
-        print(report)
         params = Params()
         params.concurrency = 4
         params.iterations = 2
@@ -60,7 +59,6 @@ class TestCSV(TestCase):
         outfile = tempfile.NamedTemporaryFile()
         report = outfile.name + "-%s.csv"
         outfile.close()
-        print(report)
         params = Params()
         params.concurrency = 2
         params.iterations = 3
@@ -110,7 +108,6 @@ class TestCSV(TestCase):
         outfile = tempfile.NamedTemporaryFile()
         report = outfile.name + "-%s.csv"
         outfile.close()
-        print(report)
         params = Params()
         params.concurrency = 1
         params.iterations = 10
@@ -140,7 +137,6 @@ class TestCSV(TestCase):
         outfile = tempfile.NamedTemporaryFile()
         report = outfile.name + "-%s.csv"
         outfile.close()
-        print(report)
         params = Params()
         params.concurrency = 1
         params.iterations = 10

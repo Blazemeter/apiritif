@@ -6,6 +6,7 @@ import time
 import threading
 from unittest import TestCase
 from multiprocessing.pool import CLOSE
+from urllib3 import disable_warnings
 
 import apiritif
 from apiritif import store, thread
@@ -13,8 +14,8 @@ from apiritif.samples import Sample
 from apiritif.loadgen import Worker, Params, Supervisor, JTLSampleWriter
 
 dummy_tests = [os.path.join(os.path.dirname(__file__), "resources", "test_dummy.py")]
-
 logging.basicConfig(level=logging.DEBUG)
+disable_warnings()
 
 
 class DummyWriter(JTLSampleWriter):
@@ -36,7 +37,6 @@ class TestLoadGen(TestCase):
 
     def test_thread(self):
         outfile = tempfile.NamedTemporaryFile()
-        print(outfile.name)
         params = Params()
         params.concurrency = 2
         params.iterations = 10
@@ -50,7 +50,6 @@ class TestLoadGen(TestCase):
         error_tests = [os.path.join(os.path.dirname(__file__), "resources", "test_setup_errors.py")]
 
         outfile = tempfile.NamedTemporaryFile()
-        print(outfile.name)
         params = Params()
         params.concurrency = 1
         params.iterations = 1
@@ -66,7 +65,6 @@ class TestLoadGen(TestCase):
 
     def test_worker(self):
         outfile = tempfile.NamedTemporaryFile()
-        print(outfile.name)
         params = Params()
         params.concurrency = 2
         params.iterations = 10
@@ -79,7 +77,6 @@ class TestLoadGen(TestCase):
 
     def test_empty_worker(self):
         outfile = tempfile.NamedTemporaryFile()
-        print(outfile.name)
         params = Params()
         params.concurrency = 2
         params.iterations = 10
@@ -187,7 +184,6 @@ class TestLoadGen(TestCase):
 
     def test_ramp_up1(self):
         outfile = tempfile.NamedTemporaryFile()
-        print(outfile.name)
 
         params1 = Params()
         params1.concurrency = 50
@@ -201,21 +197,16 @@ class TestLoadGen(TestCase):
 
         worker1 = Worker(params1)
         res1 = [x.delay for x in worker1._get_thread_params()]
-        print(res1)
         self.assertEquals(params1.concurrency, len(res1))
 
         params2 = copy.deepcopy(params1)
         params2.worker_index = 1
         worker2 = Worker(params2)
         res2 = [x.delay for x in worker2._get_thread_params()]
-        print(res2)
         self.assertEquals(params2.concurrency, len(res2))
-
-        print(sorted(res1 + res2))
 
     def test_ramp_up2(self):
         outfile = tempfile.NamedTemporaryFile()
-        print(outfile.name)
 
         params1 = Params()
         params1.concurrency = 50
@@ -228,12 +219,10 @@ class TestLoadGen(TestCase):
 
         worker1 = Worker(params1)
         res1 = [x.delay for x in worker1._get_thread_params()]
-        print(res1)
         self.assertEquals(params1.concurrency, len(res1))
 
     def test_unicode_ldjson(self):
         outfile = tempfile.NamedTemporaryFile(suffix=".ldjson")
-        print(outfile.name)
         params = Params()
         params.concurrency = 2
         params.iterations = 1
@@ -245,7 +234,8 @@ class TestLoadGen(TestCase):
         worker.join()
 
         with open(outfile.name) as fds:
-            print(fds.read())
+            result = fds.readlines()
+        self.assertEqual(4, len(result))
 
 
 class SampleGenerator(threading.Thread):
