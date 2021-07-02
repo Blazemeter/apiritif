@@ -103,7 +103,7 @@ class TestLoadGen(TestCase):
         params.iterations = 5
         sup = Supervisor(params)
         sup.start()
-        while sup.isAlive():
+        while sup.is_alive():
             time.sleep(1)
 
     def test_empty_supervisor(self):
@@ -115,7 +115,7 @@ class TestLoadGen(TestCase):
         params.iterations = 5
         sup = Supervisor(params)
         sup.start()
-        while sup.isAlive():
+        while sup.is_alive():
             time.sleep(1)
 
         self.assertEqual(CLOSE, sup.workers._state)
@@ -167,7 +167,7 @@ class TestLoadGen(TestCase):
         try:
             sup = Supervisor(params)
             sup.start()
-            while sup.isAlive():
+            while sup.is_alive():
                 time.sleep(1)
 
             with open(handlers_log) as log:
@@ -323,7 +323,7 @@ class TestWriter(TestCase):
         try:
             sup = Supervisor(params)
             sup.start()
-            while sup.isAlive():
+            while sup.is_alive():
                 time.sleep(1)
 
             with open(workers_log) as log:
@@ -366,7 +366,7 @@ class TestMultiprocessing(TestCase):
         try:
             sup = Supervisor(params)
             sup.start()
-            while sup.isAlive():
+            while sup.is_alive():
                 time.sleep(0.1)
 
             process_ids = []
