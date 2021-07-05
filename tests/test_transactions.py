@@ -118,12 +118,11 @@ class TransactionThread(threading.Thread):
 
         self.message_from_thread_store = apiritif.get_from_thread_store('message')
 
-    def _enter_handler(self, name, suite):
-        self.name_from_handler = name
-        self.suite_from_handler = suite
+    def _enter_handler(self):
+        pass
 
-    def _exit_handler(self, status, message):
-        self.message_from_handler = message
+    def _exit_handler(self):
+        pass
 
 
 class TestMultiThreadTransaction(unittest.TestCase):
@@ -142,7 +141,4 @@ class TestMultiThreadTransaction(unittest.TestCase):
         for tran in transactions:
             self.assertEqual(tran.transaction_controller, tran.controller)
             self.assertEqual(tran.transaction_driver, tran.driver)
-            self.assertEqual(tran.name_from_handler, tran.thread_name)
-            self.assertEqual(tran.suite_from_handler, tran.controller.current_sample.test_suite)
-            self.assertEqual(tran.message_from_handler, tran.exception_message)
             self.assertEqual(tran.message_from_thread_store, tran.exception_message)
