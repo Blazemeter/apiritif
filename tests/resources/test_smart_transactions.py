@@ -11,11 +11,11 @@ def add_dummy_handlers():
     set_transaction_handlers(handlers)
 
 
-def _enter_handler(case, suite):
+def _enter_handler():
     pass
 
 
-def _exit_handler(status, message):
+def _exit_handler():
     pass
 
 
