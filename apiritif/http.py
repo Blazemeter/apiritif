@@ -242,6 +242,7 @@ class smart_transaction(transaction_logged):
     def __exit__(self, exc_type, exc_val, exc_tb):
         super(smart_transaction, self).__exit__(exc_type, exc_val, exc_tb)
         self.controller.stopTest(is_transaction=True)
+
         message = ''
 
         if exc_type:
@@ -265,6 +266,18 @@ class smart_transaction(transaction_logged):
 
         self.controller.afterTest(is_transaction=True)
 
+        graceful_file_name = os.environ.get('GRACEFUL')
+        graceful_flag = graceful_file_name and os.path.exists(graceful_file_name)
+        stage = apiritif.get_from_thread_store('stage')
+        if stage in ('setup', 'teardown'):
+            self.func_mode = False
+
+        if stage == 'main' and graceful_flag:
+            raise StopIteration('graceful!')
+
+        #self.func_mode = True
+        #raise RuntimeError('stop it!')
+        #raise KeyboardInterrupt('))')
         return not self.func_mode  # don't reraise in load mode
 
 

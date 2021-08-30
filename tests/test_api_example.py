@@ -1,11 +1,10 @@
 from apiritif import http
 from unittest import TestCase
-from urllib3 import disable_warnings
 
 target = http.target("http://blazedemo.com")
 target.use_cookies(False)
 target.auto_assert_ok(False)
-disable_warnings()
+
 
 
 class TestSimple(TestCase):
