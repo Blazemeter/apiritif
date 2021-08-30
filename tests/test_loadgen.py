@@ -6,7 +6,6 @@ import time
 import threading
 from unittest import TestCase
 from multiprocessing.pool import CLOSE
-from urllib3 import disable_warnings
 
 import apiritif
 from apiritif import store, thread
@@ -15,7 +14,6 @@ from apiritif.loadgen import Worker, Params, Supervisor, JTLSampleWriter
 
 dummy_tests = [os.path.join(os.path.dirname(__file__), "resources", "test_dummy.py")]
 logging.basicConfig(level=logging.DEBUG)
-disable_warnings()
 
 
 class DummyWriter(JTLSampleWriter):
@@ -100,7 +98,7 @@ class TestLoadGen(TestCase):
         params.iterations = 5
         sup = Supervisor(params)
         sup.start()
-        while sup.isAlive():
+        while sup.is_alive():
             time.sleep(1)
 
     def test_empty_supervisor(self):
@@ -112,7 +110,7 @@ class TestLoadGen(TestCase):
         params.iterations = 5
         sup = Supervisor(params)
         sup.start()
-        while sup.isAlive():
+        while sup.is_alive():
             time.sleep(1)
 
         self.assertEqual(CLOSE, sup.workers._state)
@@ -164,7 +162,7 @@ class TestLoadGen(TestCase):
         try:
             sup = Supervisor(params)
             sup.start()
-            while sup.isAlive():
+            while sup.is_alive():
                 time.sleep(1)
 
             with open(handlers_log) as log:
@@ -313,7 +311,7 @@ class TestWriter(TestCase):
         try:
             sup = Supervisor(params)
             sup.start()
-            while sup.isAlive():
+            while sup.is_alive():
                 time.sleep(1)
 
             with open(workers_log) as log:
@@ -356,7 +354,7 @@ class TestMultiprocessing(TestCase):
         try:
             sup = Supervisor(params)
             sup.start()
-            while sup.isAlive():
+            while sup.is_alive():
                 time.sleep(0.1)
 
             process_ids = []

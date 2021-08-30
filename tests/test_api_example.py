@@ -6,7 +6,6 @@ target.use_cookies(False)
 target.auto_assert_ok(False)
 
 
-
 class TestSimple(TestCase):
     def test_blazedemo_index(self):
         response = target.get("/")

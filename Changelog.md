@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.9.8 <sup> 06 Jul 2021</sup>
+- fix handlers interface
+- add 'graceful shutdown' option
+
 ## 0.9.7 <sup> 15 Jun 2021</sup>
 - add external handlers feature
 
