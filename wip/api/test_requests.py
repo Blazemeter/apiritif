@@ -52,7 +52,6 @@ class TestSc1(unittest.TestCase):
             #raise BaseException('111')
             write('4. main2')
 
-
             graceful_flag = os.environ.get('GRACEFUL')
 
             with open(graceful_flag, 'a+') as _f:
