@@ -44,6 +44,25 @@ class TestLoadGen(TestCase):
         worker = Worker(params)
         worker.run_nose(params)
 
+    def test_setup_teardown_graceful(self):
+        error_tests = [os.path.join(os.path.dirname(__file__), "resources", "setup_teardown_graceful.py")]
+
+        outfile = tempfile.NamedTemporaryFile()
+        params = Params()
+        params.concurrency = 1
+        params.iterations = 1
+        params.report = outfile.name
+        params.tests = error_tests
+        params.verbose = True
+
+        worker = Worker(params)
+        worker.run_nose(params)
+
+        # todo: fix result of "samples = self.apiritif_extractor.parse_recording(recording, sample)"
+        test_result = apiritif.get_from_thread_store('test_result')
+        sample = ['1. setup1', '2. setup2', '3. main1', '4. main2', '5. teardown1', '6. teardown2']
+        self.assertEqual(sample, test_result)
+
     def test_setup_errors(self):
         error_tests = [os.path.join(os.path.dirname(__file__), "resources", "test_setup_errors.py")]
 
