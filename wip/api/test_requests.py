@@ -52,7 +52,6 @@ class TestSc1(unittest.TestCase):
             #raise BaseException('111')
             write('4. main2')
 
-
             graceful_flag = os.environ.get('GRACEFUL')
 
             with open(graceful_flag, 'a+') as _f:
@@ -79,14 +78,15 @@ class TestSc1(unittest.TestCase):
 
     def test_sc1(self):
         try:
-            apiritif.put_into_thread_store(stage="setup")
+            apiritif.set_stage("setup")     # can't be interrupted
             self._1_httpsblazedemocomsetup1()
             self._1_httpsblazedemocomsetup2()
-            apiritif.put_into_thread_store(stage="main")
+
+            apiritif.set_stage("main")      # interrruptable by error or graceful flag
             self._2_httpsblazedemocommain1()
             self._2_httpsblazedemocommain2()
             self._2_httpsblazedemocommain3()
         finally:
-            apiritif.put_into_thread_store(stage="teardown")
+            apiritif.set_stage("teardown")      # can't be interrupted
             self._3_httpsblazedemocomteardown1()
             self._3_httpsblazedemocomteardown2()
