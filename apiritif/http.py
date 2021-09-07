@@ -269,9 +269,9 @@ class smart_transaction(transaction_logged):
         graceful_file_name = os.environ.get('GRACEFUL')
         graceful_flag = graceful_file_name and os.path.exists(graceful_file_name)
         stage = apiritif.get_stage()
-        if stage in ("setup", "teardown"):
+        if stage == "teardown":
             self.func_mode = False
-        elif graceful_flag:     # and stage == "main"
+        elif graceful_flag:     # and stage in ("setup", "main")
             raise StopIteration("graceful!")
 
         return not self.func_mode  # don't reraise in load mode
