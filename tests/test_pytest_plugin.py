@@ -9,7 +9,7 @@ from _pytest.config.argparsing import Parser
 from _pytest.nodes import Node
 from _pytest.reports import TestReport
 from _pytest.runner import CallInfo
-from pluggy.callers import _Result
+from pluggy._result import _Result
 
 import apiritif
 from apiritif import http
