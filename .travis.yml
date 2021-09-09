@@ -10,7 +10,6 @@ matrix:
   - os: linux
     python: 3.9
 
-
 install:
 - pip install .
 - pip install codecov nose nose-exclude nose-timer "pluggy>=1.0"
