@@ -1,5 +1,8 @@
 language: python
 dist: focal
+branches: # this prevents undesired branch builds for PRs
+  only:
+    - master
 
 matrix:
   include:
