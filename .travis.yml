@@ -12,8 +12,8 @@ matrix:
 
 
 install:
-- pip install -U .
-- pip install codecov nose nose-exclude nose-timer
+- pip install .
+- pip install codecov nose nose-exclude nose-timer pluggy
 script: coverage run -m nose --exclude-dir=tests/resources --with-timer
 after_success:
   - codecov
