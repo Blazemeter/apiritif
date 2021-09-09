@@ -32,7 +32,7 @@ setup(
     docs_url='https://github.com/Blazemeter/apiritif',
 
     install_requires=[
-        'nose', 'pytest>=6.2.5', 'requests>=2.24.0', 'jsonpath-ng', 'lxml',
+        'nose', 'pytest>=6.2.5', 'pluggy>=1.0', 'requests>=2.24.0', 'jsonpath-ng', 'lxml',
         'unicodecsv', 'cssselect', 'chardet', 'pyopenssl'
     ],
 
