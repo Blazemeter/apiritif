@@ -76,14 +76,12 @@ class TestSc1(unittest.TestCase):
 
     def test_sc1(self):
         try:
-            apiritif.put_into_thread_store(stage="setup")
             self._1_httpsblazedemocomsetup1()
             self._1_httpsblazedemocomsetup2()
-            apiritif.put_into_thread_store(stage="main")
             self._2_httpsblazedemocommain1()
             self._2_httpsblazedemocommain2()
             self._2_httpsblazedemocommain3()
         finally:
-            apiritif.put_into_thread_store(stage="teardown")
+            apiritif.set_stage("teardown")
             self._3_httpsblazedemocomteardown1()
             self._3_httpsblazedemocomteardown2()
