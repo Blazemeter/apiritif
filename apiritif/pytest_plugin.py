@@ -47,7 +47,7 @@ class ApiritifPytestPlugin(object):
     def pytest_runtest_makereport(self, item, call):
         report = yield
         if call.when == 'call':
-            self._trace_map[item.nodeid] = self._get_subsamples(call, report.result, item)
+            self._trace_map[item.nodeid] = self._get_subsamples(call, report.get_result(), item)
 
     def _get_subsamples(self, call, report, item):
         recording = self._pop_events()
