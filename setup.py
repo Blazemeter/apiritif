@@ -16,10 +16,12 @@ limitations under the License.
 
 from setuptools import setup
 
+from apiritif import VERSION
+
 setup(
     name="apiritif",
     packages=['apiritif'],
-    version="0.9.8",
+    version=VERSION,
     description='Python framework for API testing',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',

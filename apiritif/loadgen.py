@@ -523,7 +523,7 @@ def cmdline_to_params():
     log.debug("%s %s", opts, args)
 
     if opts.version:
-        print("0.9.8")
+        print(apiritif.VERSION)
         sys.exit(0)
 
     params = Params()
