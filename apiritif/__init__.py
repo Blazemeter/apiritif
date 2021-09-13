@@ -22,4 +22,4 @@ from .utils import headers_as_text, assert_regexp, assert_not_regexp, log
 # DEPRECATED
 from .thread import get_logging_handlers, set_logging_handlers, external_log
 
-VERSION = "0.9.8"
+__version__ = "0.9.8"

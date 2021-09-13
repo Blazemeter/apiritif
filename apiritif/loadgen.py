@@ -39,7 +39,6 @@ import apiritif.store as store
 from apiritif.action_plugins import ActionHandlerFactory, import_plugins
 from apiritif.utils import NormalShutdown, log, get_trace
 
-
 # TODO how to implement hits/s control/shape?
 # TODO: VU ID for script
 # TODO: disable assertions for load mode
@@ -524,7 +523,7 @@ def cmdline_to_params():
     log.debug("%s %s", opts, args)
 
     if opts.version:
-        print(apiritif.VERSION)
+        print("0.9.8")
         sys.exit(0)
 
     params = Params()
