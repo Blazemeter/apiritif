@@ -7,4 +7,3 @@ unicodecsv
 cssselect
 chardet
 pyopenssl
-pluggy>=1.0
