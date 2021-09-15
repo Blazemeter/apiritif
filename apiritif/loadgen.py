@@ -37,7 +37,8 @@ import apiritif
 import apiritif.thread as thread
 import apiritif.store as store
 from apiritif.action_plugins import ActionHandlerFactory, import_plugins
-from apiritif.utils import NormalShutdown, log, get_trace
+from apiritif.utils import NormalShutdown, log, get_trace, VERSION
+
 
 # TODO how to implement hits/s control/shape?
 # TODO: VU ID for script
@@ -523,7 +524,7 @@ def cmdline_to_params():
     log.debug("%s %s", opts, args)
 
     if opts.version:
-        print(apiritif.VERSION)
+        print(VERSION)
         sys.exit(0)
 
     params = Params()
