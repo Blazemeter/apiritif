@@ -14,8 +14,8 @@ matrix:
     python: 3.9
 
 install:
-- pip install .
-- pip install codecov nose nose-exclude nose-timer "pluggy>=1.0"
+- pip install -r requirements.txt
+- pip install codecov nose-exclude nose-timer "pluggy>=1.0"
 script: coverage run -m nose --exclude-dir=tests/resources --with-timer
 after_success:
   - codecov

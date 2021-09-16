@@ -1,0 +1,9 @@
+nose
+pytest
+requests>=2.24.0
+jsonpath-ng
+lxml
+unicodecsv
+cssselect
+chardet
+pyopenssl
