@@ -18,6 +18,9 @@ from setuptools import setup
 
 from apiritif.utils import VERSION
 
+with open("requirements.txt") as reqs_file:
+    requirements = [package for package in reqs_file.read().strip().split("\n")]
+
 setup(
     name="apiritif",
     packages=['apiritif'],
@@ -32,12 +35,7 @@ setup(
     url='https://github.com/Blazemeter/apiritif',
     download_url='https://github.com/Blazemeter/apiritif',
     docs_url='https://github.com/Blazemeter/apiritif',
-
-    install_requires=[
-        'nose', 'pytest', 'requests>=2.24.0', 'jsonpath-ng', 'lxml',
-        'unicodecsv', 'cssselect', 'chardet', 'pyopenssl'
-    ],
-
+    install_requires=requirements,
     entry_points={
         'pytest11': [
             'pytest_apiritif = apiritif.pytest_plugin',
