@@ -37,7 +37,7 @@ import apiritif
 import apiritif.thread as thread
 import apiritif.store as store
 from apiritif.action_plugins import ActionHandlerFactory, import_plugins
-from apiritif.utils import NormalShutdown, log, get_trace
+from apiritif.utils import NormalShutdown, log, get_trace, VERSION
 
 
 # TODO how to implement hits/s control/shape?
@@ -519,8 +519,13 @@ def cmdline_to_params():
     parser.add_option('', '--hold-for', action='store', type="float", default=0)
     parser.add_option('', '--result-file-template', action='store', type="str", default="result-%s.csv")
     parser.add_option('', '--verbose', action='store_true', default=False)
+    parser.add_option('', "--version", action='store_true', default=False)
     opts, args = parser.parse_args()
     log.debug("%s %s", opts, args)
+
+    if opts.version:
+        print(VERSION)
+        sys.exit(0)
 
     params = Params()
     params.concurrency = opts.concurrency

@@ -4,6 +4,11 @@ Apiritif is a number of utilities aimed to simplify the process of maintaining A
 Apiritif tests fully based on python nose tests. This library can help you to develop and run your existing tests.
 In order to create any valid tests for Apiritif you can read [nose test documentation](https://nose.readthedocs.io/en/latest/testing.html).
 
+Check Apiritif version with the following command:
+```
+python -m apiritif -- version
+```
+
 Here described some features of Apiritif which can help you to create tests more easily.  
 
 ## Overview
@@ -267,17 +272,6 @@ timeStamp,elapsed,Latency,label,responseCode,responseMessage,success,allThreads,
 1602759519187,0,0,Test with exception,,Exception: Horrible error,false,0,2
 ```  
 It contains test and transaction results for executed tests by one process.
-
-## Taurus Integration
-
-TODO: describe that Taurus can extract Apiritif's action log and handle it.
-
-## Logging
-
-TODO: Describe that Apiritif creates 'apiritif' logger that can be used to
-debug http requests and write test interactively.
-
-TODO: describe how to silence Apiritif logging.
 
 ### Environment Variables
 

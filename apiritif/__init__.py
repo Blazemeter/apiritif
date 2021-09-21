@@ -1,4 +1,3 @@
-
 """
 This is a toplevel package of Apiritif tool
 Copyright 2017 BlazeMeter Inc.
