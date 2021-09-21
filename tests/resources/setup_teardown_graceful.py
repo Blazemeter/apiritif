@@ -50,6 +50,8 @@ class TestSc1(unittest.TestCase):
     def _2_httpsblazedemocommain2(self):
         with apiritif.smart_transaction('https://bad_url.com/main2'):
             write('4. main2')
+            with open(self.graceful_flag, 'a+') as _f:
+                _f.write('')
             response = apiritif.http.get('https://blazedemo.com/main2', timeout=2.0)
 
     def _2_httpsblazedemocommain3(self):
