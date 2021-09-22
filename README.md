@@ -253,9 +253,9 @@ Please note two differences with usage of `tearDown` method of nose:
 2. results of teardown steps will be written by apiritif SampleWriter into output file (nose lost them as tearDown isn't recognised as test).
 
 ##### Graceful shutdown
-Somethimes waiting of end of test isn't necessary and we prefer to break it but save all current results and handle all teardown steps (see above)
+Somethimes waiting of end of test isn't necessary and we prefer to break it but save all current results and handle all teardown steps. (see above)
 It's possible with GRACEFUL flag. To use it you can run apiritif with GRACEFUL environment variable pointed to any file name.
-Apiritif will be interrupted as soon as the file has been created.
+Apiritif will be interrupted as soon as the file is created.
 
 ## CSV Reader
 In order to use data from csv file as test parameters Apiritif provides two different csv readers.
