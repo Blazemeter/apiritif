@@ -233,6 +233,29 @@ Now about `apiritif.put_into_thread_store(func_mode=True)`, this is test executi
 We can execute all of the transactions in test no matter what or stop after first failed transaction.
 This flag tells to apiritif "Stop execution if some transaction failed". `False` says "Run till the end in any case".
 
+##### Nose Flow Control
+It's one more feature based on smart transactions. It changes `func_mode` if necessary to execute whole teardown block,
+intended to finalize all necessary things.
+
+```python
+def test_flow-control(self):
+        try:
+            self._method_with_exception()
+            self._skipped_method()
+        finally:
+            apiritif.set_stage("teardown")
+            self._teardown1()
+            self._teardown2()
+```
+If this test will be interrupted in `_method_with_exception`, both of teardown methods will be executed even if them raise exception.
+Please note two differences with usage of `tearDown` method of nose:
+1. all parts of teardown stage will be executed as mentioned above (will be interrupted in regular nose execution)
+2. results of teardown steps will be written by apiritif SampleWriter into output file (nose lost them as tearDown isn't recognised as test).
+
+##### Graceful shutdown
+Somethimes waiting of end of test isn't necessary and we prefer to break it but save all current results and handle all teardown steps (see above)
+It's possible with GRACEFUL flag. To use it you can run apiritif with GRACEFUL environment variable pointed to any file name.
+Apiritif will be interrupted as soon as the file has been created.
 
 ## CSV Reader
 In order to use data from csv file as test parameters Apiritif provides two different csv readers.
