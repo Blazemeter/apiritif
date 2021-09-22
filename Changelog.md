@@ -1,13 +1,18 @@
 # Changelog
 
-## 0.9.8 <sup> 06 Jul 2021</sup>
+## 1.0.0 <sup>next</sup>
+- add Nose Flow Control
+- add GRACEFUL shutdown feature
+- add version option
+
+## 0.9.8 <sup>06 Jul 2021</sup>
 - fix handlers interface
 - add 'graceful shutdown' option
 
-## 0.9.7 <sup> 15 Jun 2021</sup>
+## 0.9.7 <sup>15 Jun 2021</sup>
 - add external handlers feature
 
-## 0.9.6 <sup> 15 jan 2021</sup>
+## 0.9.6 <sup>15 jan 2021</sup>
 - support client-side certificates
 - improve error trace info
 - fix problem of binary POST tracing

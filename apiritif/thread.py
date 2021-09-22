@@ -50,6 +50,14 @@ def get_iteration():
     return iteration
 
 
+def get_stage():
+    return get_from_thread_store("stage")
+
+
+def set_stage(stage):
+    put_into_thread_store(stage=stage)
+
+
 def put_into_thread_store(*args, **kwargs):
     if args:
         _thread_local.args = args
