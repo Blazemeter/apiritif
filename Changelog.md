@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.0.0 <sup>next</sup>
+## 1.0.0 <sup>27 Sep 2021</sup>
 - add Nose Flow Control
 - add GRACEFUL shutdown feature
 - add version option
