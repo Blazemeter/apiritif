@@ -8,7 +8,8 @@ from apiritif import thread
 
 from apiritif.action_plugins import PLUGINS_PATH, import_plugins, ActionHandlerFactory, BaseActionHandler
 from apiritif.loadgen import Worker, Params
-from tests.test_loadgen import dummy_tests
+from tests.unit import RESOURCES_DIR
+from tests.unit.test_loadgen import dummy_tests
 
 
 class TestRequests(TestCase):
@@ -20,11 +21,11 @@ class TestRequests(TestCase):
         os.mkdir(plugin_dir)
 
         # create __init__.py file
-        init_file = os.path.join(plugin_dir, '__init__.py')
+        init_file = os.path.join(plugin_dir, '../__init__.py')
         open(init_file, 'a').close()
 
         # create plugin file
-        template_path = os.path.join(os.path.dirname(__file__), "resources", "action_plugin_template.txt")
+        template_path = os.path.join(RESOURCES_DIR, "action_plugin_template.txt")
         action_plugin = os.path.join(plugin_dir, 'bzm_logger.py')
         shutil.copyfile(template_path, action_plugin)
 

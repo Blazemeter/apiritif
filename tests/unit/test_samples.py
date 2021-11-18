@@ -5,8 +5,7 @@ import nose
 
 from apiritif import store
 from apiritif.loadgen import ApiritifPlugin
-
-RESOURCES_DIR = os.path.dirname(os.path.realpath(__file__)) + "/resources"
+from tests.unit import RESOURCES_DIR
 
 
 class CachingWriter(object):
@@ -25,7 +24,7 @@ class Recorder(ApiritifPlugin):
 
 class TestSamples(TestCase):
     def test_transactions(self):
-        test_file = RESOURCES_DIR + "/test_transactions.py"
+        test_file = os.path.join(RESOURCES_DIR, "test_transactions.py")
         self.assertTrue(os.path.exists(test_file))
         store.writer = CachingWriter()
         nose.run(argv=[__file__, test_file, '-v'], addplugins=[Recorder()])
@@ -104,7 +103,7 @@ class TestSamples(TestCase):
         self.assertTrue(request.assertions[2].failed)
 
     def test_label_single_transaction(self):
-        test_file = RESOURCES_DIR + "/test_single_transaction.py"
+        test_file = os.path.join(RESOURCES_DIR, "test_single_transaction.py")
         self.assertTrue(os.path.exists(test_file))
         store.writer = CachingWriter()
         nose.run(argv=[__file__, test_file, '-v'], addplugins=[Recorder()])
