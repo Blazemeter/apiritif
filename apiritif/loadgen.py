@@ -93,8 +93,8 @@ class Supervisor(Thread):
 
     def __init__(self, params):
         super(Supervisor, self).__init__(target=self._start_workers)
-        self.setDaemon(True)
-        self.setName(self.__class__.__name__)
+        self.daemon = True
+        self.name = self.__class__.__name__
 
         self.params = params
         self.workers = None
@@ -273,8 +273,8 @@ class LDJSONSampleWriter(object):
 
         self._writing = False
         self._writer_thread = Thread(target=self._writer)
-        self._writer_thread.setDaemon(True)
-        self._writer_thread.setName(self.__class__.__name__)
+        self._writer_thread.daemon = True
+        self._writer_thread.name = self.__class__.__name__
 
     def __enter__(self):
         self.out_stream = open(self.output_file, "wb")
