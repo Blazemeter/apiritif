@@ -1,3 +1,4 @@
+nose
 nose2
 pytest
 requests>=2.24.0
