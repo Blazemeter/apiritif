@@ -5,6 +5,7 @@ from unittest import TestCase
 from apiritif.loadgen import Params, Supervisor, ApiritifPlugin
 from apiritif.csv import CSVReaderPerThread, thread_data
 from apiritif.utils import NormalShutdown
+from tests.unit import RESOURCES_DIR
 
 
 class TestCSV(TestCase):
@@ -13,7 +14,7 @@ class TestCSV(TestCase):
 
     def test_threads_and_processes(self):
         """ check if threads and processes can divide csv fairly """
-        script = os.path.dirname(os.path.realpath(__file__)) + "/resources/test_thread_reader.py"
+        script = os.path.join(RESOURCES_DIR, "test_thread_reader.py")
         outfile = tempfile.NamedTemporaryFile()
         report = outfile.name + "-%s.csv"
         outfile.close()
@@ -55,7 +56,7 @@ class TestCSV(TestCase):
 
     def test_two_readers(self):
         """ check different reading speed, fieldnames and separators """
-        script = os.path.dirname(os.path.realpath(__file__)) + "/resources/test_two_readers.py"
+        script = os.path.join(RESOURCES_DIR, "test_two_readers.py")
         outfile = tempfile.NamedTemporaryFile()
         report = outfile.name + "-%s.csv"
         outfile.close()
@@ -90,7 +91,7 @@ class TestCSV(TestCase):
 
     def test_reader_without_loop(self):
         """ check different reading speed, fieldnames and separators """
-        reader = CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "resources/data/source0.csv"), loop=False)
+        reader = CSVReaderPerThread(os.path.join(RESOURCES_DIR, "data/source0.csv"), loop=False)
         data = []
         try:
             for i in range(20):
@@ -104,7 +105,7 @@ class TestCSV(TestCase):
 
     def test_apiritif_without_loop(self):
         """ check different reading speed, fieldnames and separators """
-        script = os.path.dirname(os.path.realpath(__file__)) + "/resources/test_reader_no_loop.py"
+        script = os.path.join(RESOURCES_DIR, "test_reader_no_loop.py")
         outfile = tempfile.NamedTemporaryFile()
         report = outfile.name + "-%s.csv"
         outfile.close()
@@ -133,7 +134,7 @@ class TestCSV(TestCase):
 
     def test_reader_without_loop_non_stop(self):
         """ check different reading speed, fieldnames and separators """
-        script = os.path.dirname(os.path.realpath(__file__)) + "/resources/test_reader_no_loop.py"
+        script = os.path.join(RESOURCES_DIR, "test_reader_no_loop.py")
         outfile = tempfile.NamedTemporaryFile()
         report = outfile.name + "-%s.csv"
         outfile.close()
@@ -168,10 +169,8 @@ class TestCSV(TestCase):
         self.assertTrue(len(threads["0"]) > 18)
 
     def test_csv_encoding(self):
-        reader_utf8 = CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "resources/data/encoding_utf8.csv"),
-                                         loop=False)
-        reader_utf16 = CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "resources/data/encoding_utf16.csv"),
-                                          loop=False)
+        reader_utf8 = CSVReaderPerThread(os.path.join(RESOURCES_DIR, "data/encoding_utf8.csv"), loop=False)
+        reader_utf16 = CSVReaderPerThread(os.path.join(RESOURCES_DIR, "data/encoding_utf16.csv"), loop=False)
         data_utf8, data_utf16 = [], []
 
         reader_utf8.read_vars()
@@ -184,11 +183,10 @@ class TestCSV(TestCase):
 
     def test_csv_quoted(self):
         readers = [
-            CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "resources/data/quoted_utf8.csv"), loop=False),
-            CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "resources/data/quoted_utf16.csv"), loop=False),
-            CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "resources/data/unquoted_utf8.csv"), loop=False),
-            CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "resources/data/unquoted_utf16.csv"),
-                               loop=False)]
+            CSVReaderPerThread(os.path.join(RESOURCES_DIR, "data/quoted_utf8.csv"), loop=False),
+            CSVReaderPerThread(os.path.join(RESOURCES_DIR, "data/quoted_utf16.csv"), loop=False),
+            CSVReaderPerThread(os.path.join(RESOURCES_DIR, "data/unquoted_utf8.csv"), loop=False),
+            CSVReaderPerThread(os.path.join(RESOURCES_DIR, "data/unquoted_utf16.csv"), loop=False)]
         readers_data = []
 
         for reader in readers:
@@ -201,10 +199,9 @@ class TestCSV(TestCase):
 
     def test_csv_delimiter(self):
         readers = [
-            CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "resources/data/encoding_utf8.csv"), loop=False),
-            CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "resources/data/delimiter_tab.csv"), loop=False),
-            CSVReaderPerThread(os.path.join(os.path.dirname(__file__), "resources/data/delimiter_semicolon.csv"),
-                               loop=False)]
+            CSVReaderPerThread(os.path.join(RESOURCES_DIR, "data/encoding_utf8.csv"), loop=False),
+            CSVReaderPerThread(os.path.join(RESOURCES_DIR, "data/delimiter_tab.csv"), loop=False),
+            CSVReaderPerThread(os.path.join(RESOURCES_DIR, "data/delimiter_semicolon.csv"), loop=False)]
         readers_data = []
 
         for reader in readers:

@@ -11,8 +11,9 @@ import apiritif
 from apiritif import store, thread
 from apiritif.samples import Sample
 from apiritif.loadgen import Worker, Params, Supervisor, JTLSampleWriter
+from tests.unit import RESOURCES_DIR
 
-dummy_tests = [os.path.join(os.path.dirname(__file__), "resources", "test_dummy.py")]
+dummy_tests = [os.path.join(RESOURCES_DIR, "test_dummy.py")]
 logging.basicConfig(level=logging.DEBUG)
 
 
@@ -45,7 +46,7 @@ class TestLoadGen(TestCase):
         worker.run_nose(params)
 
     def test_setup_teardown_graceful(self):
-        error_tests = [os.path.join(os.path.dirname(__file__), "resources", "setup_teardown_graceful.py")]
+        error_tests = [os.path.join(RESOURCES_DIR, "setup_teardown_graceful.py")]
 
         outfile = tempfile.NamedTemporaryFile()
         params = Params()
@@ -64,7 +65,7 @@ class TestLoadGen(TestCase):
         self.assertEqual(sample, test_result)
 
     def test_setup_errors(self):
-        error_tests = [os.path.join(os.path.dirname(__file__), "resources", "test_setup_errors.py")]
+        error_tests = [os.path.join(RESOURCES_DIR, "test_setup_errors.py")]
 
         outfile = tempfile.NamedTemporaryFile()
         params = Params()
@@ -101,10 +102,10 @@ class TestLoadGen(TestCase):
         params.tests = []
 
         worker = Worker(params)
-        worker.close = self.get_required_method(worker.close)   # check whether close has been called
+        worker.close = self.get_required_method(worker.close)  # check whether close has been called
         try:
             worker.start()
-        except:     # assertRaises doesn't catch it
+        except:  # assertRaises doesn't catch it
             pass
         self.assertTrue(self.required_method_called)
 
@@ -166,7 +167,7 @@ class TestLoadGen(TestCase):
         handlers_log = outfile.name + '-handlers.log'
         thread.handlers_log = handlers_log
 
-        params.tests = [os.path.join(os.path.dirname(__file__), "resources", "test_smart_transactions.py")]
+        params.tests = [os.path.join(RESOURCES_DIR, "test_smart_transactions.py")]
         params.report = outfile.name + "%s"
 
         # it causes 2 processes and 3 threads (totally)
@@ -317,7 +318,7 @@ class TestWriter(TestCase):
         workers_log = outfile.name + '-workers.log'
         params.workers_log = workers_log
 
-        params.tests = [os.path.join(os.path.dirname(__file__), "resources", "test_smart_transactions.py")]
+        params.tests = [os.path.join(RESOURCES_DIR, "test_smart_transactions.py")]
         params.report = outfile.name + "%s"
 
         # it causes 2 processes and 3 threads (totally)

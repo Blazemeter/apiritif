@@ -1,4 +1,5 @@
 nose
+nose2
 pytest
 requests>=2.24.0
 jsonpath-ng
@@ -7,3 +8,4 @@ unicodecsv
 cssselect
 chardet
 pyopenssl
+codecov

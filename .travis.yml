@@ -4,18 +4,16 @@ branches: # this prevents undesired branch builds for PRs
   only:
     - master
 
-matrix:
-  include:
-  - os: linux
-    python: 3.7
-  - os: linux
-    python: 3.8
-  - os: linux
-    python: 3.9
+os: linux
+
+python:
+- "3.7"
+- "3.8"
+- "3.9"
 
 install:
 - pip install -r requirements.txt
 - pip install codecov nose-exclude nose-timer "pluggy>=1.0"
-script: coverage run -m nose --exclude-dir=tests/resources --with-timer
+script: coverage run --source=apiritif -m nose2 -s tests/unit -v
 after_success:
   - codecov

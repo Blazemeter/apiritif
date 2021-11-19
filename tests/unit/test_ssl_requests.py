@@ -1,9 +1,12 @@
-import OpenSSL
 import os
+
+import OpenSSL
 from unittest import TestCase
 from apiritif.http import http
 from apiritif import ssl_adapter
 from nose.tools import raises
+
+from tests.unit import RESOURCES_DIR
 
 
 class CryptoMock:
@@ -82,7 +85,6 @@ class PyOpenSSLContextMock:
 
 class TestSSLAdapter(TestCase):
     def setUp(self):
-        self.current_dir = os.path.dirname(os.path.realpath(__file__))
         self.real_crypto = ssl_adapter.crypto
         self.real_PyOpenSSLContext = ssl_adapter.PyOpenSSLContext
         ssl_adapter.crypto = CryptoMock()
@@ -93,7 +95,7 @@ class TestSSLAdapter(TestCase):
         ssl_adapter.PyOpenSSLContext = self.real_PyOpenSSLContext
 
     def test_adapter_with_p12_cert(self):
-        certificate_file_path = self.current_dir + '/certificates/dump-file.p12'
+        certificate_file_path = os.path.join(RESOURCES_DIR, "certificates/dump-file.p12")
         adapter = ssl_adapter.SSLAdapter(certificate_file_path=certificate_file_path, passphrase='pass')
 
         self.assertEqual('privatekey', adapter.ssl_context._ctx.privatekey)
@@ -103,7 +105,7 @@ class TestSSLAdapter(TestCase):
         self.assertEqual(0, ssl_adapter.crypto.load_privatekey_called)
 
     def test_adapter_with_pem_cert(self):
-        certificate_file_path = self.current_dir + '/certificates/dump-file.pem'
+        certificate_file_path = os.path.join(RESOURCES_DIR, "certificates/dump-file.pem")
         adapter = ssl_adapter.SSLAdapter(certificate_file_path=certificate_file_path, passphrase='pass')
 
         self.assertEqual('privatekey', adapter.ssl_context._ctx.privatekey)
@@ -116,11 +118,10 @@ class TestSSLAdapter(TestCase):
 # TODO: This class contains integration tests. Need to be removed in future
 class TestSSL(TestCase):
     def setUp(self):
-        self.current_dir = os.path.dirname(os.path.realpath(__file__))
         self.host = 'client.badssl.com'
         self.request_url = 'https://client.badssl.com/'
-        self.certificate_file_pem = self.current_dir + '/certificates/badssl.com-client.pem'
-        self.certificate_file_p12 = self.current_dir + '/certificates/badssl.com-client.p12'
+        self.certificate_file_pem = os.path.join(RESOURCES_DIR, "certificates/badssl.com-client.pem")
+        self.certificate_file_p12 = os.path.join(RESOURCES_DIR, "certificates/badssl.com-client.p12")
         self.passphrase = 'badssl.com'
 
     def test_get_with_encrypted_p12_certificate(self):
@@ -134,7 +135,7 @@ class TestSSL(TestCase):
         self.assertEqual(200, response.status_code)
 
     def test_get_with_incorrect_certificate(self):
-        certificate_file_pem_incorrect = self.current_dir + '/certificates/badssl.com-client-wrong.pem'
+        certificate_file_pem_incorrect = os.path.join(RESOURCES_DIR, "certificates/badssl.com-client-wrong.pem")
         encrypted_cert = (certificate_file_pem_incorrect, self.passphrase)
         response = http.get(self.request_url, encrypted_cert=encrypted_cert)
         self.assertEqual(400, response.status_code)
