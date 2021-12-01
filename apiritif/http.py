@@ -237,8 +237,6 @@ class smart_transaction(transaction_logged):
         for func in apiritif.get_transaction_handlers()["enter"]:
             func()
 
-        self.controller.startTest()
-
     def __exit__(self, exc_type, exc_val, exc_tb):
         super(smart_transaction, self).__exit__(exc_type, exc_val, exc_tb)
         self.controller.stopTest(is_transaction=True)

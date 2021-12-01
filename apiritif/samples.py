@@ -222,10 +222,7 @@ class ApiritifSampleExtractor(object):
                                         response_body, len(response_body), response_time,
                                         request_body, request_cookies, request_headers))
         tran_sample.extras = extras
-        if self.active_transactions:
-            self.active_transactions[-1].add_subsample(tran_sample)
-        else:
-            self.active_transactions.append(tran_sample)
+        self.active_transactions[-1].add_subsample(tran_sample)
 
     def _parse_assertion(self, item):
         sample = self.response_map.get(item.response, None)
