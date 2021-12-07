@@ -232,6 +232,8 @@ class smart_transaction(transaction_logged):
         self.test_suite = self.controller.current_sample.test_suite
 
     def __enter__(self):
+        self.controller.startTest()
+
         super(smart_transaction, self).__enter__()
         put_into_thread_store(test_case=self.name, test_suite=self.test_suite)
         for func in apiritif.get_transaction_handlers()["enter"]:

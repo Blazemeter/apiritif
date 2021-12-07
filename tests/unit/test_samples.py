@@ -134,16 +134,14 @@ class TestSamples(TestCase):
         store.writer = CachingWriter()
         nose.run(argv=[__file__, test_file, '-v'], addplugins=[Recorder()])
         samples = store.writer.samples
-        self.assertEqual(len(samples), 1)
+        self.assertEqual(len(samples), 2)
+        first, second = samples
 
-        toplevel = samples[0]
-        self.assertEqual(2, len(toplevel.subsamples))
-        first, second = toplevel.subsamples
-
-        self.assertEqual(first.test_case, "simple transaction")
+        self.assertEqual(first.test_case, "first")
         self.assertEqual(1, len(first.subsamples))
-        self.assertEqual(first.subsamples[0].test_case, 'https://blazedemo.com/')
+        self.assertEqual(first.subsamples[0].subsamples[0].test_case, 'https://blazedemo.com/')
+        self.assertEqual(first.subsamples[0].subsamples[0].assertions[0].name, 'assert_ok')
 
-        self.assertEqual(second.test_case, "smart transaction")
+        self.assertEqual(second.test_case, "second")
         self.assertEqual(1, len(second.subsamples))
-        self.assertEqual(second.subsamples[0].test_case, 'https://blazedemo.com/vacation.html')
+        self.assertEqual(second.subsamples[0].subsamples[0].test_case, 'https://blazedemo.com/vacation.html')
