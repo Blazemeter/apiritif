@@ -6,9 +6,6 @@ import time
 import unittest
 
 import apiritif
-from urllib3 import disable_warnings
-
-disable_warnings()
 
 
 class TestTwoTransactions(unittest.TestCase):
