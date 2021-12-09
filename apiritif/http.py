@@ -220,14 +220,13 @@ class smart_transaction(transaction_logged):
         super(smart_transaction, self).__init__(name=name)
         self.driver, self.func_mode, self.controller = get_from_thread_store(("driver", "func_mode", "controller"))
 
-        if self.controller.tran_mode:
+        self.controller.beforeTest()
+
             # as isn't first smart_transaction, we must recall init of current_sample
-            self.controller.test_info["test_case"] = self.name
-            self.controller.beforeTest()
-        else:
+            #self.controller.test_info["test_case"] = self.name
             # it's first smart_transaction in test method, we shouldn't recreate current sample, just fix it
-            self.controller.tran_mode = True
-            self.controller.current_sample.test_case = self.name
+        self.controller.tran_mode = True
+            #self.controller.current_sample.test_case = self.name
 
         self.test_suite = self.controller.current_sample.test_suite
 

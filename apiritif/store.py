@@ -26,7 +26,7 @@ class SampleController(object):
         self.current_sample = Sample(
             test_case=self.test_info["test_case"],
             test_suite=self.test_info["suite_name"],
-            start_time=time.time(),
+            start_time=None,
             status="SKIPPED")
         self.current_sample.extras.update({
             "file": self.test_info["test_file"],
@@ -52,6 +52,7 @@ class SampleController(object):
 
     def startTest(self):
         self.start_time = time.time()
+        self.current_sample.start_time = self.start_time
 
     def stopTest(self, is_transaction=False):
         if self.tran_mode == is_transaction:

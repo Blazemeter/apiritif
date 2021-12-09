@@ -10,15 +10,15 @@ import apiritif
 
 class TestTwoTransactions(unittest.TestCase):
 
-    def first(self):
-        with apiritif.smart_transaction('first'):
+    def first1(self):
+        with apiritif.transaction('first'):
             response = apiritif.http.get('https://blazedemo.com/')
             response.assert_ok()
 
-    def second(self):
-        with apiritif.smart_transaction('second'):
+    def second1(self):
+        with apiritif.transaction('second'):
             response = apiritif.http.get('https://blazedemo.com/vacation.html')
 
     def test_simple(self):
-        self.first()
-        self.second()
+        self.first1()
+        self.second1()
