@@ -137,11 +137,13 @@ class TestSamples(TestCase):
         self.assertEqual(len(samples), 2)
         first, second = samples
 
-        self.assertEqual(first.test_case, "first")
+        self.assertEqual(first.test_case, "test_simple")
         self.assertEqual(1, len(first.subsamples))
+        self.assertEqual(first.subsamples[0].test_case, "first transaction")
         self.assertEqual(first.subsamples[0].subsamples[0].test_case, 'https://blazedemo.com/')
         self.assertEqual(first.subsamples[0].subsamples[0].assertions[0].name, 'assert_ok')
 
-        self.assertEqual(second.test_case, "second")
+        self.assertEqual(second.test_case, "test_simple")
         self.assertEqual(1, len(second.subsamples))
+        self.assertEqual(second.subsamples[0].test_case, "second transaction")
         self.assertEqual(second.subsamples[0].subsamples[0].test_case, 'https://blazedemo.com/vacation.html')
