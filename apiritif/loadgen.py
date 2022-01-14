@@ -178,7 +178,7 @@ class Worker(ThreadPool):
         time.sleep(params.delay)
         store.writer.concurrency += 1
 
-        config = {}
+        config = {"tests": params.tests}
         if params.verbose:
             config["verbosity"] = 3
 
@@ -244,16 +244,16 @@ class ApiritifTestProgram(PluggableTestProgram):
     def __init__(self, **kwargs):
         kwargs['module'] = None
         kwargs['exit'] = False
-        config = kwargs.pop("config")
-        self.session = config["session"]
-        self.conf_verbosity = None if "verbosity" not in config else config["verbosity"]
+        self.config = kwargs.pop("config")
+        self.session = self.config["session"]
+        self.conf_verbosity = None if "verbosity" not in self.config else self.config["verbosity"]
         super(ApiritifTestProgram, self).__init__(**kwargs)
 
     def parseArgs(self, argv):
         self.testLoader = self.loaderClass(self.session)
         self.session.testLoader = self.testLoader
 
-        dir, filename = os.path.split(argv[-1])
+        dir, filename = os.path.split(self.config["tests"][-1])
         self.session.startDir = dir or "."
         self.testNames = [os.path.splitext(filename)[0]]
 
