@@ -29,14 +29,9 @@ class SampleController(object):
             start_time=time.time(),
             status="SKIPPED")
         self.current_sample.extras.update({
-            "file": self.test_info["test_file"],
             "full_name": self.test_info["test_fqn"],
             "description": self.test_info["description"]
         })
-        module_fqn_parts = self.test_info["module_fqn"].split('.')
-        for item in module_fqn_parts[:-1]:
-            self.current_sample.path.append(PathComponent("package", item))
-        self.current_sample.path.append(PathComponent("module", module_fqn_parts[-1]))
 
         if "." in self.test_info["class_method"]:  # TestClass.test_method
             class_name, method_name = self.test_info["class_method"].split('.')[:2]
