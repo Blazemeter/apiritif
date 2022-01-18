@@ -4,7 +4,7 @@ from unittest import TestCase
 import nose2
 
 from apiritif import store
-from apiritif.loadgen import ApiritifPlugin  # required for nose2. unittest.cfg loads this plugin from here
+from . import Recorder  # required for nose2. unittest.cfg loads this plugin from here
 from tests.unit import RESOURCES_DIR
 
 
@@ -21,7 +21,8 @@ class TestSamples(TestCase):
         test_file = os.path.join(RESOURCES_DIR, "test_transactions.py")
         self.assertTrue(os.path.exists(test_file))
         store.writer = CachingWriter()
-        nose2.discover(argv=[__file__, "tests.resources.test_transactions", '-v'], module=None, exit=False)
+        nose2.discover(argv=[__file__, "tests.resources.test_transactions", '-v'], module="None", exit=False,
+                       plugins=["tests.unit.test_samples"])
         samples = store.writer.samples
         self.assertEqual(len(samples), 8)
 
@@ -100,7 +101,8 @@ class TestSamples(TestCase):
         test_file = os.path.join(RESOURCES_DIR, "test_single_transaction.py")
         self.assertTrue(os.path.exists(test_file))
         store.writer = CachingWriter()
-        nose2.discover(argv=[__file__, "tests.resources.test_single_transaction", '-v'], module=None, exit=False)
+        nose2.discover(argv=[__file__, "tests.resources.test_single_transaction", '-v'], module="None", exit=False,
+                       plugins=["tests.unit.test_samples"])
         samples = store.writer.samples
         self.assertEqual(len(samples), 1)
 
