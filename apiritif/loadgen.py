@@ -262,6 +262,7 @@ class ApiritifTestProgram(PluggableTestProgram):
         self.session.verbosity = 0
 
         self.defaultPlugins.append("apiritif.loadgen")
+        # self.excludePlugins.append("nose2.plugins.result")
         self.loadPlugins()
         self.createTests()
 
