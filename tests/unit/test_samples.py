@@ -21,7 +21,7 @@ class TestSamples(TestCase):
         test_file = os.path.join(RESOURCES_DIR, "test_transactions.py")
         self.assertTrue(os.path.exists(test_file))
         store.writer = CachingWriter()
-        nose2.discover(argv=[__file__, "resources.test_transactions", '-v'], module=None, exit=False)
+        nose2.discover(argv=[__file__, "tests.resources.test_transactions", '-v'], module=None, exit=False)
         samples = store.writer.samples
         self.assertEqual(len(samples), 8)
 
@@ -100,7 +100,7 @@ class TestSamples(TestCase):
         test_file = os.path.join(RESOURCES_DIR, "test_single_transaction.py")
         self.assertTrue(os.path.exists(test_file))
         store.writer = CachingWriter()
-        nose2.discover(argv=[__file__, "resources.test_single_transaction", '-v'], module=None, exit=False)
+        nose2.discover(argv=[__file__, "tests.resources.test_single_transaction", '-v'], module=None, exit=False)
         samples = store.writer.samples
         self.assertEqual(len(samples), 1)
 
