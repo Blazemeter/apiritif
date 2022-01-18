@@ -21,7 +21,7 @@ class TestSamples(TestCase):
         test_file = os.path.join(RESOURCES_DIR, "test_transactions.py")
         self.assertTrue(os.path.exists(test_file))
         store.writer = CachingWriter()
-        nose2.discover(argv=[__file__, "resources.test_transactions", '-v'], module=None, exit=False)
+        nose2.discover(argv=[__file__, "tests.resources.test_transactions", '-v'], module=None, exit=False, plugins=["apiritif.loadgen"])
         samples = store.writer.samples
         self.assertEqual(len(samples), 8)
 
