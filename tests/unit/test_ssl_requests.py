@@ -4,7 +4,6 @@ import OpenSSL
 from unittest import TestCase
 from apiritif.http import http
 from apiritif import ssl_adapter
-from nose.tools import raises
 
 from tests.unit import RESOURCES_DIR
 
@@ -140,11 +139,10 @@ class TestSSL(TestCase):
         response = http.get(self.request_url, encrypted_cert=encrypted_cert)
         self.assertEqual(400, response.status_code)
 
-    @raises(OpenSSL.crypto.Error)
     def test_get_with_incorrect_secret(self):
         wrong_certificate_secret = 'you shall not pass'
         encrypted_cert = (self.certificate_file_pem, wrong_certificate_secret)
-        response = http.get(self.request_url, encrypted_cert=encrypted_cert)
+        self.assertRaises(OpenSSL.crypto.Error, http.get, self.request_url, encrypted_cert=encrypted_cert)
 
     def test_get_with_ssl_and_wrong_url(self):
         cert_missing_url = 'https://client-cert-missing.badssl.com/'

@@ -169,7 +169,7 @@ class Worker(ThreadPool):
         :type params: Params
         """
         thread.set_index(params.thread_index)
-        log.debug("[%s] Starting nose iterations: %s", params.worker_index, params)
+        log.debug("[%s] Starting nose2 iterations: %s", params.worker_index, params)
         assert isinstance(params.tests, list)
         # argv.extend(['--with-apiritif', '--nocapture', '--exe', '--nologcapture'])
 
