@@ -76,10 +76,7 @@ class TestLoadGen(TestCase):
         params.verbose = True
 
         worker = Worker(params)
-        self.assertRaises(RuntimeError, worker.run_nose, params)
-
-        with open(outfile.name, 'rt') as _file:
-            _file.read()
+        self.assertRaises(BaseException, worker.run_nose, params)
 
     def test_worker(self):
         outfile = tempfile.NamedTemporaryFile()
