@@ -168,6 +168,9 @@ class Worker(ThreadPool):
         """
         :type params: Params
         """
+        if not params.tests:
+            raise RuntimeError("Nothing to test.")
+
         thread.set_index(params.thread_index)
         log.debug("[%s] Starting nose2 iterations: %s", params.worker_index, params)
         assert isinstance(params.tests, list)
@@ -418,13 +421,6 @@ class ApiritifPlugin(Plugin):
         self.controller = store.SampleController(log)
         apiritif.put_into_thread_store(controller=self.controller)  # parcel for smart_transactions
         self.session.stop_reason = ""
-
-    def finalize(self, event):
-        """
-        After all tests
-        """
-        if not self.controller.test_count:
-            raise RuntimeError("Nothing to test.")
 
     def startTest(self, event):
         """
