@@ -15,7 +15,7 @@ def log_it(name, data):
         pass
 
 
-def setup():    # setup_module
+def setUpModule():    # setup_module
     if get_iteration() > 6:     # do one pass to set stop_cause once
         return
 

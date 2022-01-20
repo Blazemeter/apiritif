@@ -201,16 +201,18 @@ class Worker(ThreadPool):
 
                 session = PluggableTestProgram.sessionClass()
                 config["session"] = session
-                ApiritifTestProgram(config=config)
+                try:
+                    ApiritifTestProgram(config=config)
+                except NormalShutdown as e:
+                    log.debug("[%s] finished prematurely: %s", params.worker_index, e)
+                    break
 
                 log.debug("Finishing iteration:: index=%d,end_time=%.3f", iteration, time.time())
 
                 iteration += 1
 
                 # reasons to stop
-                if session.stop_reason:
-                    log.debug("[%s] finished prematurely: %s", params.worker_index, session.stop_reason)
-                elif 0 < params.iterations <= iteration:
+                if 0 < params.iterations <= iteration:
                     log.debug("[%s] iteration limit reached: %s", params.worker_index, params.iterations)
                 elif 0 < end_time <= time.time():
                     log.debug("[%s] duration limit reached: %s", params.worker_index, params.hold_for)

@@ -14,7 +14,7 @@ def log_it(name, target, data):
         pass
 
 
-def setup():    # setup_module
+def setUpModule():    # setup_module
     target = str(get_index())
 
     vars = {

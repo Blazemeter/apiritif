@@ -9,8 +9,8 @@ class MyException(BaseException):
     pass
 
 
-def setup():
-    raise MyException()
+def setUpModule():
+    raise ValueError()
 
 
 class TestSimple(TestCase):
