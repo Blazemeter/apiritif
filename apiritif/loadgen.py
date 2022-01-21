@@ -329,11 +329,6 @@ class LDJSONSampleWriter(object):
         self.out_stream.write(line.encode('utf-8'))
         self.out_stream.flush()
 
-        report_pattern = "%s,Total:%d Passed:%d Failed:%d\n"
-        failed_count = test_count - success_count
-        sys.stdout.write(report_pattern % (sample.test_case, test_count, success_count, failed_count))
-        sys.stdout.flush()
-
 
 class JTLSampleWriter(LDJSONSampleWriter):
     def __init__(self, output_file):
