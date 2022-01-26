@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.0 <sup>26 Jan 2022</sup>
+- migrate to Nose2
+- fix recording parsing errors
+- fix deprecated params
+
 ## 1.0.0 <sup>27 Sep 2021</sup>
 - add Nose Flow Control
 - add GRACEFUL shutdown feature
