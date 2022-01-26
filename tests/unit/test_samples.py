@@ -128,7 +128,8 @@ class TestSamples(TestCase):
         test_file = os.path.join(RESOURCES_DIR, "test_two_transactions.py")
         self.assertTrue(os.path.exists(test_file))
         store.writer = CachingWriter()
-        nose.run(argv=[__file__, test_file, '-v'], addplugins=[Recorder()])
+        nose2.discover(argv=[__file__, "tests.resources.test_two_transactions", '-v'], module="None", exit=False,
+                       plugins=["tests.unit.test_samples"])
         samples = store.writer.samples
         self.assertEqual(len(samples), 2)
         first, second = samples
