@@ -221,23 +221,19 @@ class smart_transaction(transaction_logged):
         self.driver, self.func_mode, self.controller = get_from_thread_store(("driver", "func_mode", "controller"))
 
         if self.controller.tran_mode:
-            # as isn't first smart_transaction, we must recall init of current_sample
-            self.controller.test_info["test_case"] = self.name
             self.controller.beforeTest()
         else:
-            # it's first smart_transaction in test method, we shouldn't recreate current sample, just fix it
             self.controller.tran_mode = True
-            self.controller.current_sample.test_case = self.name
 
         self.test_suite = self.controller.current_sample.test_suite
 
     def __enter__(self):
+        self.controller.startTest()
+
         super(smart_transaction, self).__enter__()
         put_into_thread_store(test_case=self.name, test_suite=self.test_suite)
         for func in apiritif.get_transaction_handlers()["enter"]:
             func()
-
-        self.controller.startTest()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         super(smart_transaction, self).__exit__(exc_type, exc_val, exc_tb)

@@ -127,3 +127,23 @@ class TestSamples(TestCase):
         second_req = second.subsamples[0]
         self.assertEqual(second_req.test_suite, "blazedemo 456")
         self.assertEqual(second_req.test_case, 'https://api.demoblaze.com/entries')
+
+    def test_two_transactions(self):
+        test_file = os.path.join(RESOURCES_DIR, "test_two_transactions.py")
+        self.assertTrue(os.path.exists(test_file))
+        store.writer = CachingWriter()
+        nose.run(argv=[__file__, test_file, '-v'], addplugins=[Recorder()])
+        samples = store.writer.samples
+        self.assertEqual(len(samples), 2)
+        first, second = samples
+
+        self.assertEqual(first.test_case, "test_simple")
+        self.assertEqual(1, len(first.subsamples))
+        self.assertEqual(first.subsamples[0].test_case, "1st")
+        self.assertEqual(first.subsamples[0].subsamples[0].test_case, 'https://blazedemo.com/')
+        self.assertEqual(first.subsamples[0].subsamples[0].assertions[0].name, 'assert_ok')
+
+        self.assertEqual(second.test_case, "test_simple")
+        self.assertEqual(1, len(second.subsamples))
+        self.assertEqual(second.subsamples[0].test_case, "2nd")
+        self.assertEqual(second.subsamples[0].subsamples[0].test_case, 'https://blazedemo.com/vacation.html')
