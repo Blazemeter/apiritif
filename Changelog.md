@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.1 <sup>26 Jan 2022</sup>
+- fix empty result handling
+
 ## 1.1.0 <sup>26 Jan 2022</sup>
 - migrate to Nose2
 - fix recording parsing errors
