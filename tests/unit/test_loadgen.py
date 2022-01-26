@@ -25,15 +25,6 @@ class DummyWriter(JTLSampleWriter):
 
 
 class TestLoadGen(TestCase):
-    def setUp(self):
-        self.required_method_called = False
-
-    def get_required_method(self, method):
-        def required_method(*args, **kwargs):
-            self.required_method_called = True
-            method(*args, **kwargs)
-        return required_method
-
     def test_thread(self):
         outfile = tempfile.NamedTemporaryFile()
         params = Params()
@@ -99,12 +90,18 @@ class TestLoadGen(TestCase):
         params.tests = []
 
         worker = Worker(params)
-        worker.close = self.get_required_method(worker.close)  # check whether close has been called
-        try:
-            worker.start()
-        except:  # assertRaises doesn't catch it
-            pass
-        self.assertTrue(self.required_method_called)
+        self.assertRaises(RuntimeError, worker.start)
+
+    def test_empty_test_file(self):
+        outfile = tempfile.NamedTemporaryFile()
+        params = Params()
+        params.concurrency = 1
+        params.iterations = 1
+        params.report = outfile.name
+        params.tests = [os.path.join(RESOURCES_DIR, "test_invalid.py")]
+
+        worker = Worker(params)
+        self.assertRaises(RuntimeError, worker.start)
 
     def test_supervisor(self):
         outfile = tempfile.NamedTemporaryFile()
