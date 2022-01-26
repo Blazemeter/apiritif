@@ -19,7 +19,7 @@ def log_it(name, data):
         pass
 
 
-def setup():    # setup_module
+def setUpModule():    # setup_module
     reader0.read_vars()
     reader1.read_vars()
 

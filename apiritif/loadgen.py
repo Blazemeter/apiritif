@@ -27,11 +27,8 @@ from multiprocessing.pool import ThreadPool
 from optparse import OptionParser
 from threading import Thread
 
-from nose.config import Config, all_config_files
-from nose.core import TestProgram
-from nose.loader import defaultTestLoader
-from nose.plugins import Plugin
-from nose.plugins.manager import DefaultPluginManager
+from nose2.main import PluggableTestProgram
+from nose2.events import Plugin
 
 import apiritif
 import apiritif.thread as thread
@@ -171,24 +168,22 @@ class Worker(ThreadPool):
         """
         :type params: Params
         """
+        if not params.tests:
+            raise RuntimeError("Nothing to test.")
+
         thread.set_index(params.thread_index)
-        log.debug("[%s] Starting nose iterations: %s", params.worker_index, params)
+        log.debug("[%s] Starting nose2 iterations: %s", params.worker_index, params)
         assert isinstance(params.tests, list)
         # argv.extend(['--with-apiritif', '--nocapture', '--exe', '--nologcapture'])
 
         end_time = self.params.ramp_up + self.params.hold_for
         end_time += time.time() if end_time else 0
         time.sleep(params.delay)
-
-        plugin = ApiritifPlugin()
         store.writer.concurrency += 1
 
-        config = Config(env=os.environ, files=all_config_files(), plugins=DefaultPluginManager())
-        config.plugins.addPlugins(extraplugins=[plugin])
-        config.testNames = params.tests
-        config.verbosity = 3 if params.verbose else 0
+        config = {"tests": params.tests}
         if params.verbose:
-            config.stream = open(os.devnull, "w")  # FIXME: use "with", allow writing to file/log
+            config["verbosity"] = 3
 
         iteration = 0
         handlers = ActionHandlerFactory.create_all()
@@ -203,15 +198,21 @@ class Worker(ThreadPool):
                     break
                 log.debug("Starting iteration:: index=%d,start_time=%.3f", iteration, time.time())
                 thread.set_iteration(iteration)
-                ApiritifTestProgram(config=config)
+
+                session = PluggableTestProgram.sessionClass()
+                config["session"] = session
+                try:
+                    ApiritifTestProgram(config=config)
+                except NormalShutdown as e:
+                    log.debug("[%s] finished prematurely: %s", params.worker_index, e)
+                    break
+
                 log.debug("Finishing iteration:: index=%d,end_time=%.3f", iteration, time.time())
 
                 iteration += 1
 
                 # reasons to stop
-                if plugin.stop_reason:
-                    log.debug("[%s] finished prematurely: %s", params.worker_index, plugin.stop_reason)
-                elif 0 < params.iterations <= iteration:
+                if 0 < params.iterations <= iteration:
                     log.debug("[%s] iteration limit reached: %s", params.worker_index, params.iterations)
                 elif 0 < end_time <= time.time():
                     log.debug("[%s] duration limit reached: %s", params.worker_index, params.hold_for)
@@ -221,9 +222,6 @@ class Worker(ThreadPool):
                 break
         finally:
             store.writer.concurrency -= 1
-
-            if params.verbose:
-                config.stream.close()
 
             for handler in handlers:
                 handler.finalize()
@@ -247,15 +245,30 @@ class Worker(ThreadPool):
             yield params
 
 
-class ApiritifTestProgram(TestProgram):
-    def __init__(self, *args, **kwargs):
-        super(ApiritifTestProgram, self).__init__(*args, **kwargs)
-        self.testNames = None
+class ApiritifTestProgram(PluggableTestProgram):
+    def __init__(self, **kwargs):
+        kwargs['module'] = None
+        kwargs['exit'] = False
+        self.config = kwargs.pop("config")
+        self.session = self.config["session"]
+        self.conf_verbosity = None if "verbosity" not in self.config else self.config["verbosity"]
+        super(ApiritifTestProgram, self).__init__(**kwargs)
 
     def parseArgs(self, argv):
-        self.exit = False
-        self.testNames = self.config.testNames
-        self.testLoader = defaultTestLoader(config=self.config)
+        self.testLoader = self.loaderClass(self.session)
+        self.session.testLoader = self.testLoader
+
+        dir, filename = os.path.split(self.config["tests"][-1])
+        self.session.startDir = dir or "."
+        self.testNames = [os.path.splitext(filename)[0]]
+
+        if self.conf_verbosity:
+            self.session.verbosity = self.conf_verbosity
+        self.session.verbosity = 0
+
+        self.defaultPlugins.append("apiritif.loadgen")
+        self.excludePlugins.append("nose2.plugins.result")
+        self.loadPlugins()
         self.createTests()
 
 
@@ -315,11 +328,6 @@ class LDJSONSampleWriter(object):
         line = json.dumps(sample.to_dict()) + "\n"
         self.out_stream.write(line.encode('utf-8'))
         self.out_stream.flush()
-
-        report_pattern = "%s,Total:%d Passed:%d Failed:%d\n"
-        failed_count = test_count - success_count
-        sys.stdout.write(report_pattern % (sample.test_case, test_count, success_count, failed_count))
-        sys.stdout.flush()
 
 
 class JTLSampleWriter(LDJSONSampleWriter):
@@ -403,64 +411,51 @@ class ApiritifPlugin(Plugin):
     :type sample_writer: LDJSONSampleWriter
     """
 
-    name = 'apiritif'
-    enabled = False
+    configSection = 'apiritif-plugin'
+    alwaysOn = True
 
     def __init__(self):
-        super(ApiritifPlugin, self).__init__()
         self.controller = store.SampleController(log)
         apiritif.put_into_thread_store(controller=self.controller)  # parcel for smart_transactions
-        self.stop_reason = ""
+        self.session.stop_reason = ""
 
-    def finalize(self, result):
-        """
-        After all tests
-        """
-        if not self.controller.test_count:
-            raise RuntimeError("Nothing to test.")
-
-    def beforeTest(self, test):
+    def startTest(self, event):
         """
         before test run
         """
+        test = event.test
         thread.clean_transaction_handlers()
-        addr = test.address()  # file path, package.subpackage.module, class.method
-        test_file, module_fqn, class_method = addr
         test_fqn = test.id()  # [package].module.class.method
         suite_name, case_name = test_fqn.split('.')[-2:]
-        log.debug("Addr: %r", addr)
         log.debug("id: %r", test_fqn)
-
-        if class_method is None:
-            class_method = case_name
+        class_method = case_name
 
         description = test.shortDescription()
         self.controller.test_info = {
             "test_case": case_name,
             "suite_name": suite_name,
-            "test_file": test_file,
             "test_fqn": test_fqn,
             "description": description,
-            "module_fqn": module_fqn,
             "class_method": class_method}
         self.controller.beforeTest()  # create template of current_sample
+        self.controller.startTest()  # TODO: unify these two
 
-    def startTest(self, test):
-        self.controller.startTest()
-
-    def stopTest(self, test):
+    def stopTest(self, event):
         self.controller.stopTest()
+        self.controller.afterTest()  # TODO: and these two
 
-    def afterTest(self, test):
-        self.controller.afterTest()
-
-    def addError(self, test, error):
+    def reportError(self, event):
         """
         when a test raises an uncaught exception
         :param test:
         :param error:
         :return:
         """
+        error = event.testEvent.exc_info
+
+        if self.isNormalShutdown(error[0]):
+            self.add_stop_reason(error[1].args[0])  # remember it for run_nose() cycle
+
         # test_dict will be None if startTest wasn't called (i.e. exception in setUp/setUpClass)
         # status=BROKEN
         assertion_name = error[0].__name__
@@ -477,20 +472,13 @@ class ApiritifPlugin(Plugin):
         ns_full_name = ".".join((NormalShutdown.__module__, NormalShutdown.__name__))
         return cls_full_name == ns_full_name
 
-    def handleError(self, test, error):
-        if self.isNormalShutdown(error[0]):
-            self.add_stop_reason(error[1].args[0])  # remember it for run_nose() cycle
-            return True
-        else:
-            return False
-
     def add_stop_reason(self, msg):
-        if self.stop_reason:
-            self.stop_reason += "\n"
+        if self.session.stop_reason:
+            self.session.stop_reason += "\n"
 
-        self.stop_reason += msg
+        self.session.stop_reason += msg
 
-    def addFailure(self, test, error):
+    def reportFailure(self, event):
         """
         when a test fails
         :param test:
@@ -499,9 +487,9 @@ class ApiritifPlugin(Plugin):
         :return:
         """
         # status=FAILED
-        self.controller.addFailure(error)
+        self.controller.addFailure(event.testEvent.exc_info)
 
-    def addSuccess(self, test):
+    def reportSuccess(self, event):
         """
         when a test passes
         :param test:

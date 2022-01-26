@@ -1,16 +1,11 @@
 import math
-import time
 from unittest import TestCase
 
 import apiritif
 
 
-class MyException(BaseException):
-    pass
-
-
-def setup():
-    raise MyException()
+def setUpModule():
+    raise BaseException
 
 
 class TestSimple(TestCase):

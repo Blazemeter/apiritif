@@ -1,10 +1,10 @@
 import os
 from unittest import TestCase
 
-import nose
+import nose2
 
 from apiritif import store
-from apiritif.loadgen import ApiritifPlugin
+from . import Recorder  # required for nose2. unittest.cfg loads this plugin from here
 from tests.unit import RESOURCES_DIR
 
 
@@ -16,18 +16,13 @@ class CachingWriter(object):
         self.samples.append(sample)
 
 
-class Recorder(ApiritifPlugin):
-    def configure(self, options, conf):
-        super(Recorder, self).configure(options, conf)
-        self.enabled = True
-
-
 class TestSamples(TestCase):
     def test_transactions(self):
         test_file = os.path.join(RESOURCES_DIR, "test_transactions.py")
         self.assertTrue(os.path.exists(test_file))
         store.writer = CachingWriter()
-        nose.run(argv=[__file__, test_file, '-v'], addplugins=[Recorder()])
+        nose2.discover(argv=[__file__, "tests.resources.test_transactions", '-v'], module="None", exit=False,
+                       plugins=["tests.unit.test_samples"])
         samples = store.writer.samples
         self.assertEqual(len(samples), 8)
 
@@ -106,7 +101,8 @@ class TestSamples(TestCase):
         test_file = os.path.join(RESOURCES_DIR, "test_single_transaction.py")
         self.assertTrue(os.path.exists(test_file))
         store.writer = CachingWriter()
-        nose.run(argv=[__file__, test_file, '-v'], addplugins=[Recorder()])
+        nose2.discover(argv=[__file__, "tests.resources.test_single_transaction", '-v'], module="None", exit=False,
+                       plugins=["tests.unit.test_samples"])
         samples = store.writer.samples
         self.assertEqual(len(samples), 1)
 

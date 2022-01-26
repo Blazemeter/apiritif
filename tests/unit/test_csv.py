@@ -2,7 +2,7 @@ import os
 import tempfile
 
 from unittest import TestCase
-from apiritif.loadgen import Params, Supervisor, ApiritifPlugin
+from apiritif.loadgen import Params, Supervisor
 from apiritif.csv import CSVReaderPerThread, thread_data
 from apiritif.utils import NormalShutdown
 from tests.unit import RESOURCES_DIR
@@ -131,42 +131,6 @@ class TestCSV(TestCase):
             threads[item[0]].append(item[2:])
 
         self.assertEqual(18, len(threads["0"]))
-
-    def test_reader_without_loop_non_stop(self):
-        """ check different reading speed, fieldnames and separators """
-        script = os.path.join(RESOURCES_DIR, "test_reader_no_loop.py")
-        outfile = tempfile.NamedTemporaryFile()
-        report = outfile.name + "-%s.csv"
-        outfile.close()
-        params = Params()
-        params.concurrency = 1
-        params.iterations = 10
-        params.report = report
-        params.tests = [script]
-        params.worker_count = 1
-
-        handler = ApiritifPlugin.handleError
-        try:
-            # wrong handler: doesn't stop iterations
-            ApiritifPlugin.handleError = lambda a, b, c: False
-
-            sup = Supervisor(params)
-            sup.start()
-            sup.join()
-        finally:
-            ApiritifPlugin.handleError = handler
-
-        content = []
-        for i in range(params.worker_count):
-            with open(report % i) as f:
-                content.extend(f.readlines()[1::2])
-
-        threads = {"0": []}
-        content = [item[item.index('"') + 1:].strip() for item in content]
-        for item in content:
-            threads[item[0]].append(item[2:])
-
-        self.assertTrue(len(threads["0"]) > 18)
 
     def test_csv_encoding(self):
         reader_utf8 = CSVReaderPerThread(os.path.join(RESOURCES_DIR, "data/encoding_utf8.csv"), loop=False)
