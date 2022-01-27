@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.2 <sup>26 Jan 2022</sup>
+- fix logging
+
 ## 1.1.1 <sup>26 Jan 2022</sup>
 - fix empty result handling
 
