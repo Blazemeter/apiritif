@@ -132,6 +132,30 @@ class TestCSV(TestCase):
 
         self.assertEqual(18, len(threads["0"]))
 
+    def test_apiritif_without_loop_simple(self):
+        """ check different reading speed, fieldnames and separators """
+        script = os.path.join(RESOURCES_DIR, "test_simple_csv.py")
+        outfile = tempfile.NamedTemporaryFile()
+        report = outfile.name + "-%s.csv"
+        outfile.close()
+        params = Params()
+        params.concurrency = 1
+        params.iterations = 5
+        params.report = report
+        params.tests = [script]
+        params.worker_count = 1
+
+        sup = Supervisor(params)
+        sup.start()
+        sup.join()
+
+        content = []
+        for i in range(params.worker_count):
+            with open(report % i) as f:
+                content.extend(f.readlines())
+
+        self.assertNotIn("Data source is exhausted", content[-1])
+
     def test_csv_encoding(self):
         reader_utf8 = CSVReaderPerThread(os.path.join(RESOURCES_DIR, "data/encoding_utf8.csv"), loop=False)
         reader_utf16 = CSVReaderPerThread(os.path.join(RESOURCES_DIR, "data/encoding_utf16.csv"), loop=False)

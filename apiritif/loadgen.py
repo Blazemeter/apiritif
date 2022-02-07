@@ -214,6 +214,8 @@ class Worker(ThreadPool):
                 # reasons to stop
                 if "Nothing to test." in session.stop_reason:
                     raise RuntimeError("Nothing to test.")
+                elif session.stop_reason:
+                    log.debug("[%s] finished prematurely: %s", params.worker_index, session.stop_reason)
                 elif 0 < params.iterations <= iteration:
                     log.debug("[%s] iteration limit reached: %s", params.worker_index, params.iterations)
                 elif 0 < end_time <= time.time():
@@ -453,6 +455,9 @@ class ApiritifPlugin(Plugin):
         :return:
         """
         error = event.testEvent.exc_info
+
+        if self.isNormalShutdown(error[0]):
+            self.add_stop_reason(error[1].args[0])  # remember it for run_nose() cycle
 
         # test_dict will be None if startTest wasn't called (i.e. exception in setUp/setUpClass)
         # status=BROKEN
