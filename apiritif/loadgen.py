@@ -34,7 +34,7 @@ import apiritif
 import apiritif.thread as thread
 import apiritif.store as store
 from apiritif.action_plugins import ActionHandlerFactory, import_plugins
-from apiritif.utils import NormalShutdown, log, get_trace, VERSION
+from apiritif.utils import log, get_trace, VERSION
 
 
 # TODO how to implement hits/s control/shape?
@@ -194,17 +194,18 @@ class Worker(ThreadPool):
 
         try:
             while True:
-                if 'GRACEFUL' in os.environ and os.path.exists(os.environ['GRACEFUL']) or os.environ.get('CSVENDED'):
+                if 'GRACEFUL' in os.environ and os.path.exists(os.environ['GRACEFUL']):
                     break
                 log.debug("Starting iteration:: index=%d,start_time=%.3f", iteration, time.time())
                 thread.set_iteration(iteration)
 
                 session = PluggableTestProgram.sessionClass()
                 config["session"] = session
-                try:
-                    ApiritifTestProgram(config=config)
-                except NormalShutdown as e:
-                    log.debug("[%s] finished prematurely: %s", params.worker_index, e)
+
+                ApiritifTestProgram(config=config)
+                if os.environ.get('CSVENDED'):
+                    log.debug("[%s] finished prematurely: %s", params.worker_index)
+                    os.environ.pop('CSVENDED')
                     break
 
                 log.debug("Finishing iteration:: index=%d,end_time=%.3f", iteration, time.time())
@@ -456,9 +457,6 @@ class ApiritifPlugin(Plugin):
         """
         error = event.testEvent.exc_info
 
-        if self.isNormalShutdown(error[0]):
-            self.add_stop_reason(error[1].args[0])  # remember it for run_nose() cycle
-
         # test_dict will be None if startTest wasn't called (i.e. exception in setUp/setUpClass)
         # status=BROKEN
         assertion_name = error[0].__name__
@@ -468,12 +466,6 @@ class ApiritifPlugin(Plugin):
             self.controller.addError(assertion_name, error_msg, error_trace)
         else:  # error in test infrastructure (e.g. module setup())
             log.error("\n".join((assertion_name, error_msg, error_trace)))
-
-    @staticmethod
-    def isNormalShutdown(cls):
-        cls_full_name = ".".join((cls.__module__, cls.__name__))
-        ns_full_name = ".".join((NormalShutdown.__module__, NormalShutdown.__name__))
-        return cls_full_name == ns_full_name
 
     def add_stop_reason(self, msg):
         if self.session.stop_reason:

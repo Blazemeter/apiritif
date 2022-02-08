@@ -4,7 +4,6 @@ import tempfile
 from unittest import TestCase
 from apiritif.loadgen import Params, Supervisor
 from apiritif.csv import CSVReaderPerThread, thread_data
-from apiritif.utils import NormalShutdown
 from tests.unit import RESOURCES_DIR
 
 
