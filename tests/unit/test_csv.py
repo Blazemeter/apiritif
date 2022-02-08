@@ -88,20 +88,6 @@ class TestCSV(TestCase):
 
         self.assertEqual(threads, target)
 
-    def test_reader_without_loop(self):
-        """ check different reading speed, fieldnames and separators """
-        reader = CSVReaderPerThread(os.path.join(RESOURCES_DIR, "data/source0.csv"), loop=False)
-        data = []
-        try:
-            for i in range(20):
-                reader.read_vars()
-                data.append(reader.get_vars())
-        except NormalShutdown:
-            self.assertEqual(6, len(data))
-            return
-
-        self.fail()
-
     def test_apiritif_without_loop(self):
         """ check different reading speed, fieldnames and separators """
         script = os.path.join(RESOURCES_DIR, "test_reader_no_loop.py")
