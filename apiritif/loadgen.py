@@ -194,7 +194,7 @@ class Worker(ThreadPool):
 
         try:
             while True:
-                if 'GRACEFUL' in os.environ and os.path.exists(os.environ['GRACEFUL']):
+                if 'GRACEFUL' in os.environ and os.path.exists(os.environ['GRACEFUL']) or os.environ.get('CSVENDED'):
                     break
                 log.debug("Starting iteration:: index=%d,start_time=%.3f", iteration, time.time())
                 thread.set_iteration(iteration)

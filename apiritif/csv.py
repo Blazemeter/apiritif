@@ -15,6 +15,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
 import re
 import threading
 
@@ -93,6 +94,7 @@ class CSVReader(Reader):
         self.step = step
         self.first = first
         self.csv = {}
+        self.csv_next = {}
         format_params = {}
         if not encoding and quoted is None:
             with open(filename, 'rb') as bin_fds:
@@ -139,10 +141,10 @@ class CSVReader(Reader):
             if not self.csv:  # first element
                 self.csv = next(islice(self._reader, self.first, self.first + 1))
             else:  # next one
-                self.csv = next(islice(self._reader, self.step - 1, self.step))
+                self.csv = self.csv_next
+            self.csv_next = next(islice(self._reader, self.step - 1, self.step))
         except StopIteration:
-            stop_reason = "Data source is exhausted: %s" % self.fds.name
-            raise NormalShutdown(stop_reason)  # Just send it up
+            os.environ["CSVENDED"] = "True"
 
     def get_vars(self):
         return self.csv

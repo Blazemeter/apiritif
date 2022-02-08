@@ -154,6 +154,7 @@ class TestCSV(TestCase):
             with open(report % i) as f:
                 content.extend(f.readlines())
 
+        self.assertEqual(len(content), 2)
         self.assertNotIn("Data source is exhausted", content[-1])
 
     def test_csv_encoding(self):
