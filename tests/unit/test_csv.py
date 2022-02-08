@@ -153,6 +153,7 @@ class TestCSV(TestCase):
         reader_utf16.read_vars()
         data_utf16.append(reader_utf16.get_vars())
 
+        os.environ.pop('CSVENDED')
         self.assertEqual(data_utf8, data_utf16)
 
     def test_csv_quoted(self):
@@ -167,6 +168,7 @@ class TestCSV(TestCase):
             reader.read_vars()
             readers_data.append(reader.get_vars())
 
+        os.environ.pop('CSVENDED')
         result = {'ac1': '1', 'bc1': '2', 'cc1': '3'}
         for data in readers_data:
             self.assertEqual(data, result)
@@ -182,6 +184,7 @@ class TestCSV(TestCase):
             reader.read_vars()
             readers_data.append(reader.get_vars())
 
+        os.environ.pop('CSVENDED')
         result = {'ac1': '1', 'bc1': '2', 'cc1': '3'}
         for data in readers_data:
             self.assertEqual(data, result)
