@@ -117,9 +117,8 @@ class TestCSV(TestCase):
 
         self.assertEqual(18, len(threads["0"]))
 
-    def test_apiritif_without_loop_simple(self):
-        """ check different reading speed, fieldnames and separators """
-        script = os.path.join(RESOURCES_DIR, "test_simple_csv.py")
+    def test_apiritif_no_loop_one_record(self):
+        script = os.path.join(RESOURCES_DIR, "test_one_csv_record.py")
         outfile = tempfile.NamedTemporaryFile()
         report = outfile.name + "-%s.csv"
         outfile.close()
