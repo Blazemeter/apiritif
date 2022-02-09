@@ -211,7 +211,6 @@ class Worker(ThreadPool):
                 # reasons to stop
                 if os.environ.get('CSVENDED'):  # no records left in csv
                     log.debug("[%s] finished prematurely: %s", params.worker_index)
-                    os.environ.pop('CSVENDED')
                 elif "Nothing to test." in session.stop_reason:  # empty test script or no valid test class
                     raise RuntimeError("Nothing to test.")
                 elif 0 < params.iterations <= iteration:
