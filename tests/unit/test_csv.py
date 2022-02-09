@@ -123,7 +123,7 @@ class TestCSV(TestCase):
         report = outfile.name + "-%s.csv"
         outfile.close()
         params = Params()
-        params.concurrency = 1
+        params.concurrency = 2
         params.iterations = 5
         params.report = report
         params.tests = [script]
@@ -136,10 +136,11 @@ class TestCSV(TestCase):
         content = []
         for i in range(params.worker_count):
             with open(report % i) as f:
-                content.extend(f.readlines())
+                content.extend(f.readlines()[1:])
+        content = [item.split(",")[5] for item in content]
 
-        self.assertEqual(len(content), 2)
-        self.assertNotIn("Data source is exhausted", content[-1])
+        self.assertEqual(len(content), 2)  # equals concurrency value
+        self.assertTrue("KeyError" in "".join(content))  # 1 record in csv and 1 KeyError
 
     def test_csv_encoding(self):
         reader_utf8 = CSVReaderPerThread(os.path.join(RESOURCES_DIR, "data/encoding_utf8.csv"), loop=False)
