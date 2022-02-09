@@ -203,20 +203,17 @@ class Worker(ThreadPool):
                 config["session"] = session
 
                 ApiritifTestProgram(config=config)
-                if os.environ.get('CSVENDED'):
-                    log.debug("[%s] finished prematurely: %s", params.worker_index)
-                    os.environ.pop('CSVENDED')
-                    break
 
                 log.debug("Finishing iteration:: index=%d,end_time=%.3f", iteration, time.time())
 
                 iteration += 1
 
                 # reasons to stop
-                if "Nothing to test." in session.stop_reason:
+                if os.environ.get('CSVENDED'):  # no records left in csv
+                    log.debug("[%s] finished prematurely: %s", params.worker_index)
+                    os.environ.pop('CSVENDED')
+                elif "Nothing to test." in session.stop_reason:  # empty test script or no valid test class
                     raise RuntimeError("Nothing to test.")
-                elif session.stop_reason:
-                    log.debug("[%s] finished prematurely: %s", params.worker_index, session.stop_reason)
                 elif 0 < params.iterations <= iteration:
                     log.debug("[%s] iteration limit reached: %s", params.worker_index, params.iterations)
                 elif 0 < end_time <= time.time():
@@ -467,12 +464,6 @@ class ApiritifPlugin(Plugin):
         else:  # error in test infrastructure (e.g. module setup())
             log.error("\n".join((assertion_name, error_msg, error_trace)))
 
-    def add_stop_reason(self, msg):
-        if self.session.stop_reason:
-            self.session.stop_reason += "\n"
-
-        self.session.stop_reason += msg
-
     def reportFailure(self, event):
         """
         when a test fails
@@ -497,7 +488,7 @@ class ApiritifPlugin(Plugin):
         After all tests
         """
         if not self.controller.test_count:
-            self.add_stop_reason("Nothing to test.")
+            self.session.stop_reason += "Nothing to test."
 
 
 def cmdline_to_params():
