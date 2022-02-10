@@ -464,12 +464,6 @@ class ApiritifPlugin(Plugin):
         else:  # error in test infrastructure (e.g. module setup())
             log.error("\n".join((assertion_name, error_msg, error_trace)))
 
-    @staticmethod
-    def isNormalShutdown(cls):
-        cls_full_name = ".".join((cls.__module__, cls.__name__))
-        ns_full_name = ".".join((NormalShutdown.__module__, NormalShutdown.__name__))
-        return cls_full_name == ns_full_name
-
     def add_stop_reason(self, msg):
         if self.session.stop_reason:
             self.session.stop_reason += "\n"
