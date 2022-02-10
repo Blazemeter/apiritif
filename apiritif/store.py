@@ -72,7 +72,7 @@ class SampleController(object):
             self.success_count += 1
 
     def afterTest(self, is_transaction=False):
-        if self.tran_mode == is_transaction:
+        if self.tran_mode == is_transaction and not self.session.stop_reason:
             if self.end_time is None:
                 self.end_time = time.time()
             self.current_sample.duration = self.end_time - self.current_sample.start_time

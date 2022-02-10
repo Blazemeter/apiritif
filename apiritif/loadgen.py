@@ -141,11 +141,9 @@ class ApiritifSession(PluggableTestProgram.sessionClass):
         super().__init__(*args, **kwargs)
         self.stop_reason = ""
 
-    def add_stop_reason(self, msg):
-        if self.stop_reason:
-            self.stop_reason += "\n"
-
-        self.stop_reason += msg
+    def set_stop_reason(self, msg):
+        if not self.stop_reason:
+            self.stop_reason = msg
 
 
 class Worker(ThreadPool):
@@ -213,10 +211,9 @@ class Worker(ThreadPool):
 
                 session = ApiritifSession()
                 config["session"] = session
-                try:
-                    ApiritifTestProgram(config=config)
-                except NormalShutdown as e:
-                    log.debug("[%s] finished prematurely: %s", params.worker_index, e)
+                ApiritifTestProgram(config=config)
+
+                if session.stop_reason.startswith(NormalShutdown.__class__.__name__):
                     break
 
                 log.debug("Finishing iteration:: index=%d,end_time=%.3f", iteration, time.time())
@@ -455,6 +452,7 @@ class ApiritifPlugin(Plugin):
         self.controller.startTest()  # TODO: unify these two
 
     def stopTest(self, event):
+        #if not 'NormalShutdown' in self.session.stop_reason
         self.controller.stopTest()
         self.controller.afterTest()  # TODO: and these two
 
@@ -472,10 +470,13 @@ class ApiritifPlugin(Plugin):
         assertion_name = error[0].__name__
         error_msg = str(error[1]).split('\n')[0]
         error_trace = get_trace(error)
-        if self.controller.current_sample is not None:
-            self.controller.addError(assertion_name, error_msg, error_trace)
-        else:  # error in test infrastructure (e.g. module setup())
-            log.error("\n".join((assertion_name, error_msg, error_trace)))
+        if isinstance(error[1], NormalShutdown):
+            self.session.set_stop_reason(f"{error[1].__class__.__name__}: {error_msg}")
+        else:
+            if self.controller.current_sample is not None:
+                self.controller.addError(assertion_name, error_msg, error_trace)
+            else:  # error in test infrastructure (e.g. module setup())
+                log.error("\n".join((assertion_name, error_msg, error_trace)))
 
     def reportFailure(self, event):
         """
@@ -501,7 +502,7 @@ class ApiritifPlugin(Plugin):
         After all tests
         """
         if not self.controller.test_count:
-            self.add_stop_reason("Nothing to test.")
+            self.session.add_stop_reason("Nothing to test.")
 
 
 def cmdline_to_params():

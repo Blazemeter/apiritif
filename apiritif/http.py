@@ -31,7 +31,7 @@ import apiritif
 from apiritif.ssl_adapter import SSLAdapter
 from apiritif.thread import get_from_thread_store, put_into_thread_store
 from apiritif.utilities import *
-from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp, log, get_trace
+from apiritif.utils import headers_as_text, assert_regexp, assert_not_regexp, log, get_trace, NormalShutdown
 
 BODY_LIMIT = int(os.environ.get("APIRITIF_TRACE_BODY_EXCLIMIT", "1024"))
 
@@ -268,7 +268,7 @@ class smart_transaction(transaction_logged):
         if stage == "teardown":
             self.func_mode = False
         elif graceful_flag:     # and stage in ("setup", "main")
-            raise StopIteration("graceful!")
+            raise NormalShutdown("graceful!")
 
         return not self.func_mode  # don't reraise in load mode
 
