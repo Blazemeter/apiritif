@@ -136,6 +136,18 @@ class Supervisor(Thread):
         # TODO: watch the total test duration, if set, 'cause iteration might last very long
 
 
+class ApiritifSession(PluggableTestProgram.sessionClass):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.stop_reason = ""
+
+    def add_stop_reason(self, msg):
+        if self.stop_reason:
+            self.stop_reason += "\n"
+
+        self.stop_reason += msg
+
+
 class Worker(ThreadPool):
     def __init__(self, params):
         """
@@ -199,7 +211,7 @@ class Worker(ThreadPool):
                 log.debug("Starting iteration:: index=%d,start_time=%.3f", iteration, time.time())
                 thread.set_iteration(iteration)
 
-                session = PluggableTestProgram.sessionClass()
+                session = ApiritifSession()
                 config["session"] = session
                 try:
                     ApiritifTestProgram(config=config)
@@ -218,6 +230,8 @@ class Worker(ThreadPool):
                     log.debug("[%s] iteration limit reached: %s", params.worker_index, params.iterations)
                 elif 0 < end_time <= time.time():
                     log.debug("[%s] duration limit reached: %s", params.worker_index, params.hold_for)
+
+                # todo: add logging of graceful & end_of_data here
                 else:
                     continue  # continue if no one is faced
 
@@ -416,9 +430,8 @@ class ApiritifPlugin(Plugin):
     alwaysOn = True
 
     def __init__(self):
-        self.controller = store.SampleController(log)
-        apiritif.put_into_thread_store(controller=self.controller)  # parcel for smart_transactions
-        self.session.stop_reason = ""
+        self.controller = store.SampleController(log=log, session=self.session)
+        apiritif.put_into_thread_store(controller=self.controller)
 
     def startTest(self, event):
         """
@@ -463,12 +476,6 @@ class ApiritifPlugin(Plugin):
             self.controller.addError(assertion_name, error_msg, error_trace)
         else:  # error in test infrastructure (e.g. module setup())
             log.error("\n".join((assertion_name, error_msg, error_trace)))
-
-    def add_stop_reason(self, msg):
-        if self.session.stop_reason:
-            self.session.stop_reason += "\n"
-
-        self.session.stop_reason += msg
 
     def reportFailure(self, event):
         """

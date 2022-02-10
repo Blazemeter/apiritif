@@ -10,7 +10,7 @@ writer = None
 
 
 class SampleController(object):
-    def __init__(self, log):
+    def __init__(self, log, session):
         self.current_sample = None  # todo: recreate it from plugin's template every transaction
         self.success_count = None
         self.log = log
@@ -21,6 +21,7 @@ class SampleController(object):
         self.start_time = None
         self.end_time = None
         self.test_info = {}
+        self.session = session
 
     def beforeTest(self):
         self.current_sample = Sample(
