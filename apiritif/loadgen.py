@@ -34,7 +34,7 @@ import apiritif
 import apiritif.thread as thread
 import apiritif.store as store
 from apiritif.action_plugins import ActionHandlerFactory, import_plugins
-from apiritif.utils import NormalShutdown, log, get_trace, VERSION
+from apiritif.utils import NormalShutdown, log, get_trace, VERSION, graceful
 
 
 # TODO how to implement hits/s control/shape?
@@ -202,9 +202,7 @@ class Worker(ThreadPool):
         for handler in handlers:
             handler.startup()
         try:
-            while True:
-                if 'GRACEFUL' in os.environ and os.path.exists(os.environ['GRACEFUL']):
-                    break
+            while not graceful():
                 log.debug("Starting iteration:: index=%d,start_time=%.3f", iteration, time.time())
                 thread.set_iteration(iteration)
 
@@ -227,12 +225,9 @@ class Worker(ThreadPool):
                     log.debug("[%s] iteration limit reached: %s", params.worker_index, params.iterations)
                 elif 0 < end_time <= time.time():
                     log.debug("[%s] duration limit reached: %s", params.worker_index, params.hold_for)
-
-                # todo: add logging of graceful & end_of_data here
                 else:
                     continue  # continue if no one is faced
 
-                break
         finally:
             store.writer.concurrency -= 1
 

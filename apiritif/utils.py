@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
 import sys
 import re
 import logging
@@ -34,6 +35,11 @@ def get_trace(error):
         lines = traceback.format_exception(*error)
     return ''.join(lines).rstrip()
 
+
+def graceful():
+    graceful_file_name = os.environ.get('GRACEFUL')
+    graceful_flag = graceful_file_name and os.path.exists(graceful_file_name)
+    return graceful_flag
 
 class NormalShutdown(BaseException):
     pass
