@@ -33,7 +33,6 @@ class SampleController(object):
             "full_name": self.test_info["test_fqn"],
             "description": self.test_info["description"]
         })
-
         if "." in self.test_info["class_method"]:  # TestClass.test_method
             class_name, method_name = self.test_info["class_method"].split('.')[:2]
             self.current_sample.path.extend([

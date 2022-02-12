@@ -201,7 +201,6 @@ class Worker(ThreadPool):
         thread.put_into_thread_store(action_handlers=handlers)
         for handler in handlers:
             handler.startup()
-
         try:
             while True:
                 if 'GRACEFUL' in os.environ and os.path.exists(os.environ['GRACEFUL']):
@@ -213,7 +212,8 @@ class Worker(ThreadPool):
                 config["session"] = session
                 ApiritifTestProgram(config=config)
 
-                if session.stop_reason.startswith(NormalShutdown.__class__.__name__):
+                if session.stop_reason.startswith(NormalShutdown.__name__):
+                    log.info(session.stop_reason)
                     break
 
                 log.debug("Finishing iteration:: index=%d,end_time=%.3f", iteration, time.time())
@@ -471,7 +471,8 @@ class ApiritifPlugin(Plugin):
         error_msg = str(error[1]).split('\n')[0]
         error_trace = get_trace(error)
         if isinstance(error[1], NormalShutdown):
-            self.session.set_stop_reason(f"{error[1].__class__.__name__}: {error_msg}")
+            self.session.set_stop_reason(f"{error[1].__class__.__name__} for vu #{thread.get_index()}: {error_msg}")
+            self.controller.current_sample = None   # partial data mustn't be written
         else:
             if self.controller.current_sample is not None:
                 self.controller.addError(assertion_name, error_msg, error_trace)
