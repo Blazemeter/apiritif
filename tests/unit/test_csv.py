@@ -132,6 +132,32 @@ class TestCSV(TestCase):
 
         self.assertEqual(18, len(threads["0"]))
 
+    def test_apiritif_no_loop_multiple_records(self):
+        script = os.path.join(RESOURCES_DIR, "test_one_csv_record.py")
+        outfile = tempfile.NamedTemporaryFile()
+        report = outfile.name + "-%s.csv"
+        outfile.close()
+        params = Params()
+        params.concurrency = 2
+        params.iterations = 5
+        params.report = report
+        params.tests = [script]
+        params.worker_count = 1
+
+        sup = Supervisor(params)
+        sup.start()
+        sup.join()
+
+        content = []
+        for i in range(params.worker_count):
+            with open(report % i) as f:
+                content.extend(f.readlines()[1:])
+        content = [item.split(",")[6] for item in content]
+
+        self.assertEqual(len(content), 3)  # equals record number in csv
+        for line in content:
+            self.assertTrue("true" in line)
+
     def test_csv_encoding(self):
         reader_utf8 = CSVReaderPerThread(os.path.join(RESOURCES_DIR, "data/encoding_utf8.csv"), loop=False)
         reader_utf16 = CSVReaderPerThread(os.path.join(RESOURCES_DIR, "data/encoding_utf16.csv"), loop=False)
