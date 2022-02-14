@@ -210,23 +210,25 @@ class Worker(ThreadPool):
                 config["session"] = session
                 ApiritifTestProgram(config=config)
 
-                if session.stop_reason.startswith(NormalShutdown.__name__):
-                    log.info(session.stop_reason)
-                    break
-
                 log.debug("Finishing iteration:: index=%d,end_time=%.3f", iteration, time.time())
-
                 iteration += 1
 
                 # reasons to stop
-                if "Nothing to test." in session.stop_reason:
-                    raise RuntimeError("Nothing to test.")
+                if session.stop_reason:
+                    if "Nothing to test." in session.stop_reason:
+                        raise RuntimeError("Nothing to test.")
+                    elif session.stop_reason.startswith(NormalShutdown.__name__):
+                        log.info(session.stop_reason)
+                    else:
+                        raise RuntimeError(f"Unknown stop_reason: {session.stop_reason}")
                 elif 0 < params.iterations <= iteration:
                     log.debug("[%s] iteration limit reached: %s", params.worker_index, params.iterations)
                 elif 0 < end_time <= time.time():
                     log.debug("[%s] duration limit reached: %s", params.worker_index, params.hold_for)
                 else:
                     continue  # continue if no one is faced
+
+                break
 
         finally:
             store.writer.concurrency -= 1
