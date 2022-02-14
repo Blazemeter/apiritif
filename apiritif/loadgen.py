@@ -500,7 +500,7 @@ class ApiritifPlugin(Plugin):
         After all tests
         """
         if not self.controller.test_count:
-            self.session.add_stop_reason("Nothing to test.")
+            self.session.set_stop_reason("Nothing to test.")
 
 
 def cmdline_to_params():
