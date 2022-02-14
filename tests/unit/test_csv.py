@@ -133,7 +133,7 @@ class TestCSV(TestCase):
         self.assertEqual(18, len(threads["0"]))
 
     def test_apiritif_no_loop_multiple_records(self):
-        script = os.path.join(RESOURCES_DIR, "test_one_csv_record.py")
+        script = os.path.join(RESOURCES_DIR, "test_csv_records.py")
         outfile = tempfile.NamedTemporaryFile()
         report = outfile.name + "-%s.csv"
         outfile.close()
