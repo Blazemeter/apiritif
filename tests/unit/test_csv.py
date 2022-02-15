@@ -138,8 +138,8 @@ class TestCSV(TestCase):
         report = outfile.name + "-%s.csv"
         outfile.close()
         params = Params()
-        params.concurrency = 2
-        params.iterations = 5
+        params.concurrency = 5  # more than records in csv
+        params.iterations = 10
         params.report = report
         params.tests = [script]
         params.worker_count = 1
@@ -154,7 +154,9 @@ class TestCSV(TestCase):
                 content.extend(f.readlines()[1:])
         content = [item.split(",")[6] for item in content]
 
-        self.assertEqual(len(content), 3)  # equals record number in csv
+        with open(os.path.join(RESOURCES_DIR, "data/source2.csv")) as csv:
+            self.assertEqual(len(content), len(csv.readlines()))  # equals record number in csv
+
         for line in content:
             self.assertTrue("true" in line)
 
