@@ -430,6 +430,7 @@ class ApiritifPlugin(Plugin):
     def __init__(self):
         self.controller = store.SampleController(log=log, session=self.session)
         apiritif.put_into_thread_store(controller=self.controller)
+        self.session.stop_reason = ""
 
     def startTest(self, event):
         """
