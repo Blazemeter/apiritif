@@ -22,7 +22,7 @@ class SampleController(object):
         self.end_time = None
         self.test_info = {}
 
-    def beforeTest(self):
+    def startTest(self):
         self.current_sample = Sample(
             test_case=self.test_info["test_case"],
             test_suite=self.test_info["suite_name"],
@@ -42,15 +42,11 @@ class SampleController(object):
             self.current_sample.path.append(PathComponent("func", self.test_info["class_method"]))
 
         self.log.debug("Test method path: %r", self.current_sample.path)
-
         self.test_count += 1
+        self.set_start_time()
 
-    def startTest(self):
+    def set_start_time(self):
         self.start_time = time.time()
-
-    def stopTest(self, is_transaction=False):
-        if self.tran_mode == is_transaction:
-            self.end_time = time.time()
 
     def addError(self, assertion_name, error_msg, error_trace, is_transaction=False):
         if self.tran_mode == is_transaction:
@@ -70,10 +66,9 @@ class SampleController(object):
             self.current_sample.status = "PASSED"
             self.success_count += 1
 
-    def afterTest(self, is_transaction=False):
+    def stopTest(self, is_transaction=False):
         if self.tran_mode == is_transaction:
-            if self.end_time is None:
-                self.end_time = time.time()
+            self.end_time = time.time()
             self.current_sample.duration = self.end_time - self.current_sample.start_time
 
             samples_processed = self._process_apiritif_samples(self.current_sample)
