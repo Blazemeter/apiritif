@@ -1,4 +1,5 @@
 # coding=utf-8
+import time
 import unittest
 import apiritif
 import os
@@ -15,5 +16,6 @@ class TestStopByCSVRecords(unittest.TestCase):
         self.vars.update(reader_1.get_vars())
 
     def test_stop_by_csv(self):
-        with apiritif.smart_transaction('CSV records'):
-            print(self.vars['name'])
+        name = f"{apiritif.thread.get_index()}:{self.vars['name']}"
+        with apiritif.smart_transaction(name):
+            time.sleep(0.1)     # time for initialization and feeding next VU

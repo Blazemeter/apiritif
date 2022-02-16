@@ -132,6 +132,41 @@ class TestCSV(TestCase):
 
         self.assertEqual(18, len(threads["0"]))
 
+    def test_shared_csv(self):
+        script = os.path.join(RESOURCES_DIR, "test_csv_records.py")
+        outfile = tempfile.NamedTemporaryFile()
+        report = outfile.name + "-%s.csv"
+        outfile.close()
+        params = Params()
+        params.concurrency = 2  # more than records in csv
+        params.iterations = 10
+        params.report = report
+        params.tests = [script]
+        params.worker_count = 1
+
+        sup = Supervisor(params)
+        sup.start()
+        sup.join()
+
+        content = []
+        for i in range(params.worker_count):
+            with open(report % i) as f:
+                content.extend(f.readlines()[1:])
+
+        with open(os.path.join(RESOURCES_DIR, "data/source2.csv")) as csv:
+            self.assertEqual(len(content), len(csv.readlines()))  # equals record number in csv
+
+        content = [item.split(",")[3] for item in content]
+
+        target_vus = '0', '1'
+        real_vus = [record.split(':')[0] for record in content]
+        self.assertEqual(set(target_vus), set(real_vus))
+
+        target_data = 'one', 'two', 'three'
+        real_data = [record.split(':')[1] for record in content]
+        self.assertEqual(set(target_data), set(real_data))
+        self.assertEqual(len(target_data), len(real_data))
+
     def test_apiritif_no_loop_multiple_records(self):
         script = os.path.join(RESOURCES_DIR, "test_csv_records.py")
         outfile = tempfile.NamedTemporaryFile()
