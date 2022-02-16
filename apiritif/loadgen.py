@@ -208,7 +208,11 @@ class Worker(ThreadPool):
 
                 session = ApiritifSession()
                 config["session"] = session
-                ApiritifTestProgram(config=config)
+                try:
+                    ApiritifTestProgram(config=config)
+                except NormalShutdown:
+                    log.info(session.stop_reason)
+                    break
 
                 log.debug("Finishing iteration:: index=%d,end_time=%.3f", iteration, time.time())
                 iteration += 1
