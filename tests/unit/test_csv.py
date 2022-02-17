@@ -133,13 +133,14 @@ class TestCSV(TestCase):
         self.assertEqual(18, len(threads["0"]))
 
     def test_shared_csv(self):
+        concurrency = 2
         script = os.path.join(RESOURCES_DIR, "test_csv_records.py")
         outfile = tempfile.NamedTemporaryFile()
         report = outfile.name + "-%s.csv"
         outfile.close()
         params = Params()
-        params.concurrency = 2  # more than records in csv
-        params.iterations = 10
+        params.concurrency = concurrency
+        params.iterations = 6
         params.report = report
         params.tests = [script]
         params.worker_count = 1
@@ -152,19 +153,18 @@ class TestCSV(TestCase):
         for i in range(params.worker_count):
             with open(report % i) as f:
                 content.extend(f.readlines()[1:])
-
-        with open(os.path.join(RESOURCES_DIR, "data/source2.csv")) as csv:
-            self.assertEqual(len(content), len(csv.readlines()))  # equals record number in csv
-
         content = [item.split(",")[3] for item in content]
 
-        target_vus = '0', '1'
-        real_vus = [record.split(':')[0] for record in content]
-        self.assertEqual(set(target_vus), set(real_vus))
+        with open(os.path.join(RESOURCES_DIR, "data/source2.csv")) as csv:
+            target_data = csv.readlines()
+        target_data = [line.strip() for line in target_data]
 
-        target_data = 'one', 'two', 'three'
+        target_vus = [str(vu) for vu in range(concurrency)]
+        real_vus = [record.split(':')[0] for record in content]
+        self.assertEqual(set(target_vus), set(real_vus))    # all VUs participated
+
         real_data = [record.split(':')[1] for record in content]
-        self.assertEqual(set(target_data), set(real_data))
+        self.assertEqual(set(target_data), set(real_data))  # all data has been read
         self.assertEqual(len(target_data), len(real_data))
 
     def test_apiritif_no_loop_multiple_records(self):
