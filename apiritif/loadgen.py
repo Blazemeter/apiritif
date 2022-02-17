@@ -445,13 +445,11 @@ class ApiritifPlugin(Plugin):
             "test_fqn": test_fqn,
             "description": description,
             "class_method": class_method}
-        self.controller.beforeTest()  # create template of current_sample
-        self.controller.startTest()  # TODO: unify these two
+        self.controller.startTest()
 
     def stopTest(self, event):
         #if not 'NormalShutdown' in self.session.stop_reason
         self.controller.stopTest()
-        self.controller.afterTest()  # TODO: and these two
 
     def reportError(self, event):
         """

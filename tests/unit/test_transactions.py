@@ -79,7 +79,7 @@ class ControllerMock(object):
         self.test_info = {}
         self.current_sample = self.CurrentSampleMock(index)
 
-    def beforeTest(self):
+    def set_start_time(self):
         pass
 
     def startTest(self):
@@ -89,9 +89,6 @@ class ControllerMock(object):
         pass
 
     def addError(self, name, msg, trace, is_transaction):
-        pass
-
-    def afterTest(self, is_transaction):
         pass
 
 

@@ -221,14 +221,14 @@ class smart_transaction(transaction_logged):
         self.driver, self.func_mode, self.controller = get_from_thread_store(("driver", "func_mode", "controller"))
 
         if self.controller.tran_mode:
-            self.controller.beforeTest()
+            self.controller.startTest()
         else:
             self.controller.tran_mode = True
 
         self.test_suite = self.controller.current_sample.test_suite
 
     def __enter__(self):
-        self.controller.startTest()
+        self.controller.set_start_time()
 
         super(smart_transaction, self).__enter__()
         put_into_thread_store(test_case=self.name, test_suite=self.test_suite)
@@ -237,7 +237,6 @@ class smart_transaction(transaction_logged):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         super(smart_transaction, self).__exit__(exc_type, exc_val, exc_tb)
-        self.controller.stopTest(is_transaction=True)
 
         message = ''
 
@@ -260,7 +259,7 @@ class smart_transaction(transaction_logged):
         for func in apiritif.get_transaction_handlers()["exit"]:
             func()
 
-        self.controller.afterTest(is_transaction=True)
+        self.controller.stopTest(is_transaction=True)
 
         stage = apiritif.get_stage()
         if stage == "teardown":
