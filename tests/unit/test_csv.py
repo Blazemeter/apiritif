@@ -2,6 +2,8 @@ import os
 import tempfile
 
 from unittest import TestCase
+
+from apiritif import thread
 from apiritif.loadgen import Params, Supervisor
 from apiritif.csv import CSVReaderPerThread, thread_data
 from apiritif.utils import NormalShutdown
@@ -11,6 +13,7 @@ from tests.unit import RESOURCES_DIR
 class TestCSV(TestCase):
     def setUp(self):
         thread_data.csv_readers = {}
+        thread.set_total(1)  # set standard concurrency to 1 for all tests
 
     def test_threads_and_processes(self):
         """ check if threads and processes can divide csv fairly """
