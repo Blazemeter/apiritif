@@ -34,7 +34,7 @@ import apiritif
 import apiritif.thread as thread
 import apiritif.store as store
 from apiritif.action_plugins import ActionHandlerFactory, import_plugins
-from apiritif.utils import NormalShutdown, log, get_trace, VERSION
+from apiritif.utils import NormalShutdown, log, get_trace, VERSION, graceful
 
 
 # TODO how to implement hits/s control/shape?
@@ -136,6 +136,16 @@ class Supervisor(Thread):
         # TODO: watch the total test duration, if set, 'cause iteration might last very long
 
 
+class ApiritifSession(PluggableTestProgram.sessionClass):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.stop_reason = ""
+
+    def set_stop_reason(self, msg):
+        if not self.stop_reason:
+            self.stop_reason = msg
+
+
 class Worker(ThreadPool):
     def __init__(self, params):
         """
@@ -191,29 +201,26 @@ class Worker(ThreadPool):
         thread.put_into_thread_store(action_handlers=handlers)
         for handler in handlers:
             handler.startup()
-
         try:
-            while True:
-                if 'GRACEFUL' in os.environ and os.path.exists(os.environ['GRACEFUL']):
-                    break
+            while not graceful():
                 log.debug("Starting iteration:: index=%d,start_time=%.3f", iteration, time.time())
                 thread.set_iteration(iteration)
 
-                session = PluggableTestProgram.sessionClass()
+                session = ApiritifSession()
                 config["session"] = session
-                try:
-                    ApiritifTestProgram(config=config)
-                except NormalShutdown as e:
-                    log.debug("[%s] finished prematurely: %s", params.worker_index, e)
-                    break
+                ApiritifTestProgram(config=config)
 
                 log.debug("Finishing iteration:: index=%d,end_time=%.3f", iteration, time.time())
-
                 iteration += 1
 
                 # reasons to stop
-                if "Nothing to test." in session.stop_reason:
-                    raise RuntimeError("Nothing to test.")
+                if session.stop_reason:
+                    if "Nothing to test." in session.stop_reason:
+                        raise RuntimeError("Nothing to test.")
+                    elif session.stop_reason.startswith(NormalShutdown.__name__):
+                        log.info(session.stop_reason)
+                    else:
+                        raise RuntimeError(f"Unknown stop_reason: {session.stop_reason}")
                 elif 0 < params.iterations <= iteration:
                     log.debug("[%s] iteration limit reached: %s", params.worker_index, params.iterations)
                 elif 0 < end_time <= time.time():
@@ -222,6 +229,7 @@ class Worker(ThreadPool):
                     continue  # continue if no one is faced
 
                 break
+
         finally:
             store.writer.concurrency -= 1
 
@@ -416,9 +424,8 @@ class ApiritifPlugin(Plugin):
     alwaysOn = True
 
     def __init__(self):
-        self.controller = store.SampleController(log)
-        apiritif.put_into_thread_store(controller=self.controller)  # parcel for smart_transactions
-        self.session.stop_reason = ""
+        self.controller = store.SampleController(log=log, session=self.session)
+        apiritif.put_into_thread_store(controller=self.controller)
 
     def startTest(self, event):
         """
@@ -441,6 +448,7 @@ class ApiritifPlugin(Plugin):
         self.controller.startTest()
 
     def stopTest(self, event):
+        #if not 'NormalShutdown' in self.session.stop_reason
         self.controller.stopTest()
 
     def reportError(self, event):
@@ -457,22 +465,14 @@ class ApiritifPlugin(Plugin):
         assertion_name = error[0].__name__
         error_msg = str(error[1]).split('\n')[0]
         error_trace = get_trace(error)
-        if self.controller.current_sample is not None:
-            self.controller.addError(assertion_name, error_msg, error_trace)
-        else:  # error in test infrastructure (e.g. module setup())
-            log.error("\n".join((assertion_name, error_msg, error_trace)))
-
-    @staticmethod
-    def isNormalShutdown(cls):
-        cls_full_name = ".".join((cls.__module__, cls.__name__))
-        ns_full_name = ".".join((NormalShutdown.__module__, NormalShutdown.__name__))
-        return cls_full_name == ns_full_name
-
-    def add_stop_reason(self, msg):
-        if self.session.stop_reason:
-            self.session.stop_reason += "\n"
-
-        self.session.stop_reason += msg
+        if isinstance(error[1], NormalShutdown):
+            self.session.set_stop_reason(f"{error[1].__class__.__name__} for vu #{thread.get_index()}: {error_msg}")
+            self.controller.current_sample = None   # partial data mustn't be written
+        else:
+            if self.controller.current_sample is not None:
+                self.controller.addError(assertion_name, error_msg, error_trace)
+            else:  # error in test infrastructure (e.g. module setup())
+                log.error("\n".join((assertion_name, error_msg, error_trace)))
 
     def reportFailure(self, event):
         """
@@ -498,7 +498,7 @@ class ApiritifPlugin(Plugin):
         After all tests
         """
         if not self.controller.test_count:
-            self.add_stop_reason("Nothing to test.")
+            self.session.set_stop_reason("Nothing to test.")
 
 
 def cmdline_to_params():

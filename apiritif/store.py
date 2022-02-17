@@ -10,7 +10,7 @@ writer = None
 
 
 class SampleController(object):
-    def __init__(self, log):
+    def __init__(self, log, session):
         self.current_sample = None  # todo: recreate it from plugin's template every transaction
         self.success_count = None
         self.log = log
@@ -21,6 +21,7 @@ class SampleController(object):
         self.start_time = None
         self.end_time = None
         self.test_info = {}
+        self.session = session
 
     def startTest(self):
         self.current_sample = Sample(
@@ -32,7 +33,6 @@ class SampleController(object):
             "full_name": self.test_info["test_fqn"],
             "description": self.test_info["description"]
         })
-
         if "." in self.test_info["class_method"]:  # TestClass.test_method
             class_name, method_name = self.test_info["class_method"].split('.')[:2]
             self.current_sample.path.extend([
@@ -67,7 +67,7 @@ class SampleController(object):
             self.success_count += 1
 
     def stopTest(self, is_transaction=False):
-        if self.tran_mode == is_transaction:
+        if self.tran_mode == is_transaction  and not self.session.stop_reason:
             self.end_time = time.time()
             self.current_sample.duration = self.end_time - self.current_sample.start_time
 

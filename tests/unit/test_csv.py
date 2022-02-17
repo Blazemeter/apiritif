@@ -2,6 +2,8 @@ import os
 import tempfile
 
 from unittest import TestCase
+
+from apiritif import thread
 from apiritif.loadgen import Params, Supervisor
 from apiritif.csv import CSVReaderPerThread, thread_data
 from apiritif.utils import NormalShutdown
@@ -11,6 +13,7 @@ from tests.unit import RESOURCES_DIR
 class TestCSV(TestCase):
     def setUp(self):
         thread_data.csv_readers = {}
+        thread.set_total(1)  # set standard concurrency to 1 for all tests
 
     def test_threads_and_processes(self):
         """ check if threads and processes can divide csv fairly """
@@ -103,14 +106,48 @@ class TestCSV(TestCase):
 
         self.fail()
 
-    def test_apiritif_without_loop(self):
-        """ check different reading speed, fieldnames and separators """
-        script = os.path.join(RESOURCES_DIR, "test_reader_no_loop.py")
+    def test_shared_csv(self):
+        concurrency = 2
+        script = os.path.join(RESOURCES_DIR, "test_csv_records.py")
         outfile = tempfile.NamedTemporaryFile()
         report = outfile.name + "-%s.csv"
         outfile.close()
         params = Params()
-        params.concurrency = 1
+        params.concurrency = concurrency
+        params.iterations = 6
+        params.report = report
+        params.tests = [script]
+        params.worker_count = 1
+
+        sup = Supervisor(params)
+        sup.start()
+        sup.join()
+
+        content = []
+        for i in range(params.worker_count):
+            with open(report % i) as f:
+                content.extend(f.readlines()[1:])
+        content = [item.split(",")[3] for item in content]
+
+        with open(os.path.join(RESOURCES_DIR, "data/source2.csv")) as csv:
+            target_data = csv.readlines()
+        target_data = [line.strip() for line in target_data]
+
+        target_vus = [str(vu) for vu in range(concurrency)]
+        real_vus = [record.split(':')[0] for record in content]
+        self.assertEqual(set(target_vus), set(real_vus))    # all VUs participated
+
+        real_data = [record.split(':')[1] for record in content]
+        self.assertEqual(set(target_data), set(real_data))  # all data has been read
+        self.assertEqual(len(target_data), len(real_data))
+
+    def test_apiritif_no_loop_multiple_records(self):
+        script = os.path.join(RESOURCES_DIR, "test_csv_records.py")
+        outfile = tempfile.NamedTemporaryFile()
+        report = outfile.name + "-%s.csv"
+        outfile.close()
+        params = Params()
+        params.concurrency = 5  # more than records in csv
         params.iterations = 10
         params.report = report
         params.tests = [script]
@@ -123,14 +160,14 @@ class TestCSV(TestCase):
         content = []
         for i in range(params.worker_count):
             with open(report % i) as f:
-                content.extend(f.readlines()[1::2])
+                content.extend(f.readlines()[1:])
+        content = [item.split(",")[6] for item in content]
 
-        threads = {"0": []}
-        content = [item[item.index('"') + 1:].strip() for item in content]
-        for item in content:
-            threads[item[0]].append(item[2:])
+        with open(os.path.join(RESOURCES_DIR, "data/source2.csv")) as csv:
+            self.assertEqual(len(content), len(csv.readlines()))  # equals record number in csv
 
-        self.assertEqual(18, len(threads["0"]))
+        for line in content:
+            self.assertTrue("true" in line)
 
     def test_csv_encoding(self):
         reader_utf8 = CSVReaderPerThread(os.path.join(RESOURCES_DIR, "data/encoding_utf8.csv"), loop=False)
