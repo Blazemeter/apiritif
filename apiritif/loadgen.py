@@ -208,11 +208,7 @@ class Worker(ThreadPool):
 
                 session = ApiritifSession()
                 config["session"] = session
-                try:
-                    ApiritifTestProgram(config=config)
-                except NormalShutdown:
-                    log.info(session.stop_reason)
-                    break
+                ApiritifTestProgram(config=config)
 
                 log.debug("Finishing iteration:: index=%d,end_time=%.3f", iteration, time.time())
                 iteration += 1
@@ -430,7 +426,6 @@ class ApiritifPlugin(Plugin):
     def __init__(self):
         self.controller = store.SampleController(log=log, session=self.session)
         apiritif.put_into_thread_store(controller=self.controller)
-        self.session.stop_reason = ""
 
     def startTest(self, event):
         """
