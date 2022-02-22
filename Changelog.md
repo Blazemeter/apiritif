@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.3 <sup>22 Feb 2022</sup>
+- fix exception handling
+- redesign plugin hooks (to nose2 style)
+
 ## 1.1.2 <sup>26 Jan 2022</sup>
 - fix logging
 
