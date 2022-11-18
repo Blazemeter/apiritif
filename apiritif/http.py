@@ -51,14 +51,17 @@ class HTTP(object):
     HTTP is a base class to make http request with apiritif.
     """
 
+    __is_httpx: bool = False
+
     log = log.getChild("http")
 
-    def __init__(self, request_client: Any = None):
+    def __init__(self, request_client: Any = None, is_httpx: bool = False):
         """Initialize a test instance.
         request_client can be any system matching `requests` interfaces
         """
         self.__client = request_client or requests
         self.__support_session = hasattr(self.__client, "Session")
+        self.__is_httpx = is_httpx
 
     def target(self, *args, **kwargs):
         return HTTPTarget(
@@ -161,7 +164,7 @@ class HTTP(object):
             )
             raise
 
-        http.log.info("Response: %s %s", response.status_code, response.reason)
+        http.log.info("Response: %s %s", response.status_code, response.reason if not self.__is_httpx else response.reason_phrase)
         http.log.debug("Response headers: %r", response.headers)
         http.log.debug(
             "Response cookies: %r",
@@ -169,7 +172,7 @@ class HTTP(object):
         )
         http.log.debug("Response content: \n%s", response.content)
 
-        wrapped_response = HTTPResponse(response)
+        wrapped_response = HTTPResponse(response, self.__is_httpx)
 
         recorder.record_http_request(
             method, address, prepared, wrapped_response, session
@@ -689,16 +692,17 @@ class HTTPTarget(object):
 
 
 class HTTPResponse(object):
-    def __init__(self, py_response):
+    def __init__(self, py_response, is_httpx: bool = False):
         """
         Construct HTTPResponse from requests.Response object
 
         :type py_response: requests.Response
         """
+        self.__is_httpx=is_httpx
         self.url = py_response.url
         self.method = py_response.request.method
         self.status_code = int(py_response.status_code)
-        self.reason = py_response.reason
+        self.reason = py_response.reason  if not self.__is_httpx else py_response.reason_phrase
 
         self.headers = CaseInsensitiveDict(py_response.headers)
         self.cookies = {x: py_response.cookies.get(x) for x in py_response.cookies}
