@@ -55,11 +55,12 @@ class HTTP(object):
 
     log = log.getChild("http")
 
-    def __init__(self, request_client: Any = None, is_httpx: bool = False):
+    def __init__(self, sync_client: Any = None, async_client: Any = None, is_httpx: bool = False):
         """Initialize a test instance.
         request_client can be any system matching `requests` interfaces
         """
-        self.__client = request_client or requests
+        self.__client = sync_client or requests
+        self.__async_client=async_client
         self.__support_session = hasattr(self.__client, "Session")
         self.__is_httpx = is_httpx
 
@@ -204,7 +205,146 @@ class HTTP(object):
     def connect(self, address, **kwargs):
         return self.request("CONNECT", address, **kwargs)
 
+    async def async_request(
+        self,
+        method,
+        address,
+        session=None,
+        params=None,
+        headers=None,
+        cookies=None,
+        data=None,
+        json=None,
+        files=None,
+        encrypted_cert=None,
+        allow_redirects=True,
+        timeout=30,
+    ):
+        """
 
+        :param method: str
+        :param address: str
+        :return: response
+        :rtype: HTTPResponse
+        """
+        if not self.__async_client:
+            raise ValueError("No async client defined")
+
+        http.log.info("Request: %s %s", method, address)
+        msg = "Request: params=%r, headers=%r, cookies=%r, data=%r, json=%r, files=%r, allow_redirects=%r, timeout=%r"
+        http.log.debug(
+            msg, params, headers, cookies, data, json, files, allow_redirects, timeout
+        )
+
+        if headers is None:
+            headers = {}
+
+        if "User-Agent" not in headers:
+            headers["User-Agent"] = "Apiritif"
+        
+        prepared = None
+        
+        # if session is None and self.__support_session:
+        #     session = requests.Session()
+
+        # if session:
+        #     request = requests.Request(
+        #         method,
+        #         address,
+        #         params=params,
+        #         headers=headers,
+        #         cookies=cookies,
+        #         json=json,
+        #         data=data,
+        #         files=files,
+        #     )
+
+        #     if encrypted_cert is not None:
+        #         certificate_file_path, passphrase = encrypted_cert
+        #         adapter = SSLAdapter(
+        #             certificate_file_path=certificate_file_path,
+        #             passphrase=passphrase,
+        #         )
+        #         session.mount("https://", adapter)
+
+        #     prepared = session.prepare_request(request)
+        #     settings = session.merge_environment_settings(
+        #         prepared.url, {}, False, False, None
+        #     )
+
+        try:
+            # if session:
+            #     response = session.send(
+            #         prepared, allow_redirects=allow_redirects, timeout=timeout, **settings
+            #     )
+            # else:
+            response = await self.__async_client.request(
+                method,
+                address,
+                params=params,
+                headers=headers,
+                cookies=cookies,
+                json=json,
+                data=data,
+                files=files,
+            )
+        except requests.exceptions.Timeout as exc:
+            recorder.record_http_request_failure(
+                method, address, prepared, exc, session
+            )
+            raise TimeoutError("Connection to %s timed out" % address)
+        except requests.exceptions.ConnectionError as exc:
+            recorder.record_http_request_failure(
+                method, address, prepared, exc, session
+            )
+            raise ConnectionError("Connection to %s failed" % address)
+        except BaseException as exc:
+            recorder.record_http_request_failure(
+                method, address, prepared, exc, session
+            )
+            raise
+
+        http.log.info("Response: %s %s", response.status_code, response.reason if not self.__is_httpx else response.reason_phrase)
+        http.log.debug("Response headers: %r", response.headers)
+        http.log.debug(
+            "Response cookies: %r",
+            {x: response.cookies.get(x) for x in response.cookies},
+        )
+        http.log.debug("Response content: \n%s", response.content)
+
+        wrapped_response = HTTPResponse(response, self.__is_httpx)
+
+        recorder.record_http_request(
+            method, address, prepared, wrapped_response, session
+        )
+
+        return wrapped_response
+
+    async def async_get(self, address, **kwargs):
+        return await self.async_request("GET", address, **kwargs)
+
+    async def async_post(self, address, **kwargs):
+        return await self.async_request("POST", address, **kwargs)
+
+    async def async_put(self, address, **kwargs):
+        return await self.async_request("PUT", address, **kwargs)
+
+    async def async_delete(self, address, **kwargs):
+        return await  self.async_request("DELETE", address, **kwargs)
+
+    async def async_patch(self, address, **kwargs):
+        return await  self.async_request("PATCH", address, **kwargs)
+
+    async def async_head(self, address, **kwargs):
+        return await  self.async_request("HEAD", address, **kwargs)
+
+    async def async_options(self, address, **kwargs):
+        return await  self.async_request("OPTIONS", address, **kwargs)
+
+    async def async_connect(self, address, **kwargs):
+        return await self.async_request("CONNECT", address, **kwargs)
+
+      
 http = HTTP()
 
 
