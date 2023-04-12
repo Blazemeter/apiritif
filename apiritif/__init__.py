@@ -13,9 +13,12 @@ limitations under the License.
 """
 
 from .csv import CSVReaderPerThread
-from .thread import put_into_thread_store, get_from_thread_store, external_handler, get_stage, set_stage
-from .thread import get_transaction_handlers, set_transaction_handlers, get_iteration
-from .http import http, transaction, transaction_logged, smart_transaction, recorder
-from .http import Event, TransactionStarted, TransactionEnded, Request, Assertion, AssertionFailure
+from .http import (HTTP, Assertion, AssertionFailure, Event, Request,
+                   TransactionEnded, TransactionStarted, http, recorder,
+                   smart_transaction, transaction, transaction_logged)
+from .thread import (external_handler, get_from_thread_store, get_iteration,
+                     get_stage, get_transaction_handlers,
+                     put_into_thread_store, set_stage,
+                     set_transaction_handlers)
 from .utilities import *
-from .utils import headers_as_text, assert_regexp, assert_not_regexp, log
+from .utils import assert_not_regexp, assert_regexp, headers_as_text, log

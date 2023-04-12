@@ -1,14 +1,24 @@
 import unittest
 
-from apiritif import http
+from apiritif import HTTP, http
+from starlette.testclient import TestClient
+from tests.resources.api.app import app
 
 
 class TestRequests(unittest.TestCase):
+    custom_client = HTTP(TestClient(app))
+
     def test_assert_regex(self):
         response = http.get('http://blazedemo.com/')
         response.assert_ok()
         response.assert_status_code(200)
         response.assert_regex_in_body('Welcome to the Simple Travel Agency!')
+
+    def test_assert_regex_custom_client(self):
+        response = self.custom_client.get('')
+        response.assert_ok()
+        response.assert_status_code(200)
+        response.assert_regex_in_body('Hello World')
 
     def test_assert_xpath(self):
         response = http.get('http://blazedemo.com/')
