@@ -1,10 +1,9 @@
 nose2
 pytest
-requests>=2.24.0
+requests
 jsonpath-ng
 lxml
 unicodecsv
 cssselect
 chardet
 pyopenssl
-codecov

@@ -11,10 +11,11 @@ python:
 - "3.8"
 - "3.9"
 - "3.10"
+- "3.11"
+- "3.12"
 
 install:
+- pip install --upgrade pip
 - pip install -r requirements.txt
-- pip install codecov nose-exclude nose-timer "pluggy>=1.0"
+- pip install coverage nose-exclude nose-timer "pluggy>=1.0"
 script: coverage run --source=apiritif -m nose2 -s tests/unit -v
-after_success:
-  - codecov
