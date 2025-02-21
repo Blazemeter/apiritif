@@ -1,11 +1,12 @@
 # Apiritif
 
-Apiritif is a number of utilities aimed to simplify the process of maintaining API tests. 
+Apiritif is a number of utilities aimed to simplify the process of maintaining API tests.
 Apiritif tests fully based on python nose tests. This library can help you to develop and run your existing tests.
 In order to create any valid tests for Apiritif you can read [nose test documentation](https://nose.readthedocs.io/en/latest/testing.html).
 
 Check Apiritif version with the following command:
-```
+
+```bash
 python -m apiritif -- version
 ```
 
@@ -25,6 +26,7 @@ response.assert_ok()  # will raise AssertionError if request wasn't successful
 ```
 
 `http` object provides the following methods:
+
 ```python
 from apiritif import http
 
@@ -37,6 +39,7 @@ http.head("http://api.example.com/posts")
 ```
 
 All methods (`get`, `post`, `put`, `patch`, `delete`, `head`) support the following arguments:
+
 ```python
 def get(address,               # URL for the request
         params=None,           # URL params dict
@@ -49,19 +52,21 @@ def get(address,               # URL for the request
         timeout=30)            # request timeout, by default it's 30 seconds
 ```
 
-##### Certificate usage
-Currently `http` supports `pem` and `pkcs12` certificates. 
+### Certificate usage
+
+Currently `http` supports `pem` and `pkcs12` certificates.
 Here is an example of certificate usage:
+
 ```python
 http.get("http://api.example.com/posts", encrypted_cert=('./cert.pem', 'passphrase'))
 ```
+
 First parameter is path to certificate, second is the passphrase certificate encrypted with.
 
 ## HTTP Targets
 
 Target is an object that captures resource name of the URL (protocol, domain, port)
 and allows to set some settings applied to all requests made for a target.
-
 
 ```python
 from apiritif import http
@@ -72,6 +77,7 @@ qa_env.get("/api/v4/user")
 ```
 
 Target constructor supports the following options:
+
 ```python
 target = apiritif.http.target(
     address,               # target base address
@@ -83,12 +89,12 @@ target = apiritif.http.target(
 )
 ```
 
-
 ## Assertions
 
 Apiritif responses provide a lot of useful assertions that can be used on responses.
 
 Here's the list of assertions that can be used:
+
 ```python
 response = http.get("http://example.com/")
 
@@ -147,6 +153,7 @@ response.assert_not_cssselect(selector, expected_value=None, attribute=None)
 ```
 
 Note that assertions can be chained, so the following construction is entirely valid:
+
 ```python
 
 response = http.get("http://example.com/")
@@ -181,11 +188,12 @@ def test_with_login():
 
     http.get("https://blazedemo.com/users/all").assert_ok()
 ```
+
 At the same time requests to `users/all` page will be executed outside of transaction even if something inside transaction fails.
 
 Transaction defines the name for the block of code. This name with execution results of this particular block will be displayed in the output report.
 
-#### Smart transactions
+### Smart transactions
 
 `smart_transaction` is advanced option for test flow control (stop or continue after failed test method).
 Let see another test method example:
@@ -203,6 +211,7 @@ class Tests(TestCase):
         http.get("https://blazedemo.com/contactUs").assert_ok()
         http.get("https://blazedemo.com/copyright").assert_ok()
 ```
+
 In this case we have multiple requests divided into blocks. I do not want to test pages under `users` space if it is not available.
 For this purpose we can use `smart_transaction`.
 
@@ -225,15 +234,17 @@ class Tests(TestCase):
         http.get("https://blazedemo.com/contactUs").assert_ok()
         http.get("https://blazedemo.com/copyright").assert_ok()
 ```
+
 Now this two blocks are wrapped into `smart_transaction` which would help with error test flow handling and logging.
 
 Also each transaction defines the name for the block of code and will be displayed in the output report.
- 
+
 Now about `apiritif.put_into_thread_store(func_mode=True)`, this is test execution mode for apiritif.
 We can execute all of the transactions in test no matter what or stop after first failed transaction.
 This flag tells to apiritif "Stop execution if some transaction failed". `False` says "Run till the end in any case".
 
-##### Nose Flow Control
+#### Nose Flow Control
+
 It's one more feature based on smart transactions. It changes `func_mode` if necessary to execute whole teardown block,
 intended to finalize all necessary things.
 
@@ -247,17 +258,21 @@ def test_flow-control(self):
             self._teardown1()
             self._teardown2()
 ```
+
 If this test will be interrupted in `_method_with_exception`, both of teardown methods will be executed even if them raise exception.
 Please note two differences with usage of `tearDown` method of nose:
+
 1. all parts of teardown stage will be executed as mentioned above (will be interrupted in regular nose execution)
 2. results of teardown steps will be written by apiritif SampleWriter into output file (nose lost them as tearDown isn't recognised as test).
 
 ##### Graceful shutdown
+
 Somethimes waiting of end of test isn't necessary and we prefer to break it but save all current results and handle all teardown steps. (see above)
 It's possible with GRACEFUL flag. To use it you can run apiritif with GRACEFUL environment variable pointed to any file name.
 Apiritif will be interrupted as soon as the file is created.
 
 ## CSV Reader
+
 In order to use data from csv file as test parameters Apiritif provides two different csv readers.
 Simple `CSVReader` helps you to read data from file line by line and use this data wherever you need:
 
@@ -271,7 +286,7 @@ class Tests(TestCase):
 ```
 
 In case of multithreading testing you may need to deviate data between threads and ysu uniq lines for each thread.
-`CSVReaderPerThread` helps to solve this problem: 
+`CSVReaderPerThread` helps to solve this problem:
 
 ```python
 data_per_thread_reader = apiritif.CSVReaderPerThread('---path to required file---')
@@ -288,16 +303,19 @@ class Tests(TestCase):
 
 Apiritif writes output data from tests in `apiritif.#.csv` files by default. Here `#` is number of executing process.
 The output file is similar to this:
+
 ```csv
 timeStamp,elapsed,Latency,label,responseCode,responseMessage,success,allThreads,bytes
 1602759519185,0,0,Correct test,,,true,0,2
 1602759519186,0,0,Correct transaction,,,true,0,2
 1602759519187,0,0,Test with exception,,Exception: Horrible error,false,0,2
 ```  
+
 It contains test and transaction results for executed tests by one process.
 
 ### Environment Variables
 
 There are environment variables to control length of response/request body to be written into traces and logs:
-  * `APIRITIF_TRACE_BODY_EXCLIMIT` - limit of body part to include into exception messages, default is 1024
-  * `APIRITIF_TRACE_BODY_HARDLIMIT` - limit of body length to include into JSON trace records, default is unlimited
+
+* `APIRITIF_TRACE_BODY_EXCLIMIT` - limit of body part to include into exception messages, default is 1024
+* `APIRITIF_TRACE_BODY_HARDLIMIT` - limit of body length to include into JSON trace records, default is unlimited
