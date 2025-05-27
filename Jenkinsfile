@@ -11,17 +11,14 @@ pipeline {
             steps {
                 script {
                     sh "python -m venv .venv"
-                    sh '''
-                        #!/bin/bash
-                        source .venv/bin/activate
-                    '''
+                    sh 'bash -c "source .venv/bin/activate && echo Using bash && python --version"'
                 }
             }
         }
         stage('Install') {
             steps {
-                sh ".venv/bin/pip install -r requirements.txt"
-                sh ".venv/bin/pip install codecov nose-exclude nose-timer \"pluggy>=1.0\""
+                sh "pip install -r requirements.txt"
+                sh "pip install codecov nose-exclude nose-timer \"pluggy>=1.0\""
             }
         }
         stage('Code coverage') {
