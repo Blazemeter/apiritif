@@ -7,7 +7,7 @@ pipeline {
         }
     }
     environment {
-        SHELL = '/bin/bash'
+        SHELL = '/usr/bin/bash'
     }
     stages {
         stage('Setup Virtual environment') {
@@ -15,7 +15,7 @@ pipeline {
                 script {
                     sh "which bash"
                     sh "python -m venv .venv"
-                    sh 'bash -c "source .venv/bin/activate"'
+                    sh "source .venv/bin/activate"
                 }
             }
         }
