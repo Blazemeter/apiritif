@@ -35,7 +35,7 @@ def venv(command){
         sh "python -m venv .venv"
     }
     sh """
-        . .venv/bin/activate
+        . .venv/bin/activate > /dev/null 2>&1
         $command
     """
 }
