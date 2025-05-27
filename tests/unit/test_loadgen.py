@@ -209,13 +209,13 @@ class TestLoadGen(TestCase):
 
         worker1 = Worker(params1)
         res1 = [x.delay for x in worker1._get_thread_params()]
-        self.assertEquals(params1.concurrency, len(res1))
+        self.assertEqual(params1.concurrency, len(res1))
 
         params2 = copy.deepcopy(params1)
         params2.worker_index = 1
         worker2 = Worker(params2)
         res2 = [x.delay for x in worker2._get_thread_params()]
-        self.assertEquals(params2.concurrency, len(res2))
+        self.assertEqual(params2.concurrency, len(res2))
 
     def test_ramp_up2(self):
         outfile = tempfile.NamedTemporaryFile()
@@ -231,7 +231,7 @@ class TestLoadGen(TestCase):
 
         worker1 = Worker(params1)
         res1 = [x.delay for x in worker1._get_thread_params()]
-        self.assertEquals(params1.concurrency, len(res1))
+        self.assertEqual(params1.concurrency, len(res1))
 
     def test_unicode_ldjson(self):
         outfile = tempfile.NamedTemporaryFile(suffix=".ldjson")

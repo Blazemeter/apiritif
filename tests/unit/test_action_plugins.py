@@ -39,7 +39,7 @@ class TestRequests(TestCase):
 
     def test_flow(self):
         plugins = ActionHandlerFactory.create_all()
-        self.assertEquals(1, len(plugins))
+        self.assertEqual(1, len(plugins))
         plugin = plugins.pop(0)
         plugin.startup()
         plugin.handle('session_id', BaseActionHandler.YAML_ACTION_START, 'data')
@@ -47,7 +47,7 @@ class TestRequests(TestCase):
 
         self.assertTrue(plugin.started)
         self.assertTrue(plugin.ended)
-        self.assertEquals(
+        self.assertEqual(
             ('session_id', BaseActionHandler.YAML_ACTION_START, 'data'),
             plugin.actions.pop()
         )
@@ -57,7 +57,7 @@ class TestRequests(TestCase):
         apiritif.put_into_thread_store(action_handlers=plugins)
         apiritif.external_handler('session_id', BaseActionHandler.YAML_ACTION_START, 'data')
         plugin = plugins.pop(0)
-        self.assertEquals(
+        self.assertEqual(
             ('session_id', BaseActionHandler.YAML_ACTION_START, 'data'),
             plugin.actions.pop()
         )
