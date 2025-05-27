@@ -18,10 +18,10 @@ pipeline {
                 sh "coverage run --source=apiritif -m nose2 -s tests/unit -v"
             }
         }
-        post {
-            success {
-                sh "codecov"
-            }
+    }
+    post {
+        success {
+            sh "codecov"
         }
     }
 }
