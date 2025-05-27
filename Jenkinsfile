@@ -15,7 +15,7 @@ pipeline {
                 script {
                     sh "which bash"
                     sh "python -m venv .venv"
-                    sh "source ${WORKSPACE}/.venv/bin/activate"
+                    sh 'bash -c "source .venv/bin/activate"'
                 }
             }
         }
