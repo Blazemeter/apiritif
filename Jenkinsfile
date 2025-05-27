@@ -11,7 +11,7 @@ pipeline {
             steps {
                 script {
                     sh "python -m venv .venv"
-                    sh "source .venv/bin/activate"
+                    sh ". .venv/bin/activate"
                     sh "which python"
                 }
             }
