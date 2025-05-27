@@ -11,7 +11,10 @@ pipeline {
             steps {
                 script {
                     sh "python -m venv .venv"
-                    sh ". .venv/bin/activate"
+                    sh '''
+                        #!/bin/bash
+                        source .venv/bin/activate
+                    '''
                 }
             }
         }
@@ -30,6 +33,9 @@ pipeline {
     post {
         success {
             sh "codecov"
+        }
+        always {
+            cleanWs()
         }
     }
 }
