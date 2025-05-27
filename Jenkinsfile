@@ -13,6 +13,7 @@ pipeline {
         stage('Setup Virtual environment') {
             steps {
                 script {
+                    sh "which bash"
                     sh "python -m venv .venv"
                     sh "source .venv/bin/activate"
                 }
