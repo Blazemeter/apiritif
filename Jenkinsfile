@@ -12,6 +12,7 @@ pipeline {
                 script {
                     sh "python -m venv venv"
                     sh ". venv/bin/activate"
+                    sh "which python"
                 }
             }
         }
