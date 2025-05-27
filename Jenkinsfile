@@ -7,6 +7,14 @@ pipeline {
         }
     }
     stages {
+        stage('Setup Virtual environment') {
+            steps {
+                script {
+                    sh "python -m venv venv"
+                    sh ". venv/bin/activate"
+                }
+            }
+        }
         stage('Install') {
             steps {
                 sh "pip install -r requirements.txt"
