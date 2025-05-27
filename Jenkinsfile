@@ -6,12 +6,15 @@ pipeline {
             image 'us.gcr.io/verdant-bulwark-278/jenkins-docker-agent:master.latest'
         }
     }
+    environment {
+        SHELL = '/bin/bash'
+    }
     stages {
         stage('Setup Virtual environment') {
             steps {
                 script {
                     sh "python -m venv .venv"
-                    sh 'bash -c "source .venv/bin/activate && echo Using bash && python --version"'
+                    sh "source .venv/bin/activate"
                 }
             }
         }
@@ -32,7 +35,7 @@ pipeline {
             sh "codecov"
         }
         always {
-            cleanWs()
+            cleanWs
         }
     }
 }
