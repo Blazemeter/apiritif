@@ -28,14 +28,3 @@ pipeline {
         }
     }
 }
-
-
-def venv(command){
-    if(!fileExists(".venv")){
-        sh "python -m venv .venv"
-    }
-    sh """
-        . .venv/bin/activate > /dev/null 2>&1
-        $command
-    """
-}
