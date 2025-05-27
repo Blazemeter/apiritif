@@ -1,4 +1,4 @@
-@Library('jenkins_library') _
+@Library('jenkins_library@virtualenv') _
 pipeline {
     agent {
         docker {
