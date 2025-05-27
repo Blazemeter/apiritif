@@ -35,7 +35,7 @@ pipeline {
             sh "codecov"
         }
         always {
-            cleanWs
+            cleanWs()
         }
     }
 }
