@@ -233,7 +233,10 @@ class smart_transaction(transaction_logged):
         super(smart_transaction, self).__enter__()
         put_into_thread_store(test_case=self.name, test_suite=self.test_suite)
         for func in apiritif.get_transaction_handlers()["enter"]:
-            func()
+            try:
+                func()
+            except:
+                http.log.error("Failed to execute transaction handler %s", func, exc_info=True)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         super(smart_transaction, self).__exit__(exc_type, exc_val, exc_tb)
@@ -257,7 +260,10 @@ class smart_transaction(transaction_logged):
 
         put_into_thread_store(status=status, message=message)
         for func in apiritif.get_transaction_handlers()["exit"]:
-            func()
+            try:
+                func()
+            except:
+                http.log.error("Failed to execute transaction handler %s", func, exc_info=True)
 
         self.controller.stopTest(is_transaction=True)
 
